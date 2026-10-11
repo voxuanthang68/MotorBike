@@ -50,43 +50,5 @@ Hệ thống quản lý dịch vụ cho thuê xe máy chuyên nghiệp tại **Q
 
 ---
 
-## 🚀 Hướng Dẫn Cài Đặt & Chạy Dự Án
+github.com/voxuanthang68/MotorBike](https://github.com/voxuanthang68/MotorBike)
 
-### 1. Yêu cầu môi trường
-- Node.js >= 18.x
-- MongoDB (Đang chạy tại `mongodb://localhost:27017` hoặc kết nối MongoDB Atlas)
-
-### 2. Cài đặt và khởi chạy Backend
-```bash
-cd backend
-npm install
-npm run seed     # Nạp dữ liệu mẫu ban đầu
-npm start        # Chạy API server tại http://localhost:5000
-```
-
-### 3. Cài đặt và khởi chạy Frontend
-```bash
-cd frontend
-npm install
-npm run dev      # Chạy ứng dụng tại http://localhost:3000
-```
-
----
-
-## 📋 Tài Khoản Dùng Thử Mẫu (Demo Accounts)
-
-| Vai Trò | Email Đăng Nhập | Mật Khẩu |
-| :--- | :--- | :--- |
-| **Chủ cửa hàng (Owner)** | `owner@motobike.vn` | `Owner@123` |
-| **Quản trị viên (Admin)** | `admin@motobike.vn` | `Admin@123` |
-| **Kỹ thuật viên (Technician)** | `tech@motobike.vn` | `Tech@123` |
-| **Lễ tân (Receptionist)** | `receptionist@motobike.vn` | `Recep@123` |
-| **Kế toán (Accountant)** | `accountant@motobike.vn` | `Acct@123` |
-| **Hỗ trợ viên (Support)** | `support@motobike.vn` | `Support@123` |
-| **Khách hàng (Customer)** | `customer@gmail.com` | `Customer@123` |
-
----
-
-## 📄 Bản Quyền
-Phát triển cho đề tài: **Xây dựng hệ thống quản lý thuê xe Moto tại Hải Châu, Đà Nẵng**.
-Github: [https://github.com/voxuanthang68/MotorBike](https://github.com/voxuanthang68/MotorBike)
