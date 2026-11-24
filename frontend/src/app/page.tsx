@@ -522,21 +522,21 @@ export default function HomePage() {
   const liveEstimatedTotal = routeRecommendation.dailyRate * plannedDays;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#ffffff', color: '#0f172a' }}>
+    <div style={{ minHeight: '100vh', background: '#faf5f7', color: '#0f172a' }}>
 
       {/* ========================================================
-          1. HEADER NAVBAR (Modern Light Glassmorphic Bar)
+          1. HEADER NAVBAR (Blue & Rose-Gray Glassmorphic Bar)
           ======================================================== */}
       <header
         style={{
-          background: 'rgba(255, 255, 255, 0.96)',
+          background: 'rgba(250, 245, 247, 0.95)',
           backdropFilter: 'blur(16px)',
           WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid #e2e8f0',
+          borderBottom: '1px solid #ebdce3',
           position: 'sticky',
           top: 0,
           zIndex: 40,
-          boxShadow: '0 2px 12px rgba(15, 23, 42, 0.04)',
+          boxShadow: '0 2px 14px rgba(157, 23, 77, 0.04)',
         }}
       >
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -547,26 +547,26 @@ export default function HomePage() {
               style={{
                 width: '38px',
                 height: '38px',
-                background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                borderRadius: '8px',
-                boxShadow: '0 4px 10px rgba(249, 115, 22, 0.3)',
+                borderRadius: '10px',
+                boxShadow: '0 4px 12px rgba(29, 78, 216, 0.3)',
               }}
             >
               <Bike style={{ width: '22px', height: '22px', color: '#ffffff' }} />
             </div>
             <div>
               <span style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.4px' }}>
-                XTBike <span style={{ color: '#ea580c', fontSize: '13px', fontWeight: 700, background: '#fff7ed', padding: '2px 8px', borderRadius: '6px', border: '1px solid #fed7aa' }}>Đà Nẵng</span>
+                XTBike <span style={{ color: '#9d174d', fontSize: '13px', fontWeight: 700, background: '#fcecf2', padding: '2px 8px', borderRadius: '6px', border: '1px solid #f7d1de' }}>Đà Nẵng</span>
               </span>
             </div>
           </Link>
 
           {/* Navigation Links */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden-mobile">
-            <a href="#danh-sach-xe" style={{ color: '#0f172a', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
+            <a href="#danh-sach-xe" style={{ color: '#1d4ed8', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
               Bảng xe sẵn có
             </a>
             <a href="#tinh-lo-trinh" style={{ color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
@@ -591,18 +591,18 @@ export default function HomePage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                color: '#c2410c',
+                color: '#1d4ed8',
                 textDecoration: 'none',
                 fontSize: '13.5px',
                 fontWeight: 700,
                 padding: '8px 14px',
-                background: '#fff7ed',
-                border: '1px solid #fed7aa',
+                background: '#fcecf2',
+                border: '1px solid #f7d1de',
                 borderRadius: '8px',
                 transition: 'all 0.15s ease',
               }}
             >
-              <Phone style={{ width: '14px', height: '14px', color: '#ea580c' }} />
+              <Phone style={{ width: '14px', height: '14px', color: '#1d4ed8' }} />
               <span>0905 123 456</span>
             </a>
 
@@ -614,14 +614,14 @@ export default function HomePage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                    background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                     color: '#ffffff',
                     padding: '8px 16px',
                     borderRadius: '8px',
                     textDecoration: 'none',
                     fontSize: '13px',
                     fontWeight: 700,
-                    boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)',
+                    boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)',
                   }}
                 >
                   <UserCheck style={{ width: '14px', height: '14px' }} />
@@ -630,8 +630,8 @@ export default function HomePage() {
                 <button
                   onClick={logout}
                   style={{
-                    background: '#f1f5f9',
-                    border: '1px solid #e2e8f0',
+                    background: '#ffffff',
+                    border: '1px solid #ebdce3',
                     color: '#64748b',
                     padding: '7px 12px',
                     borderRadius: '8px',
@@ -650,14 +650,14 @@ export default function HomePage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                   color: '#ffffff',
                   padding: '8px 18px',
                   borderRadius: '8px',
                   textDecoration: 'none',
                   fontSize: '13.5px',
                   fontWeight: 700,
-                  boxShadow: '0 2px 8px rgba(249, 115, 22, 0.25)',
+                  boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)',
                 }}
               >
                 <span>Đăng nhập</span>
@@ -668,9 +668,9 @@ export default function HomePage() {
       </header>
 
       {/* ========================================================
-          2. HERO SECTION — Modern Light Coastal Vibe
+          2. HERO SECTION — Blue & Rose-Gray Theme
           ======================================================== */}
-      <section style={{ background: 'linear-gradient(180deg, #fffbf5 0%, #ffffff 100%)', padding: '60px 24px 70px', borderBottom: '1px solid #f1f5f9' }}>
+      <section style={{ background: 'linear-gradient(180deg, #f7edf1 0%, #faf5f7 100%)', padding: '60px 24px 70px', borderBottom: '1px solid #ebdce3' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '48px', alignItems: 'center' }}>
           
           {/* Left Column: Anchored Headline & Value Proposition */}
@@ -680,9 +680,9 @@ export default function HomePage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: '#fff7ed',
-                border: '1px solid #fed7aa',
-                color: '#c2410c',
+                background: '#fcecf2',
+                border: '1px solid #f7d1de',
+                color: '#9d174d',
                 padding: '6px 14px',
                 borderRadius: '20px',
                 fontSize: '13px',
@@ -690,7 +690,7 @@ export default function HomePage() {
                 marginBottom: '18px',
               }}
             >
-              <Sparkles style={{ width: '15px', height: '15px', color: '#ea580c' }} />
+              <Sparkles style={{ width: '15px', height: '15px', color: '#be185d' }} />
               <span>Dịch vụ thuê xe máy du lịch tự túc uy tín #1 Đà Nẵng</span>
             </div>
 
@@ -710,14 +710,14 @@ export default function HomePage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                  background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                   color: '#ffffff',
                   padding: '14px 28px',
                   borderRadius: '10px',
                   fontSize: '15px',
                   fontWeight: 700,
                   textDecoration: 'none',
-                  boxShadow: '0 6px 18px rgba(249, 115, 22, 0.3)',
+                  boxShadow: '0 6px 18px rgba(29, 78, 216, 0.3)',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -732,49 +732,49 @@ export default function HomePage() {
                   alignItems: 'center',
                   gap: '8px',
                   background: '#ffffff',
-                  color: '#0f172a',
-                  border: '1px solid #cbd5e1',
+                  color: '#1d4ed8',
+                  border: '1px solid #ebdce3',
                   padding: '14px 24px',
                   borderRadius: '10px',
                   fontSize: '15px',
                   fontWeight: 700,
                   textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                  boxShadow: '0 2px 8px rgba(157, 23, 77, 0.04)',
                 }}
               >
-                <Compass style={{ width: '16px', height: '16px', color: '#ea580c' }} />
+                <Compass style={{ width: '16px', height: '16px', color: '#1d4ed8' }} />
                 <span>Tính chi phí lộ trình</span>
               </a>
             </div>
 
             {/* Three-point Trust Statement on Solid Surface */}
-            <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '18px 24px', borderRadius: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)' }}>
+            <div style={{ background: '#ffffff', border: '1px solid #ebdce3', padding: '18px 24px', borderRadius: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', boxShadow: '0 4px 16px rgba(157, 23, 77, 0.04)' }}>
               <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>0₫ thế chấp</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8' }}>0₫ thế chấp</div>
                 <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Không giữ CCCD gốc</div>
               </div>
               <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>15 phút giao xe</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8' }}>15 phút giao xe</div>
                 <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Sân bay và khách sạn</div>
               </div>
               <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Cứu hộ 24/7</div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8' }}>Cứu hộ 24/7</div>
                 <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Tuyến Hải Vân - Hội An</div>
               </div>
             </div>
           </div>
 
           {/* Right Column: Specimen Showcase Card */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', padding: '30px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(15, 23, 42, 0.05)' }}>
+          <div style={{ background: '#ffffff', border: '1px solid #ebdce3', padding: '30px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(157, 23, 77, 0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#ea580c', background: '#fff7ed', padding: '3px 10px', borderRadius: '20px', border: '1px solid #fed7aa' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#9d174d', background: '#fcecf2', padding: '3px 10px', borderRadius: '20px', border: '1px solid #f7d1de' }}>
                 ⭐ Mẫu xe tiêu biểu tuần này
               </span>
               <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Đời mới 2024</span>
             </div>
 
             {/* Motorcycle Specimen Image */}
-            <div style={{ height: '240px', overflow: 'hidden', borderRadius: '12px', background: '#f1f5f9', marginBottom: '20px' }}>
+            <div style={{ height: '240px', overflow: 'hidden', borderRadius: '12px', background: '#f5ebf0', marginBottom: '20px' }}>
               <img
                 src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80"
                 alt="Honda Vision Smartkey 2024"
@@ -786,7 +786,7 @@ export default function HomePage() {
               <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
                 Honda Vision Smartkey
               </h2>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#ea580c' }}>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#1d4ed8' }}>
                 130.000₫ <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>/ ngày</span>
               </div>
             </div>
@@ -801,13 +801,14 @@ export default function HomePage() {
               style={{
                 width: '100%',
                 padding: '12px',
-                background: '#0f172a',
+                background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                 color: '#ffffff',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: '8px',
                 fontSize: '14px',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(29, 78, 216, 0.25)',
               }}
             >
               Xem thông số kỹ thuật xe này
@@ -819,14 +820,17 @@ export default function HomePage() {
       {/* ========================================================
           3. ONE LIVE THING: Live Route & Rate Planner
           ======================================================== */}
-      <section id="tinh-lo-trinh" style={{ background: '#f8fafc', padding: '70px 24px' }}>
+      <section id="tinh-lo-trinh" style={{ background: '#f5ebf0', borderTop: '1px solid #ebdce3', borderBottom: '1px solid #ebdce3', padding: '70px 24px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           
           <div style={{ marginBottom: '32px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
+              💡 Công cụ dự toán thông minh
+            </div>
             <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
-              Bộ tính chi phí lộ trình và gợi ý xe tối ưu
+              Bộ tính chi phí lộ trình & Gợi ý xe tối ưu
             </h2>
-            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
               Chọn cung đường dự kiến và số ngày du lịch để nhận tính toán chi phí chính xác kèm lời khuyên kỹ thuật.
             </p>
           </div>
@@ -834,8 +838,8 @@ export default function HomePage() {
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '32px', alignItems: 'start' }}>
             
             {/* Left Box: Route & Days Selection Controls */}
-            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '10px' }}>
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #ebdce3', boxShadow: '0 4px 18px rgba(157, 23, 77, 0.03)' }}>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>
                 Bước 1: Chọn cung đường bạn muốn trải nghiệm
               </div>
 
@@ -853,20 +857,22 @@ export default function HomePage() {
                     style={{
                       textAlign: 'left',
                       padding: '16px',
-                      borderRadius: '8px',
-                      border: 'none',
-                      background: plannedRoute === r.id ? '#0f172a' : '#f8fafc',
+                      borderRadius: '10px',
+                      border: plannedRoute === r.id ? 'none' : '1px solid #ebdce3',
+                      background: plannedRoute === r.id ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#fcf8fa',
                       color: plannedRoute === r.id ? '#ffffff' : '#0f172a',
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      boxShadow: plannedRoute === r.id ? '0 4px 14px rgba(29, 78, 216, 0.25)' : 'none',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>{r.title}</div>
-                    <div style={{ fontSize: '12px', color: plannedRoute === r.id ? '#cbd5e1' : '#64748b' }}>{r.tag}</div>
+                    <div style={{ fontSize: '12px', color: plannedRoute === r.id ? '#dbeafe' : '#645a60' }}>{r.tag}</div>
                   </button>
                 ))}
               </div>
 
-              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>
                 Bước 2: Chọn số ngày dự kiến thuê xe
               </div>
 
@@ -878,13 +884,15 @@ export default function HomePage() {
                     onClick={() => setPlannedDays(d)}
                     style={{
                       padding: '10px 20px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: plannedDays === d ? '#f97316' : '#f1f5f9',
-                      color: plannedDays === d ? '#ffffff' : '#0f172a',
+                      borderRadius: '8px',
+                      border: plannedDays === d ? 'none' : '1px solid #f7d1de',
+                      background: plannedDays === d ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#fcecf2',
+                      color: plannedDays === d ? '#ffffff' : '#9d174d',
                       fontSize: '13.5px',
                       fontWeight: 700,
-                      cursor: 'pointer'
+                      cursor: 'pointer',
+                      boxShadow: plannedDays === d ? '0 4px 12px rgba(29, 78, 216, 0.25)' : 'none',
+                      transition: 'all 0.15s ease'
                     }}
                   >
                     {d === 30 ? '1 Tháng' : `${d} Ngày`}
@@ -894,32 +902,32 @@ export default function HomePage() {
             </div>
 
             {/* Right Box: Live Result & Recommended Vehicle */}
-            <div style={{ background: '#0f172a', color: '#ffffff', padding: '32px', borderRadius: '10px' }}>
-              <div style={{ fontSize: '13px', color: '#f97316', fontWeight: 700, marginBottom: '8px' }}>
-                Đề xuất cho hành trình của bạn
+            <div style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1d4ed8 100%)', color: '#ffffff', padding: '32px', borderRadius: '16px', boxShadow: '0 8px 28px rgba(29, 78, 216, 0.28)' }}>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#fcecf2', background: 'rgba(252, 236, 242, 0.2)', padding: '4px 12px', borderRadius: '16px', fontWeight: 700, marginBottom: '12px', border: '1px solid rgba(252, 236, 242, 0.3)' }}>
+                ⭐ Đề xuất cho hành trình của bạn
               </div>
 
-              <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>
+              <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>
                 {routeRecommendation.bikeName}
               </h3>
 
-              <p style={{ fontSize: '13.5px', color: '#cbd5e1', lineHeight: 1.6, margin: '0 0 20px 0' }}>
+              <p style={{ fontSize: '14px', color: '#dbeafe', lineHeight: 1.6, margin: '0 0 20px 0' }}>
                 {routeRecommendation.advice}
               </p>
 
               {/* Price Calculation Box */}
-              <div style={{ background: '#1e293b', padding: '16px 20px', borderRadius: '8px', marginBottom: '24px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#94a3b8' }}>
+              <div style={{ background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', padding: '18px 20px', borderRadius: '10px', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#cbd5e1' }}>
                   <span>Đơn giá ngày:</span>
                   <span style={{ color: '#ffffff', fontWeight: 600 }}>{routeRecommendation.dailyRate.toLocaleString('vi-VN')}₫</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#cbd5e1' }}>
                   <span>Thời gian thuê:</span>
                   <span style={{ color: '#ffffff', fontWeight: 600 }}>{plannedDays} ngày</span>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '10px', borderTop: '1px solid #334155' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700 }}>Tổng tiền dự kiến:</span>
-                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#f97316' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.18)' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>Tổng tiền dự kiến:</span>
+                  <span style={{ fontSize: '26px', fontWeight: 900, color: '#fef08a' }}>
                     {liveEstimatedTotal.toLocaleString('vi-VN')}₫
                   </span>
                 </div>
@@ -927,13 +935,13 @@ export default function HomePage() {
 
               {/* Included Perks List */}
               <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '12.5px', color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}>
+                <div style={{ fontSize: '12.5px', color: '#bfdbfe', marginBottom: '10px', fontWeight: 600 }}>
                   Trọn bộ trang bị miễn phí đi kèm:
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
                   {routeRecommendation.perks.map((p, pIdx) => (
                     <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#f8fafc' }}>
-                      <Check style={{ width: '14px', height: '14px', color: '#f97316', flexShrink: 0 }} />
+                      <Check style={{ width: '15px', height: '15px', color: '#93c5fd', flexShrink: 0 }} />
                       <span>{p}</span>
                     </div>
                   ))}
@@ -955,12 +963,14 @@ export default function HomePage() {
                   gap: '8px',
                   width: '100%',
                   padding: '14px',
-                  background: '#f97316',
-                  color: '#ffffff',
-                  borderRadius: '6px',
+                  background: '#ffffff',
+                  color: '#1d4ed8',
+                  borderRadius: '10px',
                   textDecoration: 'none',
                   fontSize: '14px',
-                  fontWeight: 700
+                  fontWeight: 800,
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
+                  transition: 'background 0.15s ease'
                 }}
               >
                 <span>Xem xe này trong bảng giá</span>
@@ -974,15 +984,18 @@ export default function HomePage() {
       {/* ========================================================
           4. SPECIMEN CATALOGUE (The Vehicle Collection)
           ======================================================== */}
-      <section id="danh-sach-xe" style={{ padding: '80px 24px', background: '#ffffff' }}>
+      <section id="danh-sach-xe" style={{ padding: '80px 24px', background: '#faf5f7' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px', flexWrap: 'wrap', gap: '20px' }}>
             <div>
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
+                🏍️ Đội xe chất lượng cao
+              </div>
               <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
                 Bảng danh mục xe máy tự lái
               </h2>
-              <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+              <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
                 Toàn bộ xe được kiểm tra phanh thắng, lốp và động cơ trước khi bàn giao cho quý khách.
               </p>
             </div>
@@ -990,7 +1003,7 @@ export default function HomePage() {
             {/* Quick search input */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ position: 'relative', width: '280px' }}>
-                <Search style={{ width: '16px', height: '16px', color: '#94a3b8', position: 'absolute', left: '12px', top: '12px' }} />
+                <Search style={{ width: '16px', height: '16px', color: '#9d174d', position: 'absolute', left: '12px', top: '12px' }} />
                 <input
                   type="text"
                   placeholder="Tìm theo tên xe: Vision, Lead..."
@@ -1000,10 +1013,11 @@ export default function HomePage() {
                     width: '100%',
                     padding: '10px 14px 10px 36px',
                     fontSize: '13.5px',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
+                    border: '1px solid #ebdce3',
+                    borderRadius: '8px',
                     outline: 'none',
-                    background: '#f8fafc'
+                    background: '#ffffff',
+                    color: '#0f172a'
                   }}
                 />
               </div>
@@ -1015,12 +1029,12 @@ export default function HomePage() {
                   style={{
                     padding: '10px 14px',
                     fontSize: '13px',
-                    background: '#f1f5f9',
-                    border: 'none',
-                    borderRadius: '6px',
-                    color: '#475569',
+                    background: '#fcecf2',
+                    border: '1px solid #f7d1de',
+                    borderRadius: '8px',
+                    color: '#9d174d',
                     cursor: 'pointer',
-                    fontWeight: 600
+                    fontWeight: 700
                   }}
                 >
                   Xóa lọc
@@ -1045,13 +1059,13 @@ export default function HomePage() {
                 style={{
                   padding: '10px 22px',
                   borderRadius: '10px',
-                  border: selectedType === tab.id ? 'none' : '1px solid #e2e8f0',
+                  border: selectedType === tab.id ? 'none' : '1px solid #ebdce3',
                   fontSize: '14px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: selectedType === tab.id ? 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)' : '#ffffff',
-                  color: selectedType === tab.id ? '#ffffff' : '#475569',
-                  boxShadow: selectedType === tab.id ? '0 4px 14px rgba(249, 115, 22, 0.28)' : '0 2px 5px rgba(0,0,0,0.02)',
+                  background: selectedType === tab.id ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#ffffff',
+                  color: selectedType === tab.id ? '#ffffff' : '#57484e',
+                  boxShadow: selectedType === tab.id ? '0 4px 14px rgba(29, 78, 216, 0.28)' : '0 2px 5px rgba(157, 23, 77, 0.02)',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -1067,17 +1081,17 @@ export default function HomePage() {
                 key={bike.id}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid #ebdce3',
                   borderRadius: '18px',
                   overflow: 'hidden',
                   display: 'flex',
                   flexDirection: 'column',
-                  boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
+                  boxShadow: '0 4px 20px rgba(157, 23, 77, 0.04)',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
                 }}
               >
                 {/* Vehicle Image Tile */}
-                <div style={{ position: 'relative', height: '220px', background: '#f1f5f9' }}>
+                <div style={{ position: 'relative', height: '220px', background: '#f5ebf0' }}>
                   <img
                     src={bike.image}
                     alt={bike.name}
@@ -1086,7 +1100,7 @@ export default function HomePage() {
                   />
 
                   {bike.badge && (
-                    <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#0284c7', color: '#ffffff', fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '6px', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}>
+                    <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '6px', boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)' }}>
                       ✓ {bike.badge}
                     </div>
                   )}
@@ -1101,14 +1115,14 @@ export default function HomePage() {
                       right: '12px',
                       width: '36px',
                       height: '36px',
-                      background: 'rgba(255, 255, 255, 0.9)',
-                      border: 'none',
+                      background: 'rgba(255, 255, 255, 0.92)',
+                      border: '1px solid #ebdce3',
                       borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
                     }}
                     title={isFavorite(bike.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
                   >
@@ -1120,38 +1134,38 @@ export default function HomePage() {
                 <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
                   <div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#ea580c', background: '#fff7ed', padding: '2px 8px', borderRadius: '6px' }}>{bike.typeName}</span>
-                      <span style={{ fontSize: '12px', color: '#16a34a', fontWeight: 700, background: '#f0fdf4', padding: '2px 8px', borderRadius: '6px' }}>{bike.transmissionText}</span>
+                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#9d174d', background: '#fcecf2', border: '1px solid #f7d1de', padding: '2px 8px', borderRadius: '6px' }}>{bike.typeName}</span>
+                      <span style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, background: '#eff6ff', border: '1px solid #dbeafe', padding: '2px 8px', borderRadius: '6px' }}>{bike.transmissionText}</span>
                     </div>
 
                     <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', lineHeight: 1.3 }}>
                       {bike.name}
                     </h3>
 
-                    <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Fuel style={{ width: '14px', height: '14px', color: '#f97316' }} />
+                    <div style={{ fontSize: '13px', color: '#57484e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Fuel style={{ width: '14px', height: '14px', color: '#1d4ed8' }} />
                       <span>{bike.engine} · {bike.fuelConsumption}</span>
                     </div>
 
                     {/* Route Recommendation Pill */}
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', color: '#475569', marginBottom: '20px' }}>
+                    <div style={{ background: '#fcf8fa', border: '1px solid #ebdce3', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', color: '#57484e', marginBottom: '20px' }}>
                       <strong style={{ color: '#0f172a' }}>Thích hợp:</strong> {bike.routes.split(',').slice(0, 2).join(',')}
                     </div>
                   </div>
 
                   <div>
                     {/* Price Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '14px', borderTop: '1px solid #f1f5f9', marginBottom: '18px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '14px', borderTop: '1px solid #ebdce3', marginBottom: '18px' }}>
                       <div>
-                        <div style={{ fontSize: '11px', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Giá thuê ngày</div>
-                        <span style={{ fontSize: '24px', fontWeight: 900, color: '#ea580c' }}>
+                        <div style={{ fontSize: '11px', color: '#57484e', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Giá thuê ngày</div>
+                        <span style={{ fontSize: '24px', fontWeight: 900, color: '#1d4ed8' }}>
                           {bike.pricePerDay.toLocaleString('vi-VN')}₫
                         </span>
                       </div>
 
                       {bike.pricePerDay && (
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>Thuê tháng chỉ</div>
+                          <div style={{ fontSize: '11px', color: '#57484e' }}>Thuê tháng chỉ</div>
                           <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
                             {(bike.pricePerDay * 20).toLocaleString('vi-VN')}₫
                           </span>
@@ -1170,7 +1184,7 @@ export default function HomePage() {
                         style={{
                           padding: '11px',
                           background: '#ffffff',
-                          border: '1px solid #cbd5e1',
+                          border: '1px solid #ebdce3',
                           borderRadius: '8px',
                           fontSize: '13px',
                           fontWeight: 700,
@@ -1187,14 +1201,14 @@ export default function HomePage() {
                         onClick={() => setBookingBike(bike)}
                         style={{
                           padding: '11px',
-                          background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)',
+                          background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                           border: 'none',
                           borderRadius: '8px',
                           fontSize: '13px',
                           fontWeight: 700,
                           color: '#ffffff',
                           cursor: 'pointer',
-                          boxShadow: '0 4px 14px rgba(249, 115, 22, 0.28)',
+                          boxShadow: '0 4px 14px rgba(29, 78, 216, 0.28)',
                         }}
                       >
                         Đặt xe ngay
@@ -1207,17 +1221,17 @@ export default function HomePage() {
           </div>
 
           {filteredBikes.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#f8fafc', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#fcf8fa', borderRadius: '16px', border: '1px solid #ebdce3' }}>
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                 Không tìm thấy xe phù hợp với bộ lọc
               </div>
-              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+              <p style={{ color: '#57484e', fontSize: '14px', marginBottom: '20px' }}>
                 Vui lòng thử lại với từ khóa khác hoặc xóa bỏ các điều kiện lọc.
               </p>
               <button
                 type="button"
                 onClick={resetFilters}
-                style={{ padding: '12px 26px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(249,115,22,0.25)' }}
+                style={{ padding: '12px 26px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29, 78, 216, 0.25)' }}
               >
                 Xem tất cả dòng xe
               </button>
@@ -1229,14 +1243,17 @@ export default function HomePage() {
       {/* ========================================================
           5. THE JOURNEY INCLUSIONS (Standard Gear Table)
           ======================================================== */}
-      <section id="cam-ket" style={{ background: '#f8fafc', padding: '80px 24px' }}>
+      <section id="cam-ket" style={{ background: '#f5ebf0', borderTop: '1px solid #ebdce3', borderBottom: '1px solid #ebdce3', padding: '80px 24px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           
           <div style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
+              🛡️ An tâm mọi hành trình
+            </div>
             <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
               Trọn bộ trang bị đi kèm mỗi hợp đồng thuê
             </h2>
-            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
               Không phụ phí ẩn. Mỗi xe bàn giao đều có đầy đủ trang thiết bị an toàn và giấy tờ pháp lý.
             </p>
           </div>
@@ -1268,11 +1285,11 @@ export default function HomePage() {
                 desc: 'Giấy chứng nhận bảo hiểm trách nhiệm dân sự bắt buộc của chủ xe cơ giới còn hiệu lực.'
               }
             ].map((item, idx) => (
-              <div key={idx} style={{ background: '#ffffff', padding: '24px', borderRadius: '8px' }}>
+              <div key={idx} style={{ background: '#ffffff', padding: '24px', borderRadius: '12px', border: '1px solid #ebdce3', boxShadow: '0 2px 10px rgba(157, 23, 77, 0.03)' }}>
                 <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                   {item.title}
                 </div>
-                <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: '13.5px', color: '#57484e', lineHeight: 1.6, margin: 0 }}>
                   {item.desc}
                 </p>
               </div>
@@ -1284,42 +1301,48 @@ export default function HomePage() {
       {/* ========================================================
           6. HOW IT WORKS (3 Clean Steps)
           ======================================================== */}
-      <section id="quy-trinh" style={{ padding: '80px 24px', background: '#ffffff' }}>
+      <section id="quy-trinh" style={{ padding: '80px 24px', background: '#faf5f7' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           
           <div style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
+              ⚡ Nhanh chóng & Thuận tiện
+            </div>
             <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
               Quy trình thuê xe trong 3 bước
             </h2>
-            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
               Tiết kiệm tối đa thời gian của quý khách ngay khi hạ cánh tại Đà Nẵng.
             </p>
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }} className="search-grid-responsive">
-            <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '10px' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #ebdce3', boxShadow: '0 4px 14px rgba(157, 23, 77, 0.04)' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '15px', marginBottom: '16px' }}>1</div>
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                 Chọn xe và lịch nhận
               </div>
-              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: '14px', color: '#57484e', lineHeight: 1.6, margin: 0 }}>
                 Duyệt qua danh mục xe, chọn điểm nhận tại sân bay Đà Nẵng, ga xe lửa hoặc khách sạn quận Hải Châu, Sơn Trà.
               </p>
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '10px' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #ebdce3', boxShadow: '0 4px 14px rgba(157, 23, 77, 0.04)' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '15px', marginBottom: '16px' }}>2</div>
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                 Giao xe và kiểm tra kỹ thuật
               </div>
-              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: '14px', color: '#57484e', lineHeight: 1.6, margin: 0 }}>
                 Kỹ thuật viên giao xe tận nơi đúng giờ hẹn, hướng dẫn vận hành và cùng bạn kiểm tra phanh, lốp, đèn tín hiệu.
               </p>
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '10px' }}>
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #ebdce3', boxShadow: '0 4px 14px rgba(157, 23, 77, 0.04)' }}>
+              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '15px', marginBottom: '16px' }}>3</div>
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                 Ký số và nhận xe
               </div>
-              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: '14px', color: '#57484e', lineHeight: 1.6, margin: 0 }}>
                 Xác thực bằng ảnh chụp CCCD hoặc hộ chiếu, ký hợp đồng điện tử 60 giây và khởi hành hành trình khám phá.
               </p>
             </div>
@@ -1333,17 +1356,18 @@ export default function HomePage() {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: '#f1f5f9',
-                color: '#0f172a',
+                background: '#fcecf2',
+                color: '#1d4ed8',
                 padding: '12px 24px',
-                borderRadius: '6px',
-                border: 'none',
+                borderRadius: '8px',
+                border: '1px solid #ebdce3',
                 fontSize: '14px',
                 fontWeight: 700,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                transition: 'all 0.15s ease'
               }}
             >
-              <FileText style={{ width: '16px', height: '16px' }} />
+              <FileText style={{ width: '16px', height: '16px', color: '#1d4ed8' }} />
               <span>Xem trước mẫu hợp đồng cho thuê xe máy điện tử</span>
             </button>
           </div>
@@ -1353,14 +1377,17 @@ export default function HomePage() {
       {/* ========================================================
           7. FAQ SECTION
           ======================================================== */}
-      <section id="hoi-dap" style={{ background: '#f8fafc', padding: '80px 24px' }}>
+      <section id="hoi-dap" style={{ background: '#f5ebf0', borderTop: '1px solid #ebdce3', padding: '80px 24px' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
           
           <div style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
+              ❓ Câu hỏi phổ biến
+            </div>
             <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
               Những câu hỏi thường gặp
             </h2>
-            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+            <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
               Giải đáp minh bạch về thủ tục, địa điểm giao nhận và chính sách hỗ trợ.
             </p>
           </div>
@@ -1384,11 +1411,11 @@ export default function HomePage() {
                 a: 'Đội cứu hộ lưu động của XTBike túc trực trên tuyến đường ven biển và đèo Hải Vân. Khi có sự cố lốp hay động cơ, kỹ thuật viên sẽ có mặt trong 30 đến 45 phút để khắc phục hoặc đổi xe mới tương đương.'
               }
             ].map((faq, fIdx) => (
-              <div key={fIdx} style={{ background: '#ffffff', padding: '24px 28px', borderRadius: '8px' }}>
+              <div key={fIdx} style={{ background: '#ffffff', padding: '24px 28px', borderRadius: '12px', border: '1px solid #ebdce3' }}>
                 <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                   {faq.q}
                 </div>
-                <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.6, margin: 0 }}>
+                <p style={{ fontSize: '14px', color: '#57484e', lineHeight: 1.6, margin: 0 }}>
                   {faq.a}
                 </p>
               </div>
@@ -1400,22 +1427,22 @@ export default function HomePage() {
       {/* ========================================================
           8. FOOTER — Modern Light Elegant Footer
           ======================================================== */}
-      <footer style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#64748b', padding: '70px 24px 40px' }}>
+      <footer style={{ background: '#f2e6eb', borderTop: '1px solid #ebdce3', color: '#57484e', padding: '70px 24px 40px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: '48px', marginBottom: '50px' }}>
             <div>
               <div style={{ fontSize: '26px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #f97316 0%, #ea580c 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '6px' }}>
+                <div style={{ width: '32px', height: '32px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', boxShadow: '0 4px 10px rgba(29, 78, 216, 0.25)' }}>
                   <Bike style={{ width: '18px', height: '18px', color: '#ffffff' }} />
                 </div>
                 <span>XTBike Đà Nẵng</span>
               </div>
-              <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#475569', maxWidth: '420px', margin: '0 0 20px 0' }}>
+              <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#57484e', maxWidth: '420px', margin: '0 0 20px 0' }}>
                 Dịch vụ cho thuê xe máy du lịch tự túc chất lượng cao tại TP Đà Nẵng. 100% xe đời mới bảo dưỡng định kỳ, giao nhận tận nơi và hỗ trợ cứu hộ 24/7.
               </p>
-              <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: 700, background: '#fff7ed', border: '1px solid #fed7aa', display: 'inline-block', padding: '6px 14px', borderRadius: '8px' }}>
-                Hotline giao xe: <span style={{ color: '#ea580c' }}>0905 123 456</span>
+              <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: 700, background: '#fcecf2', border: '1px solid #f7d1de', display: 'inline-block', padding: '6px 14px', borderRadius: '8px' }}>
+                Hotline giao xe: <span style={{ color: '#1d4ed8', fontWeight: 800 }}>0905 123 456</span>
               </div>
             </div>
 
@@ -1423,13 +1450,13 @@ export default function HomePage() {
               <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginBottom: '16px' }}>
                 Địa chỉ và điểm giao nhận
               </div>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: '0 0 8px 0' }}>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#57484e', margin: '0 0 8px 0' }}>
                 📍 Cửa hàng: 08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng
               </p>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: '0 0 8px 0' }}>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#57484e', margin: '0 0 8px 0' }}>
                 ✈️ Sảnh đến: Sân bay Quốc tế Đà Nẵng (giao xe trong 15 phút)
               </p>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: 0 }}>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#57484e', margin: 0 }}>
                 🚂 Ga đường sắt: 200 Hải Phòng, Tam Thuận, Thanh Khê, Đà Nẵng
               </p>
             </div>
@@ -1439,16 +1466,16 @@ export default function HomePage() {
                 Liên kết hệ thống
               </div>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13.5px', lineHeight: 2.2 }}>
-                <li><a href="#danh-sach-xe" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Bảng xe sẵn có</a></li>
-                <li><a href="#tinh-lo-trinh" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Bộ tính chi phí lộ trình</a></li>
-                <li><Link href="/portal" style={{ color: '#ea580c', textDecoration: 'none', fontWeight: 700 }}>Cổng khách hàng (/portal)</Link></li>
-                <li><Link href="/dashboard" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 700 }}>Trang quản trị (/dashboard)</Link></li>
-                <li><Link href="/login" style={{ color: '#64748b', textDecoration: 'none' }}>Đăng nhập nhân viên</Link></li>
+                <li><a href="#danh-sach-xe" style={{ color: '#57484e', textDecoration: 'none', fontWeight: 600 }}>Bảng xe sẵn có</a></li>
+                <li><a href="#tinh-lo-trinh" style={{ color: '#57484e', textDecoration: 'none', fontWeight: 600 }}>Bộ tính chi phí lộ trình</a></li>
+                <li><Link href="/portal" style={{ color: '#9d174d', textDecoration: 'none', fontWeight: 700 }}>Cổng khách hàng (/portal)</Link></li>
+                <li><Link href="/dashboard" style={{ color: '#1d4ed8', textDecoration: 'none', fontWeight: 700 }}>Trang quản trị (/dashboard)</Link></li>
+                <li><Link href="/login" style={{ color: '#57484e', textDecoration: 'none' }}>Đăng nhập nhân viên</Link></li>
               </ul>
             </div>
           </div>
 
-          <div style={{ paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', color: '#94a3b8', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ paddingTop: '20px', borderTop: '1px solid #ebdce3', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', color: '#8c7b83', flexWrap: 'wrap', gap: '12px' }}>
             <div>
               © 2026 XTBike Platform Đà Nẵng. Toàn bộ xe máy được cấp phép hoạt động vận tải khách du lịch.
             </div>
@@ -1480,33 +1507,35 @@ export default function HomePage() {
             onClick={e => e.stopPropagation()}
             style={{
               background: '#ffffff',
-              borderRadius: '12px',
+              borderRadius: '16px',
               maxWidth: '840px',
               width: '100%',
               maxHeight: '90vh',
               overflowY: 'auto',
-              padding: '32px'
+              padding: '32px',
+              border: '1px solid #ebdce3',
+              boxShadow: '0 20px 40px rgba(15, 23, 42, 0.15)'
             }}
           >
             {/* Top modal bar */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
               <div>
-                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>{selectedBikeDetail.typeName}</span>
-                <h3 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '4px 0 0 0' }}>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#9d174d', background: '#fcecf2', border: '1px solid #f7d1de', padding: '3px 10px', borderRadius: '6px' }}>{selectedBikeDetail.typeName}</span>
+                <h3 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '8px 0 0 0' }}>
                   {selectedBikeDetail.name}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setSelectedBikeDetail(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
+                style={{ background: '#fcf8fa', border: '1px solid #ebdce3', borderRadius: '8px', cursor: 'pointer', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               >
-                <X style={{ width: '22px', height: '22px', color: '#64748b' }} />
+                <X style={{ width: '20px', height: '20px', color: '#57484e' }} />
               </button>
             </div>
 
             {/* Gallery photo switcher */}
-            <div style={{ height: '280px', borderRadius: '8px', overflow: 'hidden', background: '#e2e8f0', marginBottom: '14px' }}>
+            <div style={{ height: '280px', borderRadius: '12px', overflow: 'hidden', background: '#f5ebf0', marginBottom: '14px', border: '1px solid #ebdce3' }}>
               <img
                 src={selectedBikeDetail.gallery[activeImageIndex] || selectedBikeDetail.image}
                 alt={selectedBikeDetail.name}
@@ -1522,11 +1551,11 @@ export default function HomePage() {
                   style={{
                     width: '64px',
                     height: '48px',
-                    borderRadius: '4px',
+                    borderRadius: '6px',
                     overflow: 'hidden',
                     cursor: 'pointer',
-                    opacity: activeImageIndex === idx ? 1 : 0.5,
-                    border: activeImageIndex === idx ? '2px solid #f97316' : 'none'
+                    opacity: activeImageIndex === idx ? 1 : 0.6,
+                    border: activeImageIndex === idx ? '2px solid #1d4ed8' : '1px solid #ebdce3'
                   }}
                 >
                   <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -1535,17 +1564,17 @@ export default function HomePage() {
             </div>
 
             {/* Technical Specifications Grid */}
-            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', marginBottom: '24px' }}>
+            <div style={{ background: '#fcf8fa', border: '1px solid #ebdce3', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
               <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>
                 Thông số kỹ thuật tiêu chuẩn
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '13px' }}>
-                <div><span style={{ color: '#64748b' }}>Động cơ:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.engine}</strong></div>
-                <div><span style={{ color: '#64748b' }}>Mức tiêu hao:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.fuelConsumption}</strong></div>
-                <div><span style={{ color: '#64748b' }}>Bình xăng:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.tankCapacity}</strong></div>
-                <div><span style={{ color: '#64748b' }}>Trọng lượng:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.weight}</strong></div>
-                <div><span style={{ color: '#64748b' }}>Hệ thống phanh:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.brake}</strong></div>
-                <div><span style={{ color: '#64748b' }}>Khởi động:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.starter}</strong></div>
+                <div><span style={{ color: '#57484e' }}>Động cơ:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.engine}</strong></div>
+                <div><span style={{ color: '#57484e' }}>Mức tiêu hao:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.fuelConsumption}</strong></div>
+                <div><span style={{ color: '#57484e' }}>Bình xăng:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.tankCapacity}</strong></div>
+                <div><span style={{ color: '#57484e' }}>Trọng lượng:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.weight}</strong></div>
+                <div><span style={{ color: '#57484e' }}>Hệ thống phanh:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.brake}</strong></div>
+                <div><span style={{ color: '#57484e' }}>Khởi động:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.starter}</strong></div>
               </div>
             </div>
 
@@ -1554,18 +1583,18 @@ export default function HomePage() {
               <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                 Mô tả và cảm giác lái
               </div>
-              <p style={{ fontSize: '13.5px', color: '#475569', lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: '13.5px', color: '#57484e', lineHeight: 1.6, margin: 0 }}>
                 {selectedBikeDetail.description}
               </p>
             </div>
 
             {/* Bottom Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #ebdce3' }}>
               <div>
-                <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>
+                <span style={{ fontSize: '24px', fontWeight: 900, color: '#1d4ed8' }}>
                   {selectedBikeDetail.pricePerDay.toLocaleString('vi-VN')}₫
                 </span>
-                <span style={{ fontSize: '13px', color: '#64748b' }}> / ngày</span>
+                <span style={{ fontSize: '13px', color: '#57484e' }}> / ngày</span>
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
@@ -1575,11 +1604,12 @@ export default function HomePage() {
                   style={{
                     padding: '12px 20px',
                     background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
+                    border: '1px solid #ebdce3',
+                    borderRadius: '8px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: '13.5px'
+                    fontSize: '13.5px',
+                    color: '#0f172a'
                   }}
                 >
                   Đóng
@@ -1593,13 +1623,14 @@ export default function HomePage() {
                   }}
                   style={{
                     padding: '12px 24px',
-                    background: '#f97316',
+                    background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
                     color: '#ffffff',
                     border: 'none',
-                    borderRadius: '6px',
+                    borderRadius: '8px',
                     fontWeight: 700,
                     cursor: 'pointer',
-                    fontSize: '13.5px'
+                    fontSize: '13.5px',
+                    boxShadow: '0 4px 14px rgba(29, 78, 216, 0.28)'
                   }}
                 >
                   Tiến hành đặt xe này
