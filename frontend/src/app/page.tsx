@@ -1776,7 +1776,7 @@ export default function HomePage() {
       <footer style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#64748b', padding: '70px 24px 40px' }}>
         <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: '48px', marginBottom: '50px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.1fr 1fr', gap: '36px', marginBottom: '40px' }}>
             <div>
               <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.4px', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '34px', height: '34px', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)' }}>
@@ -1784,7 +1784,7 @@ export default function HomePage() {
                 </div>
                 <span>XTMotoBike Đà Nẵng</span>
               </div>
-              <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#475569', maxWidth: '420px', margin: '0 0 20px 0' }}>
+              <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#475569', maxWidth: '380px', margin: '0 0 16px 0' }}>
                 Dịch vụ cho thuê xe máy du lịch tự túc chất lượng cao tại TP Đà Nẵng. 100% xe đời mới bảo dưỡng định kỳ, giao nhận tận nơi và hỗ trợ cứu hộ 24/7.
               </p>
               <div style={{ fontSize: '14px', color: '#0f172a', fontWeight: 700, background: '#eff6ff', border: '1px solid #dbeafe', display: 'inline-block', padding: '6px 14px', borderRadius: '8px' }}>
@@ -1802,9 +1802,29 @@ export default function HomePage() {
               <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: '0 0 8px 0' }}>
                 ✈️ Sảnh đến: Sân bay Quốc tế Đà Nẵng (giao xe trong 15 phút)
               </p>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: 0 }}>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: '0 0 16px 0' }}>
                 🚂 Ga đường sắt: 200 Hải Phòng, Tam Thuận, Thanh Khê, Đà Nẵng
               </p>
+              <a
+                href="https://maps.google.com/?q=08+Phan+Chu+Trinh,+H%E1%BA%A3i+Ch%C3%A2u+1,+H%E1%BA%A3i+Ch%C3%A2u,+%C4%90%C3%A0+N%E1%BA%B5ng"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  fontSize: '13px',
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  textDecoration: 'none',
+                  background: '#eff6ff',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  border: '1px solid #bfdbfe'
+                }}
+              >
+                <span>🗺️ Mở Google Maps chỉ đường</span>
+              </a>
             </div>
 
             <div>
@@ -1817,6 +1837,52 @@ export default function HomePage() {
                 <li><Link href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 700 }}>Trang quản trị (/dashboard)</Link></li>
                 <li><Link href="/login" style={{ color: '#64748b', textDecoration: 'none' }}>Đăng nhập nhân viên</Link></li>
               </ul>
+            </div>
+          </div>
+
+          {/* Bản đồ vị trí cửa hàng */}
+          <div style={{ marginBottom: '40px', background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '18px' }}>📍</span>
+                <div>
+                  <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
+                    Vị trí cửa hàng XTMotoBike Đà Nẵng
+                  </div>
+                  <div style={{ fontSize: '12.5px', color: '#64748b' }}>
+                    08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng (Cách Cầu Rồng 800m, Sân bay 2km)
+                  </div>
+                </div>
+              </div>
+              <a
+                href="https://maps.google.com/?q=08+Phan+Chu+Trinh,+H%E1%BA%A3i+Ch%C3%A2u+1,+H%E1%BA%A3i+Ch%C3%A2u,+%C4%90%C3%A0+N%E1%BA%B5ng"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  fontSize: '12.5px',
+                  fontWeight: 700,
+                  color: '#2563eb',
+                  textDecoration: 'none',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                Chỉ đường tới cửa hàng &rarr;
+              </a>
+            </div>
+            
+            <div style={{ borderRadius: '12px', overflow: 'hidden', height: '260px', border: '1px solid #cbd5e1' }}>
+              <iframe
+                title="Bản đồ cửa hàng XTMotoBike Đà Nẵng"
+                src="https://maps.google.com/maps?q=08%20Phan%20Chu%20Trinh,%20H%E1%BA%A3i%20Ch%C3%A2u%201,%20H%E1%BA%A3i%20Ch%C3%A2u,%20%C4%90%C3%A0%20N%E1%BA%B5ng&t=&z=15&ie=UTF8&iwloc=&output=embed"
+                width="100%"
+                height="100%"
+                style={{ border: 0 }}
+                allowFullScreen={false}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             </div>
           </div>
 
