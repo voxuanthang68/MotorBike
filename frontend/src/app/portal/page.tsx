@@ -386,7 +386,7 @@ export default function CustomerPortalPage() {
     const rect = canvas.getBoundingClientRect();
     ctx.lineWidth = 2.5;
     ctx.lineCap = 'round';
-    ctx.strokeStyle = '#00bfa5';
+    ctx.strokeStyle = '#2563eb';
     ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
     ctx.stroke();
   };
@@ -426,11 +426,11 @@ export default function CustomerPortalPage() {
   const activeBookings = bookings.filter((b: any) => b.status === 'active' || b.status === 'confirmed');
   const completedBookings = bookings.filter((b: any) => b.status === 'completed');
 
-  // Color constants
-  const TEAL = '#00bfa5';
-  const TEAL_DARK = '#00897b';
-  const TEAL_LIGHT = '#e0f2f1';
-  const TEAL_BG = '#b2dfdb';
+  // Color constants - Synchronized with XTMotoBike Royal Blue theme
+  const TEAL = '#2563eb';
+  const TEAL_DARK = '#1d4ed8';
+  const TEAL_LIGHT = '#eff6ff';
+  const TEAL_BG = '#dbeafe';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#f5f5f5', fontFamily: "'Inter', 'Outfit', -apple-system, sans-serif" }}>
@@ -483,7 +483,7 @@ export default function CustomerPortalPage() {
           {!sidebarCollapsed && (
             <div>
               <div style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a', lineHeight: 1.2 }}>
-                Moto<span style={{ color: TEAL }}>Bike</span>
+                XT<span style={{ color: TEAL }}>MotoBike</span>
               </div>
               <div style={{ fontSize: '11px', color: '#9e9e9e', fontWeight: 500 }}>Hải Châu • Đà Nẵng</div>
             </div>
@@ -780,7 +780,7 @@ export default function CustomerPortalPage() {
                   style={{
                     borderRadius: '20px',
                     padding: '24px',
-                    background: `linear-gradient(135deg, ${TEAL} 0%, #00897b 100%)`,
+                    background: `linear-gradient(135deg, ${TEAL} 0%, ${TEAL_DARK} 100%)`,
                     color: '#ffffff',
                     position: 'relative',
                     overflow: 'hidden',
