@@ -31,7 +31,16 @@ import {
   HelpCircle,
   Sparkles,
   ArrowRight,
-  UserCheck
+  UserCheck,
+  Home,
+  Tag,
+  BookOpen,
+  Bell,
+  Play,
+  ChevronDown,
+  Headphones,
+  Star,
+  User
 } from 'lucide-react';
 
 interface Motorbike {
@@ -52,6 +61,8 @@ interface Motorbike {
   image: string;
   gallery: string[];
   popular?: boolean;
+  rating?: number;
+  reviewCount?: number;
   features: string[];
   description: string;
   routes: string;
@@ -522,89 +533,162 @@ export default function HomePage() {
   const liveEstimatedTotal = routeRecommendation.dailyRate * plannedDays;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#faf5f7', color: '#0f172a' }}>
+    <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
 
       {/* ========================================================
-          1. HEADER NAVBAR (Blue & Rose-Gray Glassmorphic Bar)
+          1. HEADER NAVBAR (MotoRent Clean Modern Style)
           ======================================================== */}
       <header
         style={{
-          background: 'rgba(250, 245, 247, 0.95)',
-          backdropFilter: 'blur(16px)',
-          WebkitBackdropFilter: 'blur(16px)',
-          borderBottom: '1px solid #ebdce3',
+          background: '#ffffff',
+          borderBottom: '1px solid #e2e8f0',
           position: 'sticky',
           top: 0,
-          zIndex: 40,
-          boxShadow: '0 2px 14px rgba(157, 23, 77, 0.04)',
+          zIndex: 50,
+          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
         }}
       >
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '14px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           
           {/* Brand mark */}
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
-            <div
-              style={{
-                width: '38px',
-                height: '38px',
-                background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '10px',
-                boxShadow: '0 4px 12px rgba(29, 78, 216, 0.3)',
-              }}
-            >
-              <Bike style={{ width: '22px', height: '22px', color: '#ffffff' }} />
+            <div style={{ color: '#2563eb', display: 'flex', alignItems: 'center' }}>
+              <svg width="44" height="32" viewBox="0 0 48 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M4 14H16M2 18H14M6 22H18" stroke="#2563eb" strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx="18" cy="22" r="6" stroke="#2563eb" strokeWidth="3" />
+                <circle cx="38" cy="22" r="6" stroke="#2563eb" strokeWidth="3" />
+                <path d="M18 22L26 10L32 10L38 22M26 10L22 6L28 6M26 15L36 15" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
             </div>
             <div>
-              <span style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.4px' }}>
-                XTBike <span style={{ color: '#9d174d', fontSize: '13px', fontWeight: 700, background: '#fcecf2', padding: '2px 8px', borderRadius: '6px', border: '1px solid #f7d1de' }}>Đà Nẵng</span>
-              </span>
+              <div style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
+                MotoRent
+              </div>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
+                Thuê xe dễ dàng
+              </div>
             </div>
           </Link>
 
-          {/* Navigation Links */}
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden-mobile">
-            <a href="#danh-sach-xe" style={{ color: '#1d4ed8', textDecoration: 'none', fontSize: '14px', fontWeight: 700 }}>
-              Bảng xe sẵn có
+          {/* Navigation Items */}
+          <nav style={{ display: 'flex', alignItems: 'center', gap: '6px' }} className="hidden-mobile">
+            <a
+              href="#"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#2563eb',
+                color: '#ffffff',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                fontWeight: 700,
+                textDecoration: 'none',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+              }}
+            >
+              <Home size={15} />
+              <span>Trang chủ</span>
             </a>
-            <a href="#tinh-lo-trinh" style={{ color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-              Bộ tính lộ trình
-            </a>
-            <a href="#quy-trinh" style={{ color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-              Quy trình nhận xe
-            </a>
-            <a href="#cam-ket" style={{ color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-              Cam kết dịch vụ
-            </a>
-            <a href="#hoi-dap" style={{ color: '#475569', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
-              Hỏi đáp
-            </a>
-          </nav>
 
-          {/* Action / Auth Button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <a
+              href="#danh-sach-xe"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#1e293b',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                textDecoration: 'none',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              <Bike size={16} style={{ color: '#475569' }} />
+              <span>Xe của chúng tôi</span>
+              <ChevronDown size={14} style={{ opacity: 0.6 }} />
+            </a>
+
+            <a
+              href="#danh-sach-xe"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#1e293b',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <Tag size={15} style={{ color: '#475569' }} />
+              <span>Bảng giá</span>
+            </a>
+
+            <a
+              href="#quy-trinh"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#1e293b',
+                padding: '8px 14px',
+                borderRadius: '8px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              <BookOpen size={15} style={{ color: '#475569' }} />
+              <span>Hướng dẫn</span>
+            </a>
+
             <a
               href="tel:0905123456"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '6px',
-                color: '#1d4ed8',
-                textDecoration: 'none',
-                fontSize: '13.5px',
-                fontWeight: 700,
+                color: '#1e293b',
                 padding: '8px 14px',
-                background: '#fcecf2',
-                border: '1px solid #f7d1de',
                 borderRadius: '8px',
-                transition: 'all 0.15s ease',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                textDecoration: 'none',
               }}
             >
-              <Phone style={{ width: '14px', height: '14px', color: '#1d4ed8' }} />
-              <span>0905 123 456</span>
+              <Phone size={15} style={{ color: '#475569' }} />
+              <span>Liên hệ</span>
             </a>
+          </nav>
+
+          {/* Action / Auth Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <button
+              type="button"
+              onClick={() => toast.success('Bạn không có thông báo mới nào')}
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '50%',
+                background: '#f1f5f9',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                position: 'relative',
+                transition: 'background 0.15s ease',
+              }}
+            >
+              <Bell size={18} style={{ color: '#475569' }} />
+              <span style={{ position: 'absolute', top: '9px', right: '9px', width: '7px', height: '7px', borderRadius: '50%', background: '#2563eb' }} />
+            </button>
 
             {mounted && user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -614,24 +698,24 @@ export default function HomePage() {
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
-                    background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+                    background: '#2563eb',
                     color: '#ffffff',
-                    padding: '8px 16px',
+                    padding: '8px 18px',
                     borderRadius: '8px',
                     textDecoration: 'none',
-                    fontSize: '13px',
+                    fontSize: '13.5px',
                     fontWeight: 700,
-                    boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)',
+                    boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
                   }}
                 >
-                  <UserCheck style={{ width: '14px', height: '14px' }} />
+                  <User size={15} />
                   <span>{user.fullName?.split(' ').slice(-1)[0] || 'Tài khoản'}</span>
                 </Link>
                 <button
                   onClick={logout}
                   style={{
                     background: '#ffffff',
-                    border: '1px solid #ebdce3',
+                    border: '1px solid #e2e8f0',
                     color: '#64748b',
                     padding: '7px 12px',
                     borderRadius: '8px',
@@ -650,16 +734,17 @@ export default function HomePage() {
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '6px',
-                  background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+                  background: '#2563eb',
                   color: '#ffffff',
-                  padding: '8px 18px',
+                  padding: '9px 20px',
                   borderRadius: '8px',
                   textDecoration: 'none',
                   fontSize: '13.5px',
                   fontWeight: 700,
-                  boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)',
+                  boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
                 }}
               >
+                <User size={15} />
                 <span>Đăng nhập</span>
               </Link>
             )}
@@ -668,383 +753,400 @@ export default function HomePage() {
       </header>
 
       {/* ========================================================
-          2. HERO SECTION — Blue & Rose-Gray Theme
+          2. HERO SECTION — Panoramic Da Nang Han River & Dragon Bridge
           ======================================================== */}
-      <section style={{ background: 'linear-gradient(180deg, #f7edf1 0%, #faf5f7 100%)', padding: '60px 24px 70px', borderBottom: '1px solid #ebdce3' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '48px', alignItems: 'center' }}>
+      <section
+        style={{
+          position: 'relative',
+          background: 'linear-gradient(180deg, #dbeafe 0%, #eff6ff 45%, #ffffff 100%)',
+          padding: '48px 24px 80px',
+          overflow: 'hidden',
+          borderBottom: '1px solid #e2e8f0',
+        }}
+      >
+        {/* Scenic Background image of Dragon Bridge Da Nang with soft overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            backgroundImage: `url('https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=1600&auto=format&fit=crop&q=80')`,
+            backgroundPosition: 'center 40%',
+            backgroundSize: 'cover',
+            opacity: 0.35,
+            pointerEvents: 'none',
+          }}
+        />
+
+        <div style={{ maxWidth: '1280px', margin: '0 auto', position: 'relative', zIndex: 10, display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '32px', alignItems: 'center' }}>
           
-          {/* Left Column: Anchored Headline & Value Proposition */}
+          {/* Left Column: Anchored Headline & CTA */}
           <div>
             <div
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '8px',
-                background: '#fcecf2',
-                border: '1px solid #f7d1de',
-                color: '#9d174d',
+                background: 'rgba(255, 255, 255, 0.9)',
+                backdropFilter: 'blur(8px)',
+                border: '1px solid rgba(37, 99, 235, 0.2)',
+                color: '#1d4ed8',
                 padding: '6px 14px',
                 borderRadius: '20px',
                 fontSize: '13px',
                 fontWeight: 700,
                 marginBottom: '18px',
+                boxShadow: '0 2px 8px rgba(37, 99, 235, 0.08)',
               }}
             >
-              <Sparkles style={{ width: '15px', height: '15px', color: '#be185d' }} />
-              <span>Dịch vụ thuê xe máy du lịch tự túc uy tín #1 Đà Nẵng</span>
+              <MapPin size={15} style={{ color: '#2563eb' }} />
+              <span>Thuê xe Moto tại Đà Nẵng</span>
             </div>
 
-            <h1 style={{ fontSize: 'clamp(2.2rem, 3.4vw, 3.5rem)', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, letterSpacing: '-0.03em', margin: '0 0 20px 0' }}>
-              Thuê xe máy du lịch tự túc tại Đà Nẵng
+            <h1
+              style={{
+                fontSize: 'clamp(2.4rem, 4vw, 3.8rem)',
+                fontWeight: 900,
+                color: '#0f172a',
+                lineHeight: 1.15,
+                letterSpacing: '-0.03em',
+                margin: '0 0 16px 0',
+              }}
+            >
+              Khám phá Đà Nẵng<br />
+              <span style={{ color: '#0f172a' }}>cùng </span>
+              <span style={{ color: '#1d4ed8' }}>MotoRent</span>
             </h1>
 
-            <p style={{ fontSize: '17px', color: '#475569', lineHeight: 1.6, margin: '0 0 32px 0', maxWidth: '560px' }}>
-              Giao xe miễn phí tận nơi tại sân bay, ga tàu và khách sạn. 100% xe đời mới 2023 - 2024, tặng kèm 2 mũ bảo hiểm đạt chuẩn, 2 áo mưa và 1 lít xăng.
+            <p style={{ fontSize: '17px', color: '#334155', lineHeight: 1.6, margin: '0 0 32px 0', maxWidth: '520px', fontWeight: 500 }}>
+              Thuê xe máy nhanh chóng – Thủ tục đơn giản<br />
+              – Giá tốt nhất!
             </p>
 
             {/* Action Group */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', marginBottom: '36px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap' }}>
               <a
                 href="#danh-sach-xe"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
+                  background: '#2563eb',
                   color: '#ffffff',
-                  padding: '14px 28px',
+                  padding: '13px 28px',
                   borderRadius: '10px',
                   fontSize: '15px',
                   fontWeight: 700,
                   textDecoration: 'none',
-                  boxShadow: '0 6px 18px rgba(29, 78, 216, 0.3)',
+                  boxShadow: '0 6px 18px rgba(37, 99, 235, 0.35)',
                   transition: 'all 0.15s ease',
                 }}
               >
-                <span>Xem bảng 8 dòng xe</span>
-                <ChevronRight style={{ width: '18px', height: '18px' }} />
+                <span>Thuê xe ngay</span>
+                <ArrowRight size={17} />
               </a>
 
-              <a
-                href="#tinh-lo-trinh"
+              <button
+                type="button"
+                onClick={() => {
+                  const target = document.getElementById('quy-trinh');
+                  if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }}
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '8px',
-                  background: '#ffffff',
-                  color: '#1d4ed8',
-                  border: '1px solid #ebdce3',
-                  padding: '14px 24px',
+                  background: 'rgba(255, 255, 255, 0.95)',
+                  backdropFilter: 'blur(8px)',
+                  color: '#1e293b',
+                  border: '1px solid #cbd5e1',
+                  padding: '13px 22px',
                   borderRadius: '10px',
-                  fontSize: '15px',
+                  fontSize: '14.5px',
                   fontWeight: 700,
-                  textDecoration: 'none',
-                  boxShadow: '0 2px 8px rgba(157, 23, 77, 0.04)',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)',
                 }}
               >
-                <Compass style={{ width: '16px', height: '16px', color: '#1d4ed8' }} />
-                <span>Tính chi phí lộ trình</span>
-              </a>
-            </div>
-
-            {/* Three-point Trust Statement on Solid Surface */}
-            <div style={{ background: '#ffffff', border: '1px solid #ebdce3', padding: '18px 24px', borderRadius: '12px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px', boxShadow: '0 4px 16px rgba(157, 23, 77, 0.04)' }}>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8' }}>0₫ thế chấp</div>
-                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Không giữ CCCD gốc</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8' }}>15 phút giao xe</div>
-                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Sân bay và khách sạn</div>
-              </div>
-              <div>
-                <div style={{ fontSize: '16px', fontWeight: 800, color: '#1d4ed8' }}>Cứu hộ 24/7</div>
-                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Tuyến Hải Vân - Hội An</div>
-              </div>
+                <div style={{ width: '22px', height: '22px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                  <Play size={11} fill="#2563eb" />
+                </div>
+                <span>Xem video</span>
+              </button>
             </div>
           </div>
 
-          {/* Right Column: Specimen Showcase Card */}
-          <div style={{ background: '#ffffff', border: '1px solid #ebdce3', padding: '30px', borderRadius: '16px', boxShadow: '0 8px 30px rgba(157, 23, 77, 0.06)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span style={{ fontSize: '13px', fontWeight: 700, color: '#9d174d', background: '#fcecf2', padding: '3px 10px', borderRadius: '20px', border: '1px solid #f7d1de' }}>
-                ⭐ Mẫu xe tiêu biểu tuần này
-              </span>
-              <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>Đời mới 2024</span>
-            </div>
-
-            {/* Motorcycle Specimen Image */}
-            <div style={{ height: '240px', overflow: 'hidden', borderRadius: '12px', background: '#f5ebf0', marginBottom: '20px' }}>
-              <img
-                src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80"
-                alt="Honda Vision Smartkey 2024"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
-            </div>
-
-            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                Honda Vision Smartkey
-              </h2>
-              <div style={{ fontSize: '20px', fontWeight: 800, color: '#1d4ed8' }}>
-                130.000₫ <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>/ ngày</span>
+          {/* Right Column: Visual of Rider on Blue Sport Bike along Han River */}
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+            
+            {/* Playful cursive calligraphy tag in top right */}
+            <div
+              style={{
+                position: 'absolute',
+                top: '-15px',
+                right: '20px',
+                zIndex: 15,
+                transform: 'rotate(-4deg)',
+                textAlign: 'right',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: "'Caveat', 'Dancing Script', 'Brush Script MT', cursive, sans-serif",
+                  fontSize: '28px',
+                  fontWeight: 800,
+                  color: '#1d4ed8',
+                  lineHeight: 1.15,
+                  textShadow: '0 2px 6px rgba(255, 255, 255, 0.8)',
+                }}
+              >
+                Tự do khám phá<br />
+                Mọi hành trình!
               </div>
             </div>
 
-            <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, margin: '0 0 18px 0' }}>
-              Động cơ 110cc eSP êm ái, khóa thông minh chống trộm, mức tiêu thụ 1.87 L/100km.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setSelectedBikeDetail(MOTORBIKES[0])}
+            {/* Rider & Motorcycle showcase frame */}
+            <div
               style={{
                 width: '100%',
-                padding: '12px',
-                background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
-                color: '#ffffff',
-                border: 'none',
-                borderRadius: '8px',
-                fontSize: '14px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(29, 78, 216, 0.25)',
+                maxWidth: '520px',
+                height: '350px',
+                position: 'relative',
+                borderRadius: '20px',
+                overflow: 'hidden',
+                boxShadow: '0 16px 40px rgba(15, 23, 42, 0.12)',
+                border: '4px solid #ffffff',
               }}
             >
-              Xem thông số kỹ thuật xe này
-            </button>
+              <img
+                src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=1000&auto=format&fit=crop&q=80"
+                alt="Khám phá Đà Nẵng cùng MotoRent"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+              <div
+                style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, rgba(15, 23, 42, 0.6) 0%, transparent 40%)',
+                }}
+              />
+              <div style={{ position: 'absolute', bottom: '16px', left: '20px', right: '20px', color: '#ffffff' }}>
+                <div style={{ fontSize: '13px', fontWeight: 600, color: '#93c5fd' }}>
+                  Cung đường biển Đà Nẵng & Đèo Hải Vân
+                </div>
+                <div style={{ fontSize: '17px', fontWeight: 800 }}>
+                  Trải nghiệm tự do khám phá miền duyên hải
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* ========================================================
-          3. ONE LIVE THING: Live Route & Rate Planner
+          3. FLOATING BOOKING SEARCH BAR (Overlapping Hero)
           ======================================================== */}
-      <section id="tinh-lo-trinh" style={{ background: '#f5ebf0', borderTop: '1px solid #ebdce3', borderBottom: '1px solid #ebdce3', padding: '70px 24px' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          
-          <div style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
-              💡 Công cụ dự toán thông minh
+      <div style={{ maxWidth: '1240px', margin: '-38px auto 36px', position: 'relative', zIndex: 30, padding: '0 24px' }}>
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '16px',
+            boxShadow: '0 12px 36px rgba(15, 23, 42, 0.08)',
+            border: '1px solid #e2e8f0',
+            padding: '16px 20px',
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1.2fr 0.9fr',
+            gap: '14px',
+            alignItems: 'center',
+          }}
+          className="search-grid-responsive"
+        >
+          {/* 1. Ngày nhận xe */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', flexShrink: 0 }}>
+              <Calendar size={18} />
             </div>
-            <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
-              Bộ tính chi phí lộ trình & Gợi ý xe tối ưu
-            </h2>
-            <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
-              Chọn cung đường dự kiến và số ngày du lịch để nhận tính toán chi phí chính xác kèm lời khuyên kỹ thuật.
-            </p>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Ngày nhận xe</div>
+              <input
+                type="date"
+                value={pickupDate || '2025-04-24'}
+                onChange={e => setPickupDate(e.target.value)}
+                style={{ border: 'none', background: 'transparent', fontWeight: 700, fontSize: '13.5px', color: '#0f172a', outline: 'none', cursor: 'pointer', width: '100%', padding: 0 }}
+              />
+            </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '32px', alignItems: 'start' }}>
-            
-            {/* Left Box: Route & Days Selection Controls */}
-            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '16px', border: '1px solid #ebdce3', boxShadow: '0 4px 18px rgba(157, 23, 77, 0.03)' }}>
-              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>
-                Bước 1: Chọn cung đường bạn muốn trải nghiệm
-              </div>
+          {/* 2. Ngày trả xe */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', flexShrink: 0 }}>
+              <Calendar size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Ngày trả xe</div>
+              <input
+                type="date"
+                value={returnDate || '2025-04-25'}
+                onChange={e => setReturnDate(e.target.value)}
+                style={{ border: 'none', background: 'transparent', fontWeight: 700, fontSize: '13.5px', color: '#0f172a', outline: 'none', cursor: 'pointer', width: '100%', padding: 0 }}
+              />
+            </div>
+          </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '28px' }}>
-                {[
-                  { id: 'city', title: 'Nội thành và Bãi biển Mỹ Khê', tag: 'Đường bằng phẳng' },
-                  { id: 'haivan', title: 'Chinh phục Đèo Hải Vân', tag: 'Độ dốc 10%, cua gấp' },
-                  { id: 'sontra', title: 'Bán đảo Sơn Trà và Đỉnh Bàn Cờ', tag: 'Cần xe số leo dốc' },
-                  { id: 'hoian', title: 'Phố cổ Hội An và Rừng Dừa', tag: 'Đường dài 30km' }
-                ].map(r => (
-                  <button
-                    key={r.id}
-                    type="button"
-                    onClick={() => setPlannedRoute(r.id as any)}
-                    style={{
-                      textAlign: 'left',
-                      padding: '16px',
-                      borderRadius: '10px',
-                      border: plannedRoute === r.id ? 'none' : '1px solid #ebdce3',
-                      background: plannedRoute === r.id ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#fcf8fa',
-                      color: plannedRoute === r.id ? '#ffffff' : '#0f172a',
-                      cursor: 'pointer',
-                      boxShadow: plannedRoute === r.id ? '0 4px 14px rgba(29, 78, 216, 0.25)' : 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>{r.title}</div>
-                    <div style={{ fontSize: '12px', color: plannedRoute === r.id ? '#dbeafe' : '#645a60' }}>{r.tag}</div>
-                  </button>
-                ))}
-              </div>
+          {/* 3. Chọn loại xe */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb', flexShrink: 0 }}>
+              <Bike size={18} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>Chọn loại xe</div>
+              <select
+                value={selectedType}
+                onChange={e => setSelectedType(e.target.value)}
+                style={{ border: 'none', background: 'transparent', fontWeight: 700, fontSize: '13.5px', color: '#0f172a', outline: 'none', cursor: 'pointer', width: '100%', padding: 0 }}
+              >
+                <option value="all">Tất cả loại xe</option>
+                <option value="scooter">Xe tay ga</option>
+                <option value="manual">Xe số</option>
+                <option value="clutch">Xe côn tay</option>
+              </select>
+            </div>
+          </div>
 
-              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a', marginBottom: '14px' }}>
-                Bước 2: Chọn số ngày dự kiến thuê xe
-              </div>
+          {/* 4. Nút Tìm kiếm */}
+          <a
+            href="#danh-sach-xe"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              background: '#2563eb',
+              color: '#ffffff',
+              height: '52px',
+              borderRadius: '10px',
+              fontWeight: 700,
+              fontSize: '15px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
+              transition: 'background 0.15s ease',
+            }}
+          >
+            <Search size={18} />
+            <span>Tìm kiếm</span>
+          </a>
+        </div>
+      </div>
 
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                {[1, 2, 3, 5, 7, 14, 30].map(d => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setPlannedDays(d)}
-                    style={{
-                      padding: '10px 20px',
-                      borderRadius: '8px',
-                      border: plannedDays === d ? 'none' : '1px solid #f7d1de',
-                      background: plannedDays === d ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#fcecf2',
-                      color: plannedDays === d ? '#ffffff' : '#9d174d',
-                      fontSize: '13.5px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      boxShadow: plannedDays === d ? '0 4px 12px rgba(29, 78, 216, 0.25)' : 'none',
-                      transition: 'all 0.15s ease'
-                    }}
-                  >
-                    {d === 30 ? '1 Tháng' : `${d} Ngày`}
-                  </button>
-                ))}
-              </div>
+      {/* ========================================================
+          4. FOUR VALUE PROPOSITIONS (Horizontal Trust Row)
+          ======================================================== */}
+      <div style={{ maxWidth: '1240px', margin: '0 auto 48px', padding: '0 24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px' }} className="search-grid-responsive">
+          {/* Value 1 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Zap size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>Thủ tục nhanh gọn</div>
+              <div style={{ fontSize: '12.5px', color: '#64748b' }}>Chỉ 5 phút</div>
+            </div>
+          </div>
+
+          {/* Value 2 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>Xe chất lượng</div>
+              <div style={{ fontSize: '12.5px', color: '#64748b' }}>Được bảo dưỡng định kỳ</div>
+            </div>
+          </div>
+
+          {/* Value 3 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Headphones size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>Hỗ trợ 24/7</div>
+              <div style={{ fontSize: '12.5px', color: '#64748b' }}>Luôn đồng hành cùng bạn</div>
+            </div>
+          </div>
+
+          {/* Value 4 */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Tag size={20} />
+            </div>
+            <div>
+              <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>Giá tốt nhất</div>
+              <div style={{ fontSize: '12.5px', color: '#64748b' }}>Cam kết cạnh tranh</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================
+          4. DÒNG XE ĐƯỢC YÊU THÍCH (Specimen Catalogue)
+          ======================================================== */}
+      <section id="danh-sach-xe" style={{ padding: '0 24px 60px', background: '#f8fafc' }}>
+        <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '16px' }}>
+            <div>
+              <h2 style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: '0 0 6px 0', letterSpacing: '-0.02em' }}>
+                Dòng xe được yêu thích
+              </h2>
+              <div style={{ height: '3.5px', width: '56px', background: '#2563eb', borderRadius: '3px' }} />
             </div>
 
-            {/* Right Box: Live Result & Recommended Vehicle */}
-            <div style={{ background: 'linear-gradient(145deg, #1e3a8a 0%, #1d4ed8 100%)', color: '#ffffff', padding: '32px', borderRadius: '16px', boxShadow: '0 8px 28px rgba(29, 78, 216, 0.28)' }}>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '12.5px', color: '#fcecf2', background: 'rgba(252, 236, 242, 0.2)', padding: '4px 12px', borderRadius: '16px', fontWeight: 700, marginBottom: '12px', border: '1px solid rgba(252, 236, 242, 0.3)' }}>
-                ⭐ Đề xuất cho hành trình của bạn
-              </div>
-
-              <h3 style={{ fontSize: '22px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>
-                {routeRecommendation.bikeName}
-              </h3>
-
-              <p style={{ fontSize: '14px', color: '#dbeafe', lineHeight: 1.6, margin: '0 0 20px 0' }}>
-                {routeRecommendation.advice}
-              </p>
-
-              {/* Price Calculation Box */}
-              <div style={{ background: 'rgba(15, 23, 42, 0.45)', backdropFilter: 'blur(8px)', padding: '18px 20px', borderRadius: '10px', marginBottom: '24px', border: '1px solid rgba(255, 255, 255, 0.15)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#cbd5e1' }}>
-                  <span>Đơn giá ngày:</span>
-                  <span style={{ color: '#ffffff', fontWeight: 600 }}>{routeRecommendation.dailyRate.toLocaleString('vi-VN')}₫</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#cbd5e1' }}>
-                  <span>Thời gian thuê:</span>
-                  <span style={{ color: '#ffffff', fontWeight: 600 }}>{plannedDays} ngày</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '10px', borderTop: '1px solid rgba(255, 255, 255, 0.18)' }}>
-                  <span style={{ fontSize: '14px', fontWeight: 700, color: '#f1f5f9' }}>Tổng tiền dự kiến:</span>
-                  <span style={{ fontSize: '26px', fontWeight: 900, color: '#fef08a' }}>
-                    {liveEstimatedTotal.toLocaleString('vi-VN')}₫
-                  </span>
-                </div>
-              </div>
-
-              {/* Included Perks List */}
-              <div style={{ marginBottom: '24px' }}>
-                <div style={{ fontSize: '12.5px', color: '#bfdbfe', marginBottom: '10px', fontWeight: 600 }}>
-                  Trọn bộ trang bị miễn phí đi kèm:
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
-                  {routeRecommendation.perks.map((p, pIdx) => (
-                    <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#f8fafc' }}>
-                      <Check style={{ width: '15px', height: '15px', color: '#93c5fd', flexShrink: 0 }} />
-                      <span>{p}</span>
-                    </div>
-                  ))}
-                </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <div style={{ position: 'relative', width: '240px' }} className="hidden-mobile">
+                <Search size={15} style={{ color: '#94a3b8', position: 'absolute', left: '12px', top: '12px' }} />
+                <input
+                  type="text"
+                  placeholder="Tìm Vision, SH, Lead..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px 12px 8px 34px',
+                    fontSize: '13px',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    outline: 'none',
+                    background: '#ffffff',
+                    color: '#0f172a',
+                  }}
+                />
               </div>
 
               <a
                 href="#danh-sach-xe"
                 onClick={() => {
-                  const targetBike = MOTORBIKES.find(b => b.id === routeRecommendation.bikeId);
-                  if (targetBike) {
-                    setSelectedType(targetBike.type);
-                  }
+                  setSelectedType('all');
+                  setSearchQuery('');
                 }}
                 style={{
+                  color: '#2563eb',
+                  fontWeight: 700,
+                  fontSize: '14px',
+                  textDecoration: 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '14px',
-                  background: '#ffffff',
-                  color: '#1d4ed8',
-                  borderRadius: '10px',
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: 800,
-                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.15)',
-                  transition: 'background 0.15s ease'
+                  gap: '4px',
                 }}
               >
-                <span>Xem xe này trong bảng giá</span>
-                <ChevronRight style={{ width: '16px', height: '16px' }} />
+                <span>Xem tất cả</span>
+                <ChevronRight size={16} />
               </a>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ========================================================
-          4. SPECIMEN CATALOGUE (The Vehicle Collection)
-          ======================================================== */}
-      <section id="danh-sach-xe" style={{ padding: '80px 24px', background: '#faf5f7' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px', flexWrap: 'wrap', gap: '20px' }}>
-            <div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '5px 14px', borderRadius: '20px', background: '#fcecf2', border: '1px solid #f7d1de', color: '#9d174d', fontSize: '13px', fontWeight: 700, marginBottom: '12px' }}>
-                🏍️ Đội xe chất lượng cao
-              </div>
-              <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
-                Bảng danh mục xe máy tự lái
-              </h2>
-              <p style={{ fontSize: '16px', color: '#57484e', margin: 0 }}>
-                Toàn bộ xe được kiểm tra phanh thắng, lốp và động cơ trước khi bàn giao cho quý khách.
-              </p>
-            </div>
-
-            {/* Quick search input */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <div style={{ position: 'relative', width: '280px' }}>
-                <Search style={{ width: '16px', height: '16px', color: '#9d174d', position: 'absolute', left: '12px', top: '12px' }} />
-                <input
-                  type="text"
-                  placeholder="Tìm theo tên xe: Vision, Lead..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '10px 14px 10px 36px',
-                    fontSize: '13.5px',
-                    border: '1px solid #ebdce3',
-                    borderRadius: '8px',
-                    outline: 'none',
-                    background: '#ffffff',
-                    color: '#0f172a'
-                  }}
-                />
-              </div>
-
-              {(searchQuery || selectedType !== 'all' || searchPrice !== 'all') && (
-                <button
-                  type="button"
-                  onClick={resetFilters}
-                  style={{
-                    padding: '10px 14px',
-                    fontSize: '13px',
-                    background: '#fcecf2',
-                    border: '1px solid #f7d1de',
-                    borderRadius: '8px',
-                    color: '#9d174d',
-                    cursor: 'pointer',
-                    fontWeight: 700
-                  }}
-                >
-                  Xóa lọc
-                </button>
-              )}
             </div>
           </div>
 
           {/* Category Tabs */}
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '36px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '28px', flexWrap: 'wrap' }}>
             {[
               { id: 'all', label: 'Tất cả các dòng xe' },
               { id: 'scooter', label: 'Xe tay ga' },
@@ -1057,15 +1159,15 @@ export default function HomePage() {
                 type="button"
                 onClick={() => setSelectedType(tab.id)}
                 style={{
-                  padding: '10px 22px',
-                  borderRadius: '10px',
-                  border: selectedType === tab.id ? 'none' : '1px solid #ebdce3',
-                  fontSize: '14px',
+                  padding: '8px 18px',
+                  borderRadius: '8px',
+                  border: selectedType === tab.id ? 'none' : '1px solid #e2e8f0',
+                  fontSize: '13.5px',
                   fontWeight: 700,
                   cursor: 'pointer',
-                  background: selectedType === tab.id ? 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)' : '#ffffff',
-                  color: selectedType === tab.id ? '#ffffff' : '#57484e',
-                  boxShadow: selectedType === tab.id ? '0 4px 14px rgba(29, 78, 216, 0.28)' : '0 2px 5px rgba(157, 23, 77, 0.02)',
+                  background: selectedType === tab.id ? '#2563eb' : '#ffffff',
+                  color: selectedType === tab.id ? '#ffffff' : '#475569',
+                  boxShadow: selectedType === tab.id ? '0 2px 10px rgba(37, 99, 235, 0.25)' : 'none',
                   transition: 'all 0.15s ease',
                 }}
               >
@@ -1074,169 +1176,270 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* Vehicle Specimen Tiles Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '28px' }}>
+          {/* Vehicle Specimen Tiles Grid matching exactly the screenshot cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '22px' }}>
             {filteredBikes.map(bike => (
               <div
                 key={bike.id}
                 style={{
                   background: '#ffffff',
-                  border: '1px solid #ebdce3',
-                  borderRadius: '18px',
-                  overflow: 'hidden',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                  padding: '16px',
                   display: 'flex',
                   flexDirection: 'column',
-                  boxShadow: '0 4px 20px rgba(157, 23, 77, 0.04)',
+                  justifyContent: 'space-between',
+                  boxShadow: '0 4px 16px rgba(15, 23, 42, 0.03)',
                   transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+                  position: 'relative',
                 }}
               >
-                {/* Vehicle Image Tile */}
-                <div style={{ position: 'relative', height: '220px', background: '#f5ebf0' }}>
-                  <img
-                    src={bike.image}
-                    alt={bike.name}
-                    loading="lazy"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
+                {/* Favorite Button */}
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(bike.id)}
+                  style={{
+                    position: 'absolute',
+                    top: '12px',
+                    right: '12px',
+                    width: '32px',
+                    height: '32px',
+                    background: 'rgba(255, 255, 255, 0.92)',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: 'pointer',
+                    zIndex: 2,
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.06)',
+                  }}
+                  title={isFavorite(bike.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
+                >
+                  <Heart style={{ width: '16px', height: '16px', color: isFavorite(bike.id) ? '#dc2626' : '#94a3b8', fill: isFavorite(bike.id) ? '#dc2626' : 'none' }} />
+                </button>
 
-                  {bike.badge && (
-                    <div style={{ position: 'absolute', top: '12px', left: '12px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', fontSize: '11px', fontWeight: 800, padding: '4px 10px', borderRadius: '6px', boxShadow: '0 2px 8px rgba(29, 78, 216, 0.25)' }}>
-                      ✓ {bike.badge}
-                    </div>
-                  )}
-
-                  {/* Favorite Button */}
-                  <button
-                    type="button"
-                    onClick={() => toggleFavorite(bike.id)}
+                {/* Top Area: Vehicle Image */}
+                <div>
+                  <div
+                    onClick={() => {
+                      setSelectedBikeDetail(bike);
+                      setActiveImageIndex(0);
+                    }}
                     style={{
-                      position: 'absolute',
-                      top: '12px',
-                      right: '12px',
-                      width: '36px',
-                      height: '36px',
-                      background: 'rgba(255, 255, 255, 0.92)',
-                      border: '1px solid #ebdce3',
-                      borderRadius: '50%',
+                      height: '160px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
+                      marginBottom: '12px',
                       cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                      position: 'relative',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      padding: '10px',
                     }}
-                    title={isFavorite(bike.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
                   >
-                    <Heart style={{ width: '18px', height: '18px', color: isFavorite(bike.id) ? '#dc2626' : '#94a3b8', fill: isFavorite(bike.id) ? '#dc2626' : 'none' }} />
-                  </button>
+                    <img
+                      src={bike.image}
+                      alt={bike.name}
+                      loading="lazy"
+                      style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
+                    />
+
+                    {bike.badge && (
+                      <span
+                        style={{
+                          position: 'absolute',
+                          top: '8px',
+                          left: '8px',
+                          background: '#eff6ff',
+                          color: '#2563eb',
+                          fontSize: '11px',
+                          fontWeight: 800,
+                          padding: '2px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid #dbeafe',
+                        }}
+                      >
+                        ✓ {bike.badge}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Vehicle Name */}
+                  <h3
+                    onClick={() => {
+                      setSelectedBikeDetail(bike);
+                      setActiveImageIndex(0);
+                    }}
+                    style={{
+                      fontSize: '16px',
+                      fontWeight: 800,
+                      color: '#0f172a',
+                      margin: '0 0 6px 0',
+                      cursor: 'pointer',
+                      lineHeight: 1.3,
+                    }}
+                  >
+                    {bike.name}
+                  </h3>
+
+                  {/* Star Rating & Reviews */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '5px', marginBottom: '16px', fontSize: '12.5px', color: '#64748b' }}>
+                    <Star size={14} style={{ fill: '#eab308', color: '#eab308' }} />
+                    <strong style={{ color: '#0f172a' }}>{bike.rating || 4.8}</strong>
+                    <span>({bike.reviewCount || 95} đánh giá)</span>
+                  </div>
                 </div>
 
-                {/* Card Information Body */}
-                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1, justifyContent: 'space-between' }}>
+                {/* Bottom Row: Price & Thuê ngay Button */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: 700, color: '#9d174d', background: '#fcecf2', border: '1px solid #f7d1de', padding: '2px 8px', borderRadius: '6px' }}>{bike.typeName}</span>
-                      <span style={{ fontSize: '12px', color: '#1d4ed8', fontWeight: 700, background: '#eff6ff', border: '1px solid #dbeafe', padding: '2px 8px', borderRadius: '6px' }}>{bike.transmissionText}</span>
-                    </div>
-
-                    <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0', lineHeight: 1.3 }}>
-                      {bike.name}
-                    </h3>
-
-                    <div style={{ fontSize: '13px', color: '#57484e', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <Fuel style={{ width: '14px', height: '14px', color: '#1d4ed8' }} />
-                      <span>{bike.engine} · {bike.fuelConsumption}</span>
-                    </div>
-
-                    {/* Route Recommendation Pill */}
-                    <div style={{ background: '#fcf8fa', border: '1px solid #ebdce3', padding: '10px 14px', borderRadius: '8px', fontSize: '12px', color: '#57484e', marginBottom: '20px' }}>
-                      <strong style={{ color: '#0f172a' }}>Thích hợp:</strong> {bike.routes.split(',').slice(0, 2).join(',')}
-                    </div>
+                    <span style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a' }}>
+                      {bike.pricePerDay.toLocaleString('vi-VN')}đ
+                    </span>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}> /ngày</span>
                   </div>
 
-                  <div>
-                    {/* Price Row */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '14px', borderTop: '1px solid #ebdce3', marginBottom: '18px' }}>
-                      <div>
-                        <div style={{ fontSize: '11px', color: '#57484e', textTransform: 'uppercase', letterSpacing: '0.04em', fontWeight: 700 }}>Giá thuê ngày</div>
-                        <span style={{ fontSize: '24px', fontWeight: 900, color: '#1d4ed8' }}>
-                          {bike.pricePerDay.toLocaleString('vi-VN')}₫
-                        </span>
-                      </div>
-
-                      {bike.pricePerDay && (
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '11px', color: '#57484e' }}>Thuê tháng chỉ</div>
-                          <span style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a' }}>
-                            {(bike.pricePerDay * 20).toLocaleString('vi-VN')}₫
-                          </span>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.3fr', gap: '10px' }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedBikeDetail(bike);
-                          setActiveImageIndex(0);
-                        }}
-                        style={{
-                          padding: '11px',
-                          background: '#ffffff',
-                          border: '1px solid #ebdce3',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          color: '#0f172a',
-                          cursor: 'pointer',
-                          transition: 'background 0.15s ease',
-                        }}
-                      >
-                        Chi tiết xe
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setBookingBike(bike)}
-                        style={{
-                          padding: '11px',
-                          background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '13px',
-                          fontWeight: 700,
-                          color: '#ffffff',
-                          cursor: 'pointer',
-                          boxShadow: '0 4px 14px rgba(29, 78, 216, 0.28)',
-                        }}
-                      >
-                        Đặt xe ngay
-                      </button>
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setBookingBike(bike)}
+                    style={{
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 18px',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 10px rgba(37, 99, 235, 0.25)',
+                      transition: 'background 0.15s ease',
+                    }}
+                  >
+                    Thuê ngay
+                  </button>
                 </div>
               </div>
             ))}
           </div>
 
           {filteredBikes.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#fcf8fa', borderRadius: '16px', border: '1px solid #ebdce3' }}>
+            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
               <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
                 Không tìm thấy xe phù hợp với bộ lọc
               </div>
-              <p style={{ color: '#57484e', fontSize: '14px', marginBottom: '20px' }}>
+              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
                 Vui lòng thử lại với từ khóa khác hoặc xóa bỏ các điều kiện lọc.
               </p>
               <button
                 type="button"
                 onClick={resetFilters}
-                style={{ padding: '12px 26px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%)', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(29, 78, 216, 0.25)' }}
+                style={{ padding: '12px 26px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)' }}
               >
                 Xem tất cả dòng xe
               </button>
             </div>
           )}
+
+          {/* ========================================================
+              BOTTOM PROMO / CTA BANNER (MotoRent Companion Banner)
+              ======================================================== */}
+          <div style={{ marginTop: '48px' }}>
+            <div
+              style={{
+                background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #3b82f6 100%)',
+                borderRadius: '20px',
+                padding: '28px 36px',
+                color: '#ffffff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '24px',
+                boxShadow: '0 10px 30px rgba(37, 99, 235, 0.25)',
+                position: 'relative',
+                overflow: 'hidden',
+              }}
+              className="search-grid-responsive"
+            >
+              {/* Graphic Silhouette Backdrop */}
+              <div
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  width: '35%',
+                  opacity: 0.18,
+                  pointerEvents: 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                }}
+              >
+                <svg viewBox="0 0 200 80" fill="none" style={{ width: '100%', height: '100%' }}>
+                  <path d="M0 60 L40 20 L80 60 L120 10 L160 60 L200 30" stroke="#ffffff" strokeWidth="2.5" />
+                  <path d="M0 70 Q 50 30, 100 70 T 200 70" stroke="#ffffff" strokeWidth="2" />
+                </svg>
+              </div>
+
+              {/* Text & Icon */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px', position: 'relative', zIndex: 5 }}>
+                <div
+                  style={{
+                    width: '54px',
+                    height: '54px',
+                    borderRadius: '14px',
+                    background: 'rgba(255, 255, 255, 0.15)',
+                    backdropFilter: 'blur(8px)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <Bike size={32} color="#ffffff" />
+                </div>
+                <div>
+                  <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px', color: '#ffffff' }}>
+                    MotoRent – Đồng hành cùng bạn trên mọi nẻo đường!
+                  </h3>
+                  <p style={{ fontSize: '14px', margin: 0, color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
+                    Thuê xe dễ dàng, khám phá Đà Nẵng trọn vẹn hơn
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Button */}
+              <button
+                type="button"
+                onClick={() => {
+                  if (filteredBikes.length > 0) {
+                    setBookingBike(filteredBikes[0]);
+                  }
+                }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#ffffff',
+                  color: '#1d4ed8',
+                  padding: '12px 28px',
+                  borderRadius: '30px',
+                  fontSize: '14.5px',
+                  fontWeight: 800,
+                  border: 'none',
+                  cursor: 'pointer',
+                  flexShrink: 0,
+                  boxShadow: '0 4px 14px rgba(0, 0, 0, 0.1)',
+                  position: 'relative',
+                  zIndex: 5,
+                }}
+              >
+                <span>Đặt xe ngay</span>
+                <ArrowRight size={16} />
+              </button>
+            </div>
+          </div>
         </div>
       </section>
 
