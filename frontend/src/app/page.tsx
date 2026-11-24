@@ -1,154 +1,472 @@
 'use client';
-import { useState, useMemo } from 'react';
+
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
+import RentalWizard from '@/components/booking/RentalWizard';
+import ContractPreviewModal from '@/components/ContractPreviewModal';
+import {
+  Bike,
+  ShieldCheck,
+  MapPin,
+  Phone,
+  Clock,
+  Compass,
+  Calendar,
+  ChevronRight,
+  SlidersHorizontal,
+  Search,
+  FileText,
+  CheckCircle2,
+  Zap,
+  RotateCcw,
+  Heart,
+  X,
+  Fuel,
+  Gauge,
+  PackageCheck,
+  Check,
+  HelpCircle,
+  Sparkles,
+  ArrowRight,
+  UserCheck
+} from 'lucide-react';
 
 interface Motorbike {
   id: string;
   name: string;
+  year: string;
   brand: string;
-  type: 'scooter' | 'manual' | 'clutch';
+  type: 'scooter' | 'manual' | 'clutch' | 'electric';
   typeName: string;
   pricePerDay: number;
+  priceFormatted: string;
+  priceMonthFormatted?: string;
+  badge?: string;
+  transmissionText: string;
+  conditionTag: string;
   engine: string;
   fuelConsumption: string;
   image: string;
+  gallery: string[];
   popular?: boolean;
   features: string[];
+  description: string;
+  routes: string;
+  specifications: {
+    tankCapacity: string;
+    weight: string;
+    brake: string;
+    starter: string;
+    year: string;
+  };
 }
 
 const MOTORBIKES: Motorbike[] = [
   {
     id: '1',
-    name: 'Honda Vision 2024 Smartkey',
+    name: 'Honda Vision Smartkey 2024',
+    year: '2024',
     brand: 'Honda',
     type: 'scooter',
     typeName: 'Xe tay ga',
     pricePerDay: 130000,
-    engine: '110cc',
+    priceFormatted: '130K',
+    priceMonthFormatted: '2.600K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Số tự động',
+    conditionTag: 'Xe mới',
+    engine: '110cc eSP thế hệ mới',
     fuelConsumption: '1.87 L/100km',
     image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=800&auto=format&fit=crop&q=80'
+    ],
     popular: true,
-    features: ['Khóa Smartkey', 'Cốp rộng 16L', 'Trọng lượng nhẹ', 'Phù hợp nữ & du lịch']
+    features: ['Khóa Smartkey chống trộm', 'Cốp rộng 16L tiện lợi', 'Trọng lượng nhẹ 96kg dễ dắt', 'Tối ưu du lịch nội thành'],
+    description: 'Honda Vision 2024 là dòng xe tay ga quốc dân được yêu thích nhất tại Đà Nẵng nhờ kiểu dáng thanh thoát, tay lái nhẹ và cực kỳ tiết kiệm xăng. Động cơ eSP 110cc vận hành êm ái, thích hợp cho các cặp đôi dạo phố ngắm cảnh biển.',
+    routes: 'Dạo phố Bạch Đằng, Cầu Rồng, Bãi biển Mỹ Khê, Chùa Linh Ứng và Phố Cổ Hội An.',
+    specifications: {
+      tankCapacity: '4.9 Lít',
+      weight: '96 kg',
+      brake: 'Phanh đĩa trước / tang trống sau (CBS an toàn)',
+      starter: 'Điện tử Smartkey thông minh',
+      year: 'Đời mới 2024'
+    }
   },
   {
     id: '2',
-    name: 'Honda Air Blade 125cc LED',
+    name: 'Honda Air Blade 125cc LED 2023',
+    year: '2023',
     brand: 'Honda',
     type: 'scooter',
     typeName: 'Xe tay ga',
     pricePerDay: 150000,
-    engine: '125cc',
+    priceFormatted: '150K',
+    priceMonthFormatted: '3.000K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Số tự động',
+    conditionTag: 'Xe mới',
+    engine: '125cc eSP+ 4 van mạnh mẽ',
     fuelConsumption: '2.14 L/100km',
     image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=800&auto=format&fit=crop&q=80'
+    ],
     popular: true,
-    features: ['Khóa Smartkey', 'Động cơ eSP+ 4 van', 'Phanh ABS an toàn', 'Cốp 22.7L']
+    features: ['Khóa Smartkey tiện ích', 'Động cơ eSP+ 4 van bốc khỏe', 'Phanh đĩa CBS an toàn', 'Cốp siêu rộng 22.7L'],
+    description: 'Air Blade 125cc sở hữu thiết kế thể thao nam tính, khung xe đầm chắc và động cơ 4 van thế hệ mới tăng tốc mượt mà. Xe cực kỳ đầm khi chạy ở tốc độ cao trên cung đường ven biển Hoàng Sa và Võ Nguyên Giáp.',
+    routes: 'Chinh phục Đèo Hải Vân, Bán đảo Sơn Trà, Đỉnh Bàn Cờ, Bà Nà Hills và Hội An.',
+    specifications: {
+      tankCapacity: '4.4 Lít',
+      weight: '113 kg',
+      brake: 'Phanh đĩa thủy lực an toàn',
+      starter: 'Khóa thông minh Smartkey 2024',
+      year: 'Đời mới 2023'
+    }
   },
   {
     id: '3',
-    name: 'Honda Lead 125 Cốp Khủng',
-    brand: 'Honda',
-    type: 'scooter',
-    typeName: 'Xe tay ga',
-    pricePerDay: 140000,
-    engine: '125cc',
-    fuelConsumption: '2.16 L/100km',
-    image: 'https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=800&auto=format&fit=crop&q=80',
-    features: ['Cốp siêu to 37L', 'Cổng sạc USB', 'Tiết kiệm xăng', 'Sàn để chân rộng']
-  },
-  {
-    id: '4',
-    name: 'Honda SH Mode 125 ABS',
+    name: 'Honda SH Mode 125 ABS 2024',
+    year: '2024',
     brand: 'Honda',
     type: 'scooter',
     typeName: 'Xe tay ga cao cấp',
     pricePerDay: 220000,
-    engine: '125cc',
+    priceFormatted: '220K',
+    priceMonthFormatted: '4.500K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Số tự động',
+    conditionTag: 'Xe mới',
+    engine: '125cc eSP+ 4 van êm ái',
     fuelConsumption: '2.12 L/100km',
     image: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
+    ],
     popular: true,
-    features: ['Phanh ABS an toàn', 'Sang trọng đẳng cấp', 'Động cơ eSP+', 'Êm ái lướt phố']
+    features: ['Phanh ABS chống bó cứng an toàn', 'Phong cách Châu Âu lịch lãm', 'Động cơ eSP+ êm ái tuyệt đối', 'Đèn LED định vị sắc sảo'],
+    description: 'Dòng xe tay ga cao cấp chuẩn thanh lịch, giúp bạn có những bức ảnh check-in tuyệt đẹp tại các cây cầu nổi tiếng của Đà Nẵng hay các resort ven biển Sơn Trà. Hệ thống phanh ABS chống trượt bánh khi gặp mưa ướt.',
+    routes: 'Tuyến đường ven biển Võ Nguyên Giáp, Cầu Tình Yêu, Bán đảo Sơn Trà và Resort cao cấp.',
+    specifications: {
+      tankCapacity: '5.5 Lít',
+      weight: '116 kg',
+      brake: 'Phanh chống bó cứng ABS cao cấp',
+      starter: 'Smartkey FOB sang trọng',
+      year: 'Đời mới 2024'
+    }
   },
   {
-    id: '5',
-    name: 'Honda Wave Alpha 110cc',
+    id: '4',
+    name: 'Honda Wave Alpha 110cc 2024',
+    year: '2024',
     brand: 'Honda',
     type: 'manual',
     typeName: 'Xe số',
     pricePerDay: 90000,
-    engine: '110cc',
+    priceFormatted: '90K',
+    priceMonthFormatted: '1.800K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Xe số 4 cấp',
+    conditionTag: 'Xe mới',
+    engine: '110cc bền bỉ siêu tiết kiệm',
     fuelConsumption: '1.72 L/100km',
     image: 'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1615172282427-9a57ef2d142e?w=800&auto=format&fit=crop&q=80'
+    ],
     popular: true,
-    features: ['Tiết kiệm xăng vượt trội', 'Bền bỉ leo dốc Đèo Hải Vân', 'Dễ lái', 'Chi phí tiết kiệm nhất']
+    features: ['Tiết kiệm xăng kỷ lục 1.7L/100km', 'Khỏe khoắn leo dốc Đèo Hải Vân', 'Dễ điều khiển nhẹ nhàng', 'Chi phí thuê tiết kiệm nhất'],
+    description: 'Vua xe số bền bỉ và kinh tế. Wave Alpha nổi tiếng với khả năng tiết kiệm xăng kỷ lục chỉ ~1.7L/100km. Xe máy khỏe, về số 1 hoặc 2 leo dốc dẻo dai, là lựa chọn số 1 cho các bạn trẻ phượt Đèo Hải Vân.',
+    routes: 'Đèo Hải Vân, Cung đường đèo Sơn Trà, Suối Mơ, Ngũ Hành Sơn, Hội An.',
+    specifications: {
+      tankCapacity: '3.7 Lít',
+      weight: '97 kg',
+      brake: 'Phanh cơ tang trống bền bỉ',
+      starter: 'Nút đề điện và cần đạp chân',
+      year: 'Đời mới 2024'
+    }
   },
   {
-    id: '6',
-    name: 'Yamaha Sirius 110 FI',
-    brand: 'Yamaha',
-    type: 'manual',
-    typeName: 'Xe số',
-    pricePerDay: 100000,
-    engine: '115cc',
-    fuelConsumption: '1.65 L/100km',
-    image: 'https://images.unsplash.com/photo-1615172282427-9a57ef2d142e?w=800&auto=format&fit=crop&q=80',
-    features: ['Phun xăng điện tử FI', 'Máy bốc tăng tốc nhanh', 'Leo đèo khỏe', 'Vành đúc thể thao']
-  },
-  {
-    id: '7',
-    name: 'Honda Winner X 150 ABS',
+    id: '5',
+    name: 'Honda Winner X 150 ABS 2024',
+    year: '2024',
     brand: 'Honda',
     type: 'clutch',
     typeName: 'Xe côn tay',
     pricePerDay: 180000,
-    engine: '150cc',
+    priceFormatted: '180K',
+    priceMonthFormatted: '3.600K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Côn tay 6 số',
+    conditionTag: 'Xe mới',
+    engine: '150cc DOHC 6 số uy lực',
     fuelConsumption: '1.99 L/100km',
     image: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1558980664-769d59546b3d?w=800&auto=format&fit=crop&q=80'
+    ],
     popular: true,
-    features: ['Côn tay thể thao', 'Phanh ABS chống bó cứng', 'Động cơ DOHC 6 số', 'Chuyên phượt Sơn Trà - Hải Vân']
+    features: ['Côn tay thể thao 6 số', 'Phanh ABS chống bó cứng trước', 'Động cơ DOHC bứt tốc mạnh mẽ', 'Chuyên phượt Sơn Trà và Hải Vân'],
+    description: 'Siêu phẩm côn tay đường trường cho phượt thủ. Khối động cơ DOHC 150cc 6 cấp số cho lực kéo mạnh mẽ và phanh ABS đem lại sự an tâm tuyệt đối khi đổ đèo Hải Vân hay đi đường trường dài.',
+    routes: 'Đèo Hải Vân, Mũi Nghê, Cây Đa ngàn năm Sơn Trà, Cù Lao Chàm.',
+    specifications: {
+      tankCapacity: '4.5 Lít',
+      weight: '122 kg',
+      brake: 'Phanh đĩa ABS chống bó cứng bánh trước',
+      starter: 'Điện tử Smartkey tiện lợi',
+      year: 'Đời mới 2024'
+    }
+  },
+  {
+    id: '6',
+    name: 'Yamaha Sirius 110 FI 2024',
+    year: '2024',
+    brand: 'Yamaha',
+    type: 'manual',
+    typeName: 'Xe số',
+    pricePerDay: 100000,
+    priceFormatted: '100K',
+    priceMonthFormatted: '2.000K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Xe số 4 cấp',
+    conditionTag: 'Xe mới',
+    engine: '115cc Phun xăng điện tử FI',
+    fuelConsumption: '1.65 L/100km',
+    image: 'https://images.unsplash.com/photo-1615172282427-9a57ef2d142e?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1615172282427-9a57ef2d142e?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1609630875171-b1321377ee65?w=800&auto=format&fit=crop&q=80'
+    ],
+    features: ['Phun xăng điện tử FI tiết kiệm', 'Máy bốc đề-pa vượt dốc nhanh', 'Vành đúc thể thao đầm chắc', 'Phanh đĩa trước an toàn'],
+    description: 'Sirius FI với động cơ 115cc của Yamaha mang lại cảm giác ga nhạy, máy bốc và phản hồi tức thì. Vành đúc chắc chắn giúp bạn tự tin ôm cua trên những cung đường dốc quanh co ở Đà Nẵng.',
+    routes: 'Vịnh Lăng Cô, Đèo Hải Vân, Đỉnh Bàn Cờ, Bán đảo Sơn Trà, Hội An.',
+    specifications: {
+      tankCapacity: '3.8 Lít',
+      weight: '99 kg',
+      brake: 'Phanh đĩa trước thể thao',
+      starter: 'Đề điện tử nhạy nổ',
+      year: 'Đời mới 2024'
+    }
+  },
+  {
+    id: '7',
+    name: 'Honda Lead 125 Cốp Khủng 2024',
+    year: '2024',
+    brand: 'Honda',
+    type: 'scooter',
+    typeName: 'Xe tay ga',
+    pricePerDay: 140000,
+    priceFormatted: '140K',
+    priceMonthFormatted: '2.800K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Số tự động',
+    conditionTag: 'Xe mới',
+    engine: '125cc eSP+ làm mát dung dịch',
+    fuelConsumption: '2.16 L/100km',
+    image: 'https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=800&auto=format&fit=crop&q=80',
+    gallery: [
+      'https://images.unsplash.com/photo-1591637333184-19aa84b3e01f?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80'
+    ],
+    features: ['Cốp siêu to 37L chứa 2 mũ và balo', 'Cổng sạc điện thoại USB tiện dụng', 'Tiết kiệm xăng tối ưu', 'Sàn để chân phẳng rộng rãi'],
+    description: 'Chiếc xe lý tưởng cho các chuyến du lịch gia đình hoặc nhóm bạn. Dung tích cốp kỷ lục 37L có thể chứa vừa cả balo du lịch, túi xách, quà đặc sản mua tại chợ Cồn và 2 mũ bảo hiểm lớn.',
+    routes: 'Tour ẩm thực nội thành Hải Châu, Chợ Cồn, Chợ Hàn, Bãi biển Mỹ Khê và Hội An.',
+    specifications: {
+      tankCapacity: '6.0 Lít (bình xăng lớn)',
+      weight: '113 kg',
+      brake: 'Phanh đĩa kết hợp CBS',
+      starter: 'Smartkey có báo động',
+      year: 'Đời mới 2024'
+    }
   },
   {
     id: '8',
-    name: 'Yamaha Exciter 155 VVA',
+    name: 'Yamaha Exciter 155 VVA 2024',
+    year: '2024',
     brand: 'Yamaha',
     type: 'clutch',
     typeName: 'Xe côn tay',
     pricePerDay: 190000,
-    engine: '155cc',
+    priceFormatted: '190K',
+    priceMonthFormatted: '3.800K',
+    badge: 'Miễn thế chấp',
+    transmissionText: 'Côn tay 6 số',
+    conditionTag: 'Xe mới',
+    engine: '155cc Van biến thiên VVA',
     fuelConsumption: '2.09 L/100km',
     image: 'https://images.unsplash.com/photo-1558980664-769d59546b3d?w=800&auto=format&fit=crop&q=80',
-    features: ['Van biến thiên VVA', 'Bộ ly hợp chống trượt Assist & Slipper', 'Khóa Smartkey', 'Công suất mạnh mẽ']
+    gallery: [
+      'https://images.unsplash.com/photo-1558980664-769d59546b3d?w=800&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1558981806-ec527fa84c39?w=800&auto=format&fit=crop&q=80'
+    ],
+    features: ['Van biến thiên VVA mở tua bốc', 'Ly hợp chống trượt Slipper Clutch', 'Khóa Smartkey hiện đại', 'Cổng sạc 12V điện thoại'],
+    description: 'Exciter 155 VVA sở hữu công nghệ van biến thiên tăng cường công suất ở dải tua cao và bộ ly hợp chống trượt bánh sau khi dồn số gấp, đem lại trải nghiệm lái thể thao phấn khích nhất.',
+    routes: 'Cung đường phượt biển Đà Nẵng đến Lăng Cô, Đèo Hải Vân, Rừng Dừa Bảy Mẫu.',
+    specifications: {
+      tankCapacity: '5.4 Lít',
+      weight: '121 kg',
+      brake: 'Phanh đĩa 2 piston thể thao',
+      starter: 'Khóa thông minh Smartkey',
+      year: 'Đời mới 2024'
+    }
   }
 ];
 
+const VEHICLE_FILE_BASE_URL = 'http://localhost:5000';
+
+function toCatalogBike(vehicle: any): Motorbike {
+  const fallback = MOTORBIKES.find(bike => bike.type === vehicle.type) || MOTORBIKES[0];
+  const imagePath = vehicle.mainImage || vehicle.images?.[0]?.url;
+  const image = imagePath
+    ? (String(imagePath).startsWith('http') ? imagePath : `${VEHICLE_FILE_BASE_URL}${imagePath}`)
+    : fallback.image;
+  const pricePerDay = Number(vehicle.pricePerDay || 0);
+  const type = vehicle.type === 'semi-automatic' ? 'manual' : vehicle.type === 'sport' ? 'clutch' : vehicle.type;
+  const typeName = type === 'scooter' ? 'Xe tay ga' : type === 'manual' ? 'Xe số' : type === 'electric' ? 'Xe điện' : 'Xe côn tay';
+  return {
+    ...fallback,
+    id: String(vehicle._id),
+    name: vehicle.name,
+    year: String(vehicle.year || '2024'),
+    brand: vehicle.brand,
+    type: type as Motorbike['type'],
+    typeName,
+    pricePerDay,
+    priceFormatted: `${Math.round(pricePerDay / 1000)}K`,
+    priceMonthFormatted: pricePerDay ? `${Math.round(pricePerDay * 20 / 1000)}K` : undefined,
+    image,
+    gallery: (vehicle.images || []).map((item: any) => String(item.url).startsWith('http') ? item.url : `${VEHICLE_FILE_BASE_URL}${item.url}`),
+    engine: vehicle.engineCC ? `${vehicle.engineCC}cc` : 'Động cơ xe máy',
+    conditionTag: vehicle.condition === 'excellent' ? 'Xe mới' : 'Xe bảo dưỡng định kỳ',
+    description: vehicle.description || fallback.description,
+    features: vehicle.features?.length ? vehicle.features : fallback.features,
+    specifications: { ...fallback.specifications, year: `Đời ${vehicle.year || '2024'}` },
+  };
+}
+
 export default function HomePage() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [selectedType, setSelectedType] = useState<string>('all');
   const [pickupDate, setPickupDate] = useState<string>('');
   const [returnDate, setReturnDate] = useState<string>('');
   const [pickupLocation, setPickupLocation] = useState<string>('Sân bay Đà Nẵng');
-  const [bookingBike, setBookingBike] = useState<Motorbike | null>(null);
-  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [bookingBike, setBookingBike] = useState<any>(null);
+  const [selectedBikeDetail, setSelectedBikeDetail] = useState<Motorbike | null>(null);
+  const [activeImageIndex, setActiveImageIndex] = useState<number>(0);
+  const [showContractPreview, setShowContractPreview] = useState(false);
 
-  // Form states for quick booking
-  const [customerName, setCustomerName] = useState('');
-  const [customerPhone, setCustomerPhone] = useState('');
-  const [customerNote, setCustomerNote] = useState('');
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchPrice, setSearchPrice] = useState('all');
+  const [searchBrand, setSearchBrand] = useState('all');
+  const [sortOption, setSortOption] = useState('rating');
+  const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
+  const [availabilityById, setAvailabilityById] = useState<Record<string, string>>({});
+  const [availabilityByName, setAvailabilityByName] = useState<Record<string, string>>({});
+  const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+  const [catalogBikes, setCatalogBikes] = useState<Motorbike[]>([]);
+
+  // ONE LIVE THING: Route & Rate Planner
+  const [plannedRoute, setPlannedRoute] = useState<'city' | 'haivan' | 'sontra' | 'hoian'>('city');
+  const [plannedDays, setPlannedDays] = useState<number>(2);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('8bike_favorites');
+      if (saved) {
+        setFavoriteIds(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const refreshAvailability = () => api.get('/vehicles/public').then(response => {
+      if (!active) return;
+      const next: Record<string, string> = {};
+      const nextById: Record<string, string> = {};
+      (response.data?.data || []).forEach((vehicle: any) => {
+        if (vehicle._id) nextById[String(vehicle._id)] = vehicle.availability || vehicle.status;
+        const name = String(vehicle.name).trim().toLowerCase();
+        next[name] = vehicle.availability;
+        next[name.replace(/\s*-\s*\d{4}$/, '')] = vehicle.availability;
+        next[name.replace(/\b\d{4}\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim()] = vehicle.availability;
+      });
+      setCatalogBikes((response.data?.data || []).map(toCatalogBike));
+      setAvailabilityById(nextById);
+      setAvailabilityByName(next);
+      setAvailabilityLoaded(true);
+    }).catch(() => {
+      if (active) setAvailabilityLoaded(false);
+    });
+    refreshAvailability();
+    const timer = window.setInterval(refreshAvailability, 20000);
+    return () => { active = false; window.clearInterval(timer); };
+  }, []);
+
+  const toggleFavorite = (bikeId: string) => {
+    setFavoriteIds(prev => {
+      const exists = prev.includes(bikeId);
+      const updated = exists ? prev.filter(id => id !== bikeId) : [...prev, bikeId];
+      try {
+        localStorage.setItem('8bike_favorites', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      if (exists) {
+        toast.success('Đã bỏ xe khỏi danh sách yêu thích');
+      } else {
+        toast.success('Đã thêm xe vào danh sách yêu thích');
+      }
+      return updated;
+    });
+  };
+
+  const isFavorite = (id: string) => favoriteIds.includes(id);
 
   const filteredBikes = useMemo(() => {
-    if (selectedType === 'all') return MOTORBIKES;
-    return MOTORBIKES.filter(b => b.type === selectedType);
-  }, [selectedType]);
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+    const bikes = catalogBikes.length > 0 ? catalogBikes : MOTORBIKES;
+    const result = bikes.filter(b => {
+      const catalogName = b.name.trim().toLowerCase();
+      const availability = availabilityById[b.id] || availabilityByName[catalogName] || availabilityByName[catalogName.replace(/\s*-\s*\d{4}$/, '')] || availabilityByName[catalogName.replace(/\b\d{4}\b/g, '').replace(/[^a-z0-9]+/g, ' ').trim()];
+      if (availabilityLoaded && availability && availability !== 'available') return false;
+      if (selectedType === 'favorites' && !favoriteIds.includes(b.id)) return false;
+      if (selectedType !== 'all' && selectedType !== 'favorites' && b.type !== selectedType) return false;
+      if (searchBrand !== 'all' && b.brand !== searchBrand) return false;
+      if (normalizedQuery && !`${b.name} ${b.brand} ${b.engine} ${b.typeName}`.toLowerCase().includes(normalizedQuery)) return false;
+      if (searchPrice === 'under100' && b.pricePerDay >= 100000) return false;
+      if (searchPrice === '100to150' && (b.pricePerDay < 100000 || b.pricePerDay > 150000)) return false;
+      if (searchPrice === 'over150' && b.pricePerDay <= 150000) return false;
+      return true;
+    });
+    return [...result].sort((a, b) => sortOption === 'priceAsc' ? a.pricePerDay - b.pricePerDay : sortOption === 'priceDesc' ? b.pricePerDay - a.pricePerDay : a.name.localeCompare(b.name));
+  }, [catalogBikes, selectedType, favoriteIds, searchQuery, searchBrand, searchPrice, sortOption, availabilityById, availabilityByName, availabilityLoaded]);
 
-  const handleQuickBook = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!customerName || !customerPhone) {
-      toast.error('Vui lòng điền họ tên và số điện thoại!');
-      return;
-    }
-    setBookingSuccess(true);
-    toast.success('Gửi yêu cầu đặt xe thành công! Nhân viên sẽ gọi xác nhận trong 5 phút.');
+  const resetFilters = () => {
+    setSearchQuery('');
+    setSearchPrice('all');
+    setSearchBrand('all');
+    setSelectedType('all');
+    setSortOption('rating');
   };
 
   const calculateDays = () => {
@@ -159,841 +477,1086 @@ export default function HomePage() {
     return diff > 0 ? diff : 1;
   };
 
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-      {/* Top Floating Glow */}
-      <div
-        style={{
-          position: 'absolute',
-          top: '-150px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '800px',
-          height: '400px',
-          background: 'radial-gradient(ellipse at center, rgba(249, 115, 22, 0.15), transparent 70%)',
-          pointerEvents: 'none',
-          zIndex: 0
-        }}
-      />
+  // Live calculator calculation
+  const routeRecommendation = useMemo(() => {
+    switch (plannedRoute) {
+      case 'haivan':
+        return {
+          title: 'Chinh phục Đèo Hải Vân và Vịnh Lăng Cô',
+          bikeName: 'Honda Winner X 150 ABS hoặc Wave Alpha',
+          bikeId: '5',
+          dailyRate: 180000,
+          advice: 'Cung đường đèo có nhiều khúc cua tay áo và độ dốc 10%. Nên ưu tiên xe côn tay hoặc xe số có lực kéo mạnh và phanh an toàn khi đổ dốc.',
+          perks: ['2 mũ bảo hiểm đạt chuẩn', '2 áo mưa tiện lợi', '1 lít xăng', 'Hỗ trợ kỹ thuật toàn tuyến']
+        };
+      case 'sontra':
+        return {
+          title: 'Khám phá Bán đảo Sơn Trà và Đỉnh Bàn Cờ',
+          bikeName: 'Honda Wave Alpha hoặc Yamaha Sirius FI',
+          bikeId: '4',
+          dailyRate: 90000,
+          advice: 'Tuyến đường lên Đỉnh Bàn Cờ có đoạn dốc cao cấm xe tay ga tự động. Xe số giúp bạn ghìm số 1 và 2 an toàn tuyệt đối khi xuống dốc.',
+          perks: ['2 mũ bảo hiểm đạt chuẩn', 'Giá đỡ điện thoại xem bản đồ', '1 lít xăng khởi hành', 'Cứu hộ lưu động']
+        };
+      case 'hoian':
+        return {
+          title: 'Hành trình Phố Cổ Hội An và Rừng Dừa',
+          bikeName: 'Honda Air Blade 125cc hoặc Honda Vision',
+          bikeId: '2',
+          dailyRate: 150000,
+          advice: 'Đường ven biển bằng phẳng dài 30km. Xe tay ga đầm chắc, yên rộng êm ái cho 2 người và cốp lớn chứa đồ du lịch thoải mái.',
+          perks: ['2 mũ bảo hiểm đạt chuẩn', '2 áo mưa', 'Giao xe tận nơi khách sạn', 'Hỗ trợ 24/7']
+        };
+      default:
+        return {
+          title: 'Dạo phố Bạch Đằng, Cầu Rồng và Biển Mỹ Khê',
+          bikeName: 'Honda Vision Smartkey 2024',
+          bikeId: '1',
+          dailyRate: 130000,
+          advice: 'Lựa chọn nhẹ nhàng, tiết kiệm xăng nhất khi di chuyển trong trung tâm thành phố và chụp ảnh check-in các cây cầu.',
+          perks: ['2 mũ bảo hiểm đạt chuẩn', 'Khóa Smartkey chống trộm', 'Giao xe sân bay miễn phí', '1 lít xăng']
+        };
+    }
+  }, [plannedRoute]);
 
-      {/* HEADER NAVBAR */}
-      <header
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          backdropFilter: 'blur(16px)',
-          background: 'rgba(10, 10, 15, 0.85)',
-          borderBottom: '1px solid var(--border-primary)',
-          padding: '16px 32px'
-        }}
-      >
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          {/* Logo */}
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none' }}>
-            <div
-              style={{
-                width: '42px',
-                height: '42px',
-                borderRadius: '12px',
-                background: 'var(--brand-gradient)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '22px',
-                boxShadow: '0 4px 16px rgba(249, 115, 22, 0.4)'
-              }}
-            >
-              🏍️
+  const liveEstimatedTotal = routeRecommendation.dailyRate * plannedDays;
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#ffffff', color: '#0f172a' }}>
+
+      {/* ========================================================
+          1. HEADER NAVBAR (Clean Solid Minimalist Bar)
+          ======================================================== */}
+      <header style={{ background: '#0f172a', color: '#ffffff', position: 'sticky', top: 0, zIndex: 40 }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          
+          {/* Brand mark */}
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}>
+            <div style={{ width: '36px', height: '36px', background: '#f97316', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '4px' }}>
+              <Bike style={{ width: '22px', height: '22px', color: '#ffffff' }} />
             </div>
             <div>
-              <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--text-primary)', letterSpacing: '-0.5px' }}>
-                MotoBike <span className="gradient-text">Hải Châu</span>
-              </div>
-              <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Thuê Xe Máy Uy Tín Đà Nẵng</div>
+              <span style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', letterSpacing: '-0.3px' }}>
+                XTBike <span style={{ color: '#f97316', fontSize: '14px', fontWeight: 600 }}>Đà Nẵng</span>
+              </span>
             </div>
           </Link>
 
-          {/* Navigation links */}
+          {/* Navigation Links */}
           <nav style={{ display: 'flex', alignItems: 'center', gap: '28px' }} className="hidden-mobile">
-            <a href="#danh-sach-xe" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '14px', fontWeight: 500, transition: 'color 0.2s' }}>
-              Dòng Xe & Bảng Giá
+            <a href="#danh-sach-xe" style={{ color: '#f8fafc', textDecoration: 'none', fontSize: '14px', fontWeight: 600 }}>
+              Bảng xe sẵn có
             </a>
-            <a href="#quy-trinh" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
-              Quy Trình Thuê
+            <a href="#tinh-lo-trinh" style={{ color: '#cbd5e1', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+              Bộ tính lộ trình
             </a>
-            <a href="#uu-diem" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
-              Ưu Điểm Vượt Trội
+            <a href="#quy-trinh" style={{ color: '#cbd5e1', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+              Quy trình nhận xe
             </a>
-            <a href="#dia-diem-da-nang" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
-              Điểm Phượt Đà Nẵng
+            <a href="#cam-ket" style={{ color: '#cbd5e1', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+              Cam kết dịch vụ
             </a>
-            <a href="#lien-he" style={{ color: 'var(--text-secondary)', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
-              Liên Hệ
+            <a href="#hoi-dap" style={{ color: '#cbd5e1', textDecoration: 'none', fontSize: '14px', fontWeight: 500 }}>
+              Hỏi đáp
             </a>
           </nav>
 
-          {/* User actions */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {user ? (
-              <Link
-                href={user.role === 'customer' ? '/portal' : '/dashboard'}
-                className="btn btn-primary"
-                style={{ padding: '8px 18px', fontSize: '13px' }}
-              >
-                <span>{user.role === 'customer' ? 'Cổng Khách Hàng' : 'Quản Lý Hệ Thống'}</span>
-                <span>⚡</span>
-              </Link>
+          {/* Action / Auth Button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <a
+              href="tel:0905123456"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                color: '#ffffff',
+                textDecoration: 'none',
+                fontSize: '13.5px',
+                fontWeight: 700,
+                padding: '8px 14px',
+                background: '#1e293b',
+                borderRadius: '6px'
+              }}
+            >
+              <Phone style={{ width: '14px', height: '14px', color: '#f97316' }} />
+              <span>0905 123 456</span>
+            </a>
+
+            {mounted && user ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Link
+                  href={user.role === 'customer' ? '/portal' : '/dashboard'}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    background: '#f97316',
+                    color: '#ffffff',
+                    padding: '8px 16px',
+                    borderRadius: '6px',
+                    textDecoration: 'none',
+                    fontSize: '13px',
+                    fontWeight: 700
+                  }}
+                >
+                  <UserCheck style={{ width: '14px', height: '14px' }} />
+                  <span>{user.fullName?.split(' ').slice(-1)[0] || 'Tài khoản'}</span>
+                </Link>
+                <button
+                  onClick={logout}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94a3b8',
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    fontSize: '12.5px'
+                  }}
+                >
+                  Thoát
+                </button>
+              </div>
             ) : (
-              <>
-                <Link href="/login" className="btn btn-secondary" style={{ padding: '8px 16px', fontSize: '13px' }}>
-                  Đăng Nhập
-                </Link>
-                <Link href="/register" className="btn btn-primary" style={{ padding: '8px 18px', fontSize: '13px' }}>
-                  Đăng Ký
-                </Link>
-              </>
+              <Link
+                href="/login"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  background: '#f97316',
+                  color: '#ffffff',
+                  padding: '8px 16px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  fontSize: '13.5px',
+                  fontWeight: 700
+                }}
+              >
+                <span>Đăng nhập</span>
+              </Link>
             )}
           </div>
         </div>
       </header>
 
-      {/* HERO SECTION */}
-      <section style={{ position: 'relative', zIndex: 1, padding: '60px 24px 80px', maxWidth: '1280px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', maxWidth: '900px', margin: '0 auto 48px' }}>
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '6px 16px',
-              borderRadius: '999px',
-              background: 'rgba(249, 115, 22, 0.1)',
-              border: '1px solid rgba(249, 115, 22, 0.3)',
-              color: 'var(--brand-primary)',
-              fontSize: '13px',
-              fontWeight: 600,
-              marginBottom: '20px'
-            }}
-          >
-            <span>✨</span> Dịch Vụ Cho Thuê Xe Máy Chuyên Nghiệp #1 Quận Hải Châu • Đà Nẵng
-          </div>
+      {/* ========================================================
+          2. HERO SECTION — Anchored Text with Specimen Half
+          ======================================================== */}
+      <section style={{ background: '#ffffff', padding: '60px 24px 70px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '48px', alignItems: 'center' }}>
+          
+          {/* Left Column: Anchored Headline & Value Proposition */}
+          <div>
+            <h1 style={{ fontSize: 'clamp(2.1rem, 3.2vw, 3.4rem)', fontWeight: 800, color: '#0f172a', lineHeight: 1.15, letterSpacing: '-0.03em', margin: '0 0 20px 0' }}>
+              Thuê xe máy du lịch tự túc tại Đà Nẵng
+            </h1>
 
-          <h1 style={{ fontSize: '46px', fontWeight: 900, lineHeight: 1.2, letterSpacing: '-1px', marginBottom: '20px' }}>
-            Khám Phá Thành Phố Biển Đà Nẵng <br />
-            <span className="gradient-text">Với Dàn Xe Đời Mới Siêu Êm</span>
-          </h1>
+            <p style={{ fontSize: '18px', color: '#475569', lineHeight: 1.6, margin: '0 0 32px 0', maxWidth: '560px' }}>
+              Giao xe miễn phí tận nơi tại sân bay, ga tàu và khách sạn. 100% xe đời mới 2023 - 2024, tặng kèm 2 mũ bảo hiểm đạt chuẩn, 2 áo mưa và 1 lít xăng.
+            </p>
 
-          <p style={{ fontSize: '17px', color: 'var(--text-secondary)', lineHeight: 1.6, maxWidth: '720px', margin: '0 auto' }}>
-            Giao xe tận nơi miễn phí chỉ trong <strong style={{ color: 'var(--text-primary)' }}>15 phút</strong> tại Quận Hải Châu,
-            Sân bay Quốc tế Đà Nẵng, Cầu Rồng và Khách sạn. Thủ tục nhanh gọn, hợp đồng ký điện tử trực tiếp không cần photo giấy tờ.
-          </p>
-        </div>
-
-        {/* QUICK SEARCH / BOOKING WIDGET */}
-        <div
-          className="glass-card"
-          style={{
-            padding: '28px',
-            maxWidth: '1060px',
-            margin: '0 auto 60px',
-            border: '1px solid rgba(249, 115, 22, 0.25)',
-            boxShadow: '0 20px 50px rgba(0, 0, 0, 0.5), 0 0 30px rgba(249, 115, 22, 0.1)'
-          }}
-        >
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', alignItems: 'end' }}>
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                📍 Điểm nhận xe tại Đà Nẵng
-              </label>
-              <select
-                className="form-input"
-                value={pickupLocation}
-                onChange={e => setPickupLocation(e.target.value)}
-              >
-                <option value="Sân bay Đà Nẵng">Sân bay Quốc tế Đà Nẵng</option>
-                <option value="Cửa hàng Hải Châu">Cửa hàng trung tâm Hải Châu</option>
-                <option value="Cầu Rồng / Bạch Đằng">Khu vực Cầu Rồng / Bạch Đằng</option>
-                <option value="Ga tàu Đà Nẵng">Ga xe lửa Đà Nẵng (Hải Châu)</option>
-                <option value="Khách sạn tại Hải Châu">Giao tận khách sạn Quận Hải Châu</option>
-                <option value="Bãi biển Mỹ Khê">Giao tận nơi Bãi biển Mỹ Khê</option>
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                📅 Ngày & Giờ nhận xe
-              </label>
-              <input
-                type="date"
-                className="form-input"
-                value={pickupDate}
-                onChange={e => setPickupDate(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                📅 Ngày & Giờ trả xe
-              </label>
-              <input
-                type="date"
-                className="form-input"
-                value={returnDate}
-                onChange={e => setReturnDate(e.target.value)}
-              />
-            </div>
-
-            <div className="form-group">
-              <label className="form-label" style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
-                🛵 Loại xe mong muốn
-              </label>
-              <select
-                className="form-input"
-                value={selectedType}
-                onChange={e => setSelectedType(e.target.value)}
-              >
-                <option value="all">Tất cả các dòng xe</option>
-                <option value="scooter">Xe tay ga (Vision, AirBlade, Lead)</option>
-                <option value="manual">Xe số (Wave Alpha, Sirius)</option>
-                <option value="clutch">Xe côn tay (Winner X, Exciter 155)</option>
-              </select>
-            </div>
-
-            <div>
+            {/* Action Group */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flexWrap: 'wrap', marginBottom: '36px' }}>
               <a
                 href="#danh-sach-xe"
-                className="btn btn-primary w-full"
-                style={{ height: '42px', fontSize: '14px', fontWeight: 600 }}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#f97316',
+                  color: '#ffffff',
+                  padding: '14px 28px',
+                  borderRadius: '6px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  textDecoration: 'none'
+                }}
               >
-                <span>Tìm Xe Ngay</span>
-                <span>🔍</span>
+                <span>Xem bảng 8 dòng xe</span>
+                <ChevronRight style={{ width: '18px', height: '18px' }} />
+              </a>
+
+              <a
+                href="#tinh-lo-trinh"
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  background: '#f1f5f9',
+                  color: '#0f172a',
+                  padding: '14px 24px',
+                  borderRadius: '6px',
+                  fontSize: '15px',
+                  fontWeight: 700,
+                  textDecoration: 'none'
+                }}
+              >
+                <Compass style={{ width: '16px', height: '16px', color: '#f97316' }} />
+                <span>Tính chi phí lộ trình</span>
               </a>
             </div>
-          </div>
 
-          <div
-            style={{
-              marginTop: '20px',
-              paddingTop: '16px',
-              borderTop: '1px solid var(--border-primary)',
-              display: 'flex',
-              flexWrap: 'wrap',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              gap: '16px',
-              fontSize: '12px',
-              color: 'var(--text-secondary)'
-            }}
-          >
-            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              <span>✅ 2 Nón bảo hiểm đạt chuẩn CR</span>
-              <span>✅ 2 Áo mưa tiện lợi cao cấp</span>
-              <span>✅ Giá đỡ điện thoại chắc chắn</span>
-              <span>✅ Hỗ trợ cứu hộ 24/7 toàn TP Đà Nẵng</span>
-            </div>
-            <div style={{ color: 'var(--brand-primary)', fontWeight: 600 }}>
-              Hotline 24/7: 0905.888.999 (Zalo)
+            {/* Three-point Trust Statement on Solid Surface */}
+            <div style={{ background: '#f8fafc', padding: '18px 24px', borderRadius: '8px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>0₫ thế chấp</div>
+                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Không giữ CCCD gốc</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>15 phút giao xe</div>
+                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Sân bay và khách sạn</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a' }}>Cứu hộ 24/7</div>
+                <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>Tuyến Hải Vân - Hội An</div>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* TRUST BADGES / STATS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--brand-primary)', marginBottom: '4px' }}>500+</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Xe Máy Đời Mới 2023-2024</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Bảo dưỡng thay nhớt sau mỗi lượt thuê</div>
-          </div>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent-green)', marginBottom: '4px' }}>15 Phút</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Giao Xe Nhanh Tại Hải Châu</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Sân bay, bến xe, khách sạn trung tâm</div>
-          </div>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent-blue)', marginBottom: '4px' }}>0 Đồng</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>Miễn Cọc Cho Du Khách</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Chỉ cần vé máy bay khứ hồi & CCCD/Hộ chiếu</div>
-          </div>
-          <div className="glass-card" style={{ padding: '20px', textAlign: 'center' }}>
-            <div style={{ fontSize: '32px', fontWeight: 800, color: 'var(--accent-yellow)', marginBottom: '4px' }}>4.9/5 ⭐</div>
-            <div style={{ fontSize: '14px', fontWeight: 600 }}>2.800+ Đánh Giá Tốt</div>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Từ khách du lịch trong nước & quốc tế</div>
+          {/* Right Column: Specimen Showcase Card */}
+          <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+              <span style={{ fontSize: '13px', fontWeight: 700, color: '#f97316' }}>Mẫu xe tiêu biểu tuần này</span>
+              <span style={{ fontSize: '13px', color: '#64748b' }}>Đời mới 2024</span>
+            </div>
+
+            {/* Motorcycle Specimen Image */}
+            <div style={{ height: '240px', overflow: 'hidden', borderRadius: '8px', background: '#e2e8f0', marginBottom: '20px' }}>
+              <img
+                src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=800&auto=format&fit=crop&q=80"
+                alt="Honda Vision Smartkey 2024"
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: '8px' }}>
+              <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                Honda Vision Smartkey
+              </h2>
+              <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>
+                130.000₫ <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 500 }}>/ ngày</span>
+              </div>
+            </div>
+
+            <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, margin: '0 0 18px 0' }}>
+              Động cơ 110cc eSP êm ái, khóa thông minh chống trộm, mức tiêu thụ 1.87 L/100km.
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setSelectedBikeDetail(MOTORBIKES[0])}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#0f172a',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '6px',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Xem thông số kỹ thuật xe này
+            </button>
           </div>
         </div>
       </section>
 
-      {/* FLEET SHOWCASE SECTION */}
-      <section id="danh-sach-xe" style={{ padding: '80px 24px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-primary)', borderBottom: '1px solid var(--border-primary)' }}>
+      {/* ========================================================
+          3. ONE LIVE THING: Live Route & Rate Planner
+          ======================================================== */}
+      <section id="tinh-lo-trinh" style={{ background: '#f8fafc', padding: '70px 24px' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '40px' }}>
-            <div className="badge badge-confirmed" style={{ marginBottom: '12px' }}>DÀN XE CHẤT LƯỢNG CAO</div>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px' }}>
-              Bảng Giá Thuê Xe Máy Hải Châu - Đà Nẵng
+          
+          <div style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
+              Bộ tính chi phí lộ trình và gợi ý xe tối ưu
             </h2>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', fontSize: '15px' }}>
-              Giá công khai minh bạch, không phí ẩn. Xe được kiểm định an toàn 12 hạng mục kỹ thuật trước khi bàn giao cho quý khách.
+            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+              Chọn cung đường dự kiến và số ngày du lịch để nhận tính toán chi phí chính xác kèm lời khuyên kỹ thuật.
             </p>
+          </div>
 
-            {/* Filter buttons */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '24px', flexWrap: 'wrap', justifyContent: 'center' }}>
-              <button
-                className={`btn btn-sm ${selectedType === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setSelectedType('all')}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '32px', alignItems: 'start' }}>
+            
+            {/* Left Box: Route & Days Selection Controls */}
+            <div style={{ background: '#ffffff', padding: '32px', borderRadius: '10px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+                Bước 1: Chọn cung đường bạn muốn trải nghiệm
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '28px' }}>
+                {[
+                  { id: 'city', title: 'Nội thành và Bãi biển Mỹ Khê', tag: 'Đường bằng phẳng' },
+                  { id: 'haivan', title: 'Chinh phục Đèo Hải Vân', tag: 'Độ dốc 10%, cua gấp' },
+                  { id: 'sontra', title: 'Bán đảo Sơn Trà và Đỉnh Bàn Cờ', tag: 'Cần xe số leo dốc' },
+                  { id: 'hoian', title: 'Phố cổ Hội An và Rừng Dừa', tag: 'Đường dài 30km' }
+                ].map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setPlannedRoute(r.id as any)}
+                    style={{
+                      textAlign: 'left',
+                      padding: '16px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      background: plannedRoute === r.id ? '#0f172a' : '#f8fafc',
+                      color: plannedRoute === r.id ? '#ffffff' : '#0f172a',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>{r.title}</div>
+                    <div style={{ fontSize: '12px', color: plannedRoute === r.id ? '#cbd5e1' : '#64748b' }}>{r.tag}</div>
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ fontSize: '14px', fontWeight: 700, color: '#0f172a', marginBottom: '14px' }}>
+                Bước 2: Chọn số ngày dự kiến thuê xe
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[1, 2, 3, 5, 7, 14, 30].map(d => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setPlannedDays(d)}
+                    style={{
+                      padding: '10px 20px',
+                      borderRadius: '6px',
+                      border: 'none',
+                      background: plannedDays === d ? '#f97316' : '#f1f5f9',
+                      color: plannedDays === d ? '#ffffff' : '#0f172a',
+                      fontSize: '13.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {d === 30 ? '1 Tháng' : `${d} Ngày`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Right Box: Live Result & Recommended Vehicle */}
+            <div style={{ background: '#0f172a', color: '#ffffff', padding: '32px', borderRadius: '10px' }}>
+              <div style={{ fontSize: '13px', color: '#f97316', fontWeight: 700, marginBottom: '8px' }}>
+                Đề xuất cho hành trình của bạn
+              </div>
+
+              <h3 style={{ fontSize: '20px', fontWeight: 800, color: '#ffffff', margin: '0 0 12px 0' }}>
+                {routeRecommendation.bikeName}
+              </h3>
+
+              <p style={{ fontSize: '13.5px', color: '#cbd5e1', lineHeight: 1.6, margin: '0 0 20px 0' }}>
+                {routeRecommendation.advice}
+              </p>
+
+              {/* Price Calculation Box */}
+              <div style={{ background: '#1e293b', padding: '16px 20px', borderRadius: '8px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '13px', color: '#94a3b8' }}>
+                  <span>Đơn giá ngày:</span>
+                  <span style={{ color: '#ffffff', fontWeight: 600 }}>{routeRecommendation.dailyRate.toLocaleString('vi-VN')}₫</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px', fontSize: '13px', color: '#94a3b8' }}>
+                  <span>Thời gian thuê:</span>
+                  <span style={{ color: '#ffffff', fontWeight: 600 }}>{plannedDays} ngày</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', paddingTop: '10px', borderTop: '1px solid #334155' }}>
+                  <span style={{ fontSize: '14px', fontWeight: 700 }}>Tổng tiền dự kiến:</span>
+                  <span style={{ fontSize: '24px', fontWeight: 800, color: '#f97316' }}>
+                    {liveEstimatedTotal.toLocaleString('vi-VN')}₫
+                  </span>
+                </div>
+              </div>
+
+              {/* Included Perks List */}
+              <div style={{ marginBottom: '24px' }}>
+                <div style={{ fontSize: '12.5px', color: '#94a3b8', marginBottom: '8px', fontWeight: 600 }}>
+                  Trọn bộ trang bị miễn phí đi kèm:
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '6px' }}>
+                  {routeRecommendation.perks.map((p, pIdx) => (
+                    <div key={pIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#f8fafc' }}>
+                      <Check style={{ width: '14px', height: '14px', color: '#f97316', flexShrink: 0 }} />
+                      <span>{p}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <a
+                href="#danh-sach-xe"
+                onClick={() => {
+                  const targetBike = MOTORBIKES.find(b => b.id === routeRecommendation.bikeId);
+                  if (targetBike) {
+                    setSelectedType(targetBike.type);
+                  }
+                }}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  width: '100%',
+                  padding: '14px',
+                  background: '#f97316',
+                  color: '#ffffff',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: 700
+                }}
               >
-                Tất Cả ({MOTORBIKES.length})
-              </button>
-              <button
-                className={`btn btn-sm ${selectedType === 'scooter' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setSelectedType('scooter')}
-              >
-                Xe Tay Ga (4)
-              </button>
-              <button
-                className={`btn btn-sm ${selectedType === 'manual' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setSelectedType('manual')}
-              >
-                Xe Số Tiết Kiệm (2)
-              </button>
-              <button
-                className={`btn btn-sm ${selectedType === 'clutch' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setSelectedType('clutch')}
-              >
-                Xe Côn Tay Phượt (2)
-              </button>
+                <span>Xem xe này trong bảng giá</span>
+                <ChevronRight style={{ width: '16px', height: '16px' }} />
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          4. SPECIMEN CATALOGUE (The Vehicle Collection)
+          ======================================================== */}
+      <section id="danh-sach-xe" style={{ padding: '80px 24px', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '36px', flexWrap: 'wrap', gap: '20px' }}>
+            <div>
+              <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
+                Bảng danh mục xe máy tự lái
+              </h2>
+              <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+                Toàn bộ xe được kiểm tra phanh thắng, lốp và động cơ trước khi bàn giao cho quý khách.
+              </p>
+            </div>
+
+            {/* Quick search input */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ position: 'relative', width: '280px' }}>
+                <Search style={{ width: '16px', height: '16px', color: '#94a3b8', position: 'absolute', left: '12px', top: '12px' }} />
+                <input
+                  type="text"
+                  placeholder="Tìm theo tên xe: Vision, Lead..."
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '10px 14px 10px 36px',
+                    fontSize: '13.5px',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    outline: 'none',
+                    background: '#f8fafc'
+                  }}
+                />
+              </div>
+
+              {(searchQuery || selectedType !== 'all' || searchPrice !== 'all') && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: '13px',
+                    background: '#f1f5f9',
+                    border: 'none',
+                    borderRadius: '6px',
+                    color: '#475569',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Xóa lọc
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Motorbike Cards Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' }}>
+          {/* Category Tabs */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '36px', flexWrap: 'wrap' }}>
+            {[
+              { id: 'all', label: 'Tất cả các dòng xe' },
+              { id: 'scooter', label: 'Xe tay ga' },
+              { id: 'manual', label: 'Xe số' },
+              { id: 'clutch', label: 'Xe côn tay' },
+              ...(favoriteIds.length > 0 ? [{ id: 'favorites', label: `Xe yêu thích (${favoriteIds.length})` }] : [])
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setSelectedType(tab.id)}
+                style={{
+                  padding: '10px 22px',
+                  borderRadius: '6px',
+                  border: 'none',
+                  fontSize: '14px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  background: selectedType === tab.id ? '#0f172a' : '#f1f5f9',
+                  color: selectedType === tab.id ? '#ffffff' : '#475569'
+                }}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Vehicle Specimen Tiles Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '32px' }}>
             {filteredBikes.map(bike => (
               <div
                 key={bike.id}
-                className="vehicle-card"
                 style={{
+                  background: '#f8fafc',
+                  borderRadius: '10px',
+                  overflow: 'hidden',
                   display: 'flex',
-                  flexDirection: 'column',
-                  position: 'relative'
+                  flexDirection: 'column'
                 }}
               >
-                {bike.popular && (
-                  <div
+                {/* Vehicle Image Tile */}
+                <div style={{ position: 'relative', height: '220px', background: '#e2e8f0' }}>
+                  <img
+                    src={bike.image}
+                    alt={bike.name}
+                    loading="lazy"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+
+                  {bike.badge && (
+                    <div style={{ position: 'absolute', top: '12px', left: '12px', background: '#0f172a', color: '#ffffff', fontSize: '11px', fontWeight: 700, padding: '4px 8px', borderRadius: '4px' }}>
+                      {bike.badge}
+                    </div>
+                  )}
+
+                  {/* Favorite Button */}
+                  <button
+                    type="button"
+                    onClick={() => toggleFavorite(bike.id)}
                     style={{
                       position: 'absolute',
                       top: '12px',
                       right: '12px',
-                      background: 'var(--brand-gradient)',
-                      color: 'white',
-                      fontSize: '11px',
-                      fontWeight: 700,
-                      padding: '4px 10px',
-                      borderRadius: '999px',
-                      zIndex: 2,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
-                    }}
-                  >
-                    🔥 Thuê nhiều
-                  </div>
-                )}
-
-                {/* Bike Image */}
-                <div style={{ position: 'relative', overflow: 'hidden', height: '190px' }}>
-                  <img
-                    src={bike.image}
-                    alt={bike.name}
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      transition: 'transform 0.5s ease'
-                    }}
-                    onMouseOver={e => (e.currentTarget.style.transform = 'scale(1.08)')}
-                    onMouseOut={e => (e.currentTarget.style.transform = 'scale(1)')}
-                  />
-                  <div
-                    style={{
-                      position: 'absolute',
-                      bottom: '8px',
-                      left: '8px',
-                      background: 'rgba(0,0,0,0.7)',
-                      backdropFilter: 'blur(4px)',
-                      color: 'white',
-                      fontSize: '11px',
-                      padding: '2px 8px',
-                      borderRadius: '4px'
-                    }}
-                  >
-                    {bike.typeName}
-                  </div>
-                </div>
-
-                {/* Bike Details */}
-                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px' }}>{bike.name}</div>
-
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-                    <span>⚙️ {bike.engine}</span>
-                    <span>⛽ {bike.fuelConsumption}</span>
-                    <span>🏷️ {bike.brand}</span>
-                  </div>
-
-                  <div style={{ marginBottom: '16px', flex: 1 }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginBottom: '6px', fontWeight: 600 }}>TÍNH NĂNG & TIỆN ÍCH:</div>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                      {bike.features.map((feat, idx) => (
-                        <li key={idx} style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ color: 'var(--brand-primary)', fontSize: '10px' }}>✓</span> {feat}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  {/* Price & CTA */}
-                  <div
-                    style={{
-                      paddingTop: '16px',
-                      borderTop: '1px solid var(--border-primary)',
+                      width: '36px',
+                      height: '36px',
+                      background: '#ffffff',
+                      border: 'none',
+                      borderRadius: '50%',
                       display: 'flex',
                       alignItems: 'center',
-                      justifyContent: 'space-between'
+                      justifyContent: 'center',
+                      cursor: 'pointer'
                     }}
+                    title={isFavorite(bike.id) ? 'Bỏ yêu thích' : 'Thêm vào yêu thích'}
                   >
+                    <Heart style={{ width: '18px', height: '18px', color: isFavorite(bike.id) ? '#dc2626' : '#94a3b8', fill: isFavorite(bike.id) ? '#dc2626' : 'none' }} />
+                  </button>
+                </div>
+
+                {/* Card Information Body */}
+                <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>{bike.typeName}</span>
+                    <span style={{ fontSize: '12px', color: '#64748b' }}>{bike.transmissionText}</span>
+                  </div>
+
+                  <h3 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: '0 0 8px 0' }}>
+                    {bike.name}
+                  </h3>
+
+                  <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
+                    {bike.engine} · {bike.fuelConsumption}
+                  </div>
+
+                  {/* Route Recommendation Pill */}
+                  <div style={{ background: '#ffffff', padding: '10px 14px', borderRadius: '6px', fontSize: '12px', color: '#475569', marginBottom: '20px' }}>
+                    <strong>Thích hợp:</strong> {bike.routes.split(',').slice(0, 2).join(',')}
+                  </div>
+
+                  {/* Price Row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 'auto', marginBottom: '20px' }}>
                     <div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Giá thuê theo ngày</div>
-                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-primary)' }}>
-                        {bike.pricePerDay.toLocaleString('vi-VN')} <span style={{ fontSize: '12px', fontWeight: 400, color: 'var(--text-secondary)' }}>đ/ngày</span>
-                      </div>
+                      <span style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a' }}>
+                        {bike.pricePerDay.toLocaleString('vi-VN')}₫
+                      </span>
+                      <span style={{ fontSize: '13px', color: '#64748b' }}> / ngày</span>
                     </div>
 
+                    {bike.pricePerDay && (
+                      <span style={{ fontSize: '12px', color: '#64748b' }}>
+                        Tháng: {(bike.pricePerDay * 20).toLocaleString('vi-VN')}₫
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                     <button
+                      type="button"
                       onClick={() => {
-                        setBookingBike(bike);
-                        setBookingSuccess(false);
+                        setSelectedBikeDetail(bike);
+                        setActiveImageIndex(0);
                       }}
-                      className="btn btn-primary btn-sm"
+                      style={{
+                        padding: '11px',
+                        background: '#ffffff',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#0f172a',
+                        cursor: 'pointer'
+                      }}
                     >
-                      Đặt Xe Nhanh
+                      Chi tiết xe
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setBookingBike(bike)}
+                      style={{
+                        padding: '11px',
+                        background: '#f97316',
+                        border: 'none',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        color: '#ffffff',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Đặt xe ngay
                     </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* RENTAL WORKFLOW PROCESS */}
-      <section id="quy-trinh" style={{ padding: '80px 24px', maxWidth: '1280px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-          <div className="badge badge-active" style={{ marginBottom: '12px' }}>THỦ TỤC 100% ONLINE</div>
-          <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px' }}>
-            Quy Trình Thuê Xe 4 Bước Tiện Lợi
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-            Áp dụng chữ ký điện tử hiện đại, không cần photo giấy tờ rườm rà, nhận xe ngay tại cửa khách sạn hoặc sân bay Đà Nẵng.
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '24px' }}>
-          <div className="glass-card" style={{ padding: '24px', position: 'relative' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(249, 115, 22, 0.15)', color: 'var(--brand-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, marginBottom: '16px' }}>
-              1
-            </div>
-            <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>Chọn Xe & Lịch Trình</div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Lựa chọn dòng xe tay ga hoặc xe số ưng ý, chọn ngày nhận xe và điểm hẹn giao xe (Sân bay Đà Nẵng, Cầu Rồng, Khách sạn Hải Châu).
-            </p>
-          </div>
-
-          <div className="glass-card" style={{ padding: '24px', position: 'relative' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(59, 130, 246, 0.15)', color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, marginBottom: '16px' }}>
-              2
-            </div>
-            <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>Ký Hợp Đồng Điện Tử</div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Hệ thống tự động tạo hợp đồng thuê xe điện tử. Bạn chỉ cần ký chữ ký tay trực tiếp trên điện thoại/máy tính trong 30 giây.
-            </p>
-          </div>
-
-          <div className="glass-card" style={{ padding: '24px', position: 'relative' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--accent-green)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, marginBottom: '16px' }}>
-              3
-            </div>
-            <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>Nhận Xe & Kiểm Tra Kỹ Thuật</div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Kỹ thuật viên giao xe tận nơi trong 15 phút. Cùng kiểm tra xe, chụp ảnh 4 góc lưu hệ thống và nhận 2 mũ bảo hiểm + áo mưa.
-            </p>
-          </div>
-
-          <div className="glass-card" style={{ padding: '24px', position: 'relative' }}>
-            <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(139, 92, 246, 0.15)', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '22px', fontWeight: 800, marginBottom: '16px' }}>
-              4
-            </div>
-            <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '8px' }}>Trả Xe & Hoàn Tất</div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-              Hết thời gian thuê, nhân viên đến tận điểm hẹn để nhận lại xe. Hoàn tất check-out và thanh toán linh hoạt qua chuyển khoản hoặc tiền mặt.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      {/* WHY CHOOSE US & LOCAL ADVANTAGES */}
-      <section id="uu-diem" style={{ padding: '80px 24px', background: 'var(--bg-secondary)', borderTop: '1px solid var(--border-primary)', borderBottom: '1px solid var(--border-primary)' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-            <div className="badge badge-confirmed" style={{ marginBottom: '12px' }}>DỊCH VỤ CHUYÊN NGHIỆP</div>
-            <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px' }}>
-              Vì Sao Nên Thuê Xe Máy Tại Hải Châu - Đà Nẵng?
-            </h2>
-            <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-              Chúng tôi cam kết chất lượng xe tốt nhất thị trường để chuyến du lịch miền Trung của bạn an toàn và trọn vẹn.
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '28px' }}>
-            <div className="glass-card" style={{ padding: '28px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>🚀</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Giao Xe Nhanh Chóng Trong 15 Phút</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-                Vị trí đắc địa tại Quận Hải Châu ngay trung tâm TP Đà Nẵng giúp đội ngũ nhân viên giao xe tức thì đến Sân bay, Ga xe lửa và các khách sạn chỉ trong 10-15 phút.
-              </p>
-            </div>
-
-            <div className="glass-card" style={{ padding: '28px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>📑</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Ký Điện Tử Không Cần Giấy Tờ Phức Tạp</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-                Không giữ CCCD gốc của khách hàng du lịch có vé máy bay khứ hồi. Hợp đồng pháp lý rõ ràng bảo vệ quyền lợi đôi bên, ký trực tiếp trên màn hình.
-              </p>
-            </div>
-
-            <div className="glass-card" style={{ padding: '28px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>🔧</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Xe Được Bảo Dưỡng Nghiêm Ngặt</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-                100% xe được đội ngũ kỹ thuật viên kiểm tra phanh, lốp, đèn, còi và nhớt trước khi bàn giao. Leo đèo dốc Sơn Trà, Đèo Hải Vân an tâm tuyệt đối.
-              </p>
-            </div>
-
-            <div className="glass-card" style={{ padding: '28px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>🆘</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Cứu Hộ 24/7 Toàn Đà Nẵng</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-                Sự cố thủng lốp, hỏng xe giữa đường? Đội ngũ cứu hộ lưu động tại Hải Châu sẽ có mặt ngay để khắc phục hoặc đổi xe mới miễn phí trong 30 phút.
-              </p>
-            </div>
-
-            <div className="glass-card" style={{ padding: '28px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>🎁</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Combo Phụ Kiện Phượt Miễn Phí</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-                Tặng kèm 2 nón bảo hiểm sạch sẽ đạt chuẩn, 2 áo mưa dự phòng, giá đỡ điện thoại dẫn đường Google Maps và 1 lít xăng sẵn trong xe.
-              </p>
-            </div>
-
-            <div className="glass-card" style={{ padding: '28px' }}>
-              <div style={{ fontSize: '36px', marginBottom: '16px' }}>💳</div>
-              <div style={{ fontSize: '18px', fontWeight: 700, marginBottom: '10px' }}>Thanh Toán Linh Hoạt & Đa Dạng</div>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px', lineHeight: 1.6 }}>
-                Hỗ trợ thanh toán tiền mặt khi nhận xe, chuyển khoản QR VietQR, thẻ tín dụng hoặc các ví điện tử Momo, VNPay tiện lợi.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FAMOUS TOURIST ROUTES IN DA NANG */}
-      <section id="dia-diem-da-nang" style={{ padding: '80px 24px', maxWidth: '1280px', margin: '0 auto' }}>
-        <div style={{ textAlign: 'center', marginBottom: '50px' }}>
-          <div className="badge badge-active" style={{ marginBottom: '12px' }}>GỢI Ý PHƯỢT ĐÀ NẴNG</div>
-          <h2 style={{ fontSize: '32px', fontWeight: 800, marginBottom: '12px' }}>
-            Những Cung Đường Tuyệt Đẹp Khởi Hành Từ Hải Châu
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto' }}>
-            Từ trung tâm Quận Hải Châu, bạn có thể dễ dàng lái xe máy vi vu khắp các thắng cảnh nổi tiếng của Đà Nẵng và Hội An.
-          </p>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '24px' }}>
-          <div className="glass-card" style={{ overflow: 'hidden' }}>
-            <img
-              src="https://images.unsplash.com/photo-1528127269322-539801943592?w=800&auto=format&fit=crop&q=80"
-              alt="Đèo Hải Vân"
-              style={{ width: '100%', height: '180px', objectFit: 'cover' }}
-            />
-            <div style={{ padding: '20px' }}>
-              <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>Đèo Hải Vân - Thiên Hạ Đệ Nhất Hùng Quan</div>
-              <div style={{ fontSize: '12px', color: 'var(--brand-primary)', marginBottom: '8px' }}>📍 Cách Hải Châu 25 km • Cung đường phượt đỉnh cao</div>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Một bên là vách núi hùng vĩ, một bên là vịnh Lăng Cô xanh ngắt. Thích hợp đi xe số khỏe máy hoặc xe tay ga đầm chắc.
-              </p>
-            </div>
-          </div>
-
-          <div className="glass-card" style={{ overflow: 'hidden' }}>
-            <img
-              src="https://images.unsplash.com/photo-1544735716-392fe2489ffa?w=800&auto=format&fit=crop&q=80"
-              alt="Bán Đảo Sơn Trà"
-              style={{ width: '100%', height: '180px', objectFit: 'cover' }}
-            />
-            <div style={{ padding: '20px' }}>
-              <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>Bán Đảo Sơn Trà & Chùa Linh Ứng</div>
-              <div style={{ fontSize: '12px', color: 'var(--brand-primary)', marginBottom: '8px' }}>📍 Cách Hải Châu 10 km • Ngắm trọn Đà Nẵng từ trên cao</div>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Cung đường ven biển Hoàng Sa tuyệt đẹp dẫn lên Chùa Linh Ứng tượng Phật Bà 67m, Cây Đa ngàn năm và Đỉnh Bàn Cờ.
-              </p>
-            </div>
-          </div>
-
-          <div className="glass-card" style={{ overflow: 'hidden' }}>
-            <img
-              src="https://images.unsplash.com/photo-1559592413-7cec4d0cae2b?w=800&auto=format&fit=crop&q=80"
-              alt="Cầu Rồng Đà Nẵng"
-              style={{ width: '100%', height: '180px', objectFit: 'cover' }}
-            />
-            <div style={{ padding: '20px' }}>
-              <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>Cầu Rồng & Bạch Đằng Về Đêm</div>
-              <div style={{ fontSize: '12px', color: 'var(--brand-primary)', marginBottom: '8px' }}>📍 Ngay trung tâm Quận Hải Châu</div>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Chiêm ngưỡng Cầu Rồng phun lửa, phun nước vào tối thứ 7 & Chủ Nhật, dạo phố đi bộ Bạch Đằng và chợ đêm Sơn Trà.
-              </p>
-            </div>
-          </div>
-
-          <div className="glass-card" style={{ overflow: 'hidden' }}>
-            <img
-              src="https://images.unsplash.com/photo-1583417319070-4a69db38a482?w=800&auto=format&fit=crop&q=80"
-              alt="Phố Cổ Hội An"
-              style={{ width: '100%', height: '180px', objectFit: 'cover' }}
-            />
-            <div style={{ padding: '20px' }}>
-              <div style={{ fontSize: '17px', fontWeight: 700, marginBottom: '6px' }}>Phố Cổ Hội An & Rừng Dừa Bảy Mẫu</div>
-              <div style={{ fontSize: '12px', color: 'var(--brand-primary)', marginBottom: '8px' }}>📍 Cách Hải Châu 28 km theo đường biển Võ Nguyên Giáp</div>
-              <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                Chạy xe máy dọc bờ biển ngắm hàng phi lao và ghé thăm phố cổ lồng đèn lung linh, thưởng thức cao lầu và chè bắp.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer id="lien-he" style={{ background: 'rgba(5, 5, 10, 0.95)', borderTop: '1px solid var(--border-primary)', padding: '60px 24px 30px' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '40px', marginBottom: '40px' }}>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'var(--brand-gradient)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-                🏍️
+          {filteredBikes.length === 0 && (
+            <div style={{ textAlign: 'center', padding: '60px 24px', background: '#f8fafc', borderRadius: '8px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Không tìm thấy xe phù hợp với bộ lọc
               </div>
-              <div style={{ fontSize: '17px', fontWeight: 800 }}>MotoBike Hải Châu</div>
+              <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+                Vui lòng thử lại với từ khóa khác hoặc xóa bỏ các điều kiện lọc.
+              </p>
+              <button
+                type="button"
+                onClick={resetFilters}
+                style={{ padding: '10px 24px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Xem tất cả dòng xe
+              </button>
             </div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '16px' }}>
-              Hệ thống cho thuê xe máy uy tín hàng đầu tại Quận Hải Châu, TP. Đà Nẵng. Đem đến trải nghiệm du lịch tự túc an toàn, tiết kiệm và trọn vẹn nhất.
+          )}
+        </div>
+      </section>
+
+      {/* ========================================================
+          5. THE JOURNEY INCLUSIONS (Standard Gear Table)
+          ======================================================== */}
+      <section id="cam-ket" style={{ background: '#f8fafc', padding: '80px 24px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          
+          <div style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
+              Trọn bộ trang bị đi kèm mỗi hợp đồng thuê
+            </h2>
+            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+              Không phụ phí ẩn. Mỗi xe bàn giao đều có đầy đủ trang thiết bị an toàn và giấy tờ pháp lý.
             </p>
-            <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              Mã số thuế: 0401998877 do Sở KH&ĐT Đà Nẵng cấp
-            </div>
           </div>
 
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Địa Điểm & Liên Hệ</div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <li>📍 <strong>Trụ sở chính:</strong> 128 Bạch Đằng, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng</li>
-              <li>📍 <strong>Chi nhánh Sân bay:</strong> Cổng ra Sân bay Quốc tế Đà Nẵng (Giao trong 5p)</li>
-              <li>📞 <strong>Hotline/Zalo 24/7:</strong> <span style={{ color: 'var(--brand-primary)', fontWeight: 700 }}>0905.888.999</span></li>
-              <li>✉️ <strong>Email:</strong> contact@motobikehaichau.vn</li>
-              <li>⏰ <strong>Giờ làm việc:</strong> 06:00 - 23:00 tất cả các ngày trong tuần</li>
-            </ul>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Dịch Vụ Nổi Bật</div>
-            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-              <li>• Thuê xe máy theo ngày / theo tuần / theo tháng</li>
-              <li>• Giao xe miễn phí tận nơi tại Quận Hải Châu</li>
-              <li>• Giao nhận xe tại Sân bay Đà Nẵng</li>
-              <li>• Hợp đồng điện tử ký online tiện lợi</li>
-              <li>• Dịch vụ cứu hộ xe máy 24/7</li>
-            </ul>
-          </div>
-
-          <div>
-            <div style={{ fontSize: '15px', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Đăng Nhập Quản Trị</div>
-            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
-              Dành cho Chủ cửa hàng, Kỹ thuật viên, Lễ tân, Kế toán và Nhân viên hỗ trợ:
-            </p>
-            <Link href="/login" className="btn btn-secondary w-full" style={{ fontSize: '13px', marginBottom: '8px' }}>
-              Cổng Đăng Nhập Nhân Viên
-            </Link>
-            <Link href="/dashboard" className="btn btn-primary w-full" style={{ fontSize: '13px' }}>
-              Truy Cập Dashboard
-            </Link>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
+            {[
+              {
+                title: '02 Mũ bảo hiểm đạt chuẩn',
+                desc: 'Mũ bảo hiểm nửa đầu chính hãng có tem kiểm định CR an toàn, vệ sinh sạch sẽ và thay lót định kỳ.'
+              },
+              {
+                title: '02 Áo mưa tiện lợi',
+                desc: 'Áo mưa dẻo dai xếp gọn sẵn trong cốp để bạn chủ động trước những cơn mưa bất chợt vùng duyên hải.'
+              },
+              {
+                title: '01 Giá đỡ điện thoại kim loại',
+                desc: 'Gắn chắc chắn vào chân gương chiếu hậu, hỗ trợ xem Google Maps tìm đường an toàn.'
+              },
+              {
+                title: '01 Lít xăng châm sẵn',
+                desc: 'Đủ nhiên liệu để bạn xuất phát ngay từ sân bay hoặc ga tàu đến cây xăng gần nhất.'
+              },
+              {
+                title: 'Cứu hộ lưu động 24/7',
+                desc: 'Hỗ trợ vá xe, cứu hộ hỏng hóc tận nơi trên toàn tuyến Đà Nẵng, Đèo Hải Vân và Phố Cổ Hội An.'
+              },
+              {
+                title: 'Bảo hiểm xe máy dân sự',
+                desc: 'Giấy chứng nhận bảo hiểm trách nhiệm dân sự bắt buộc của chủ xe cơ giới còn hiệu lực.'
+              }
+            ].map((item, idx) => (
+              <div key={idx} style={{ background: '#ffffff', padding: '24px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  {item.title}
+                </div>
+                <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                  {item.desc}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '24px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-          © 2026 MotoBike Rental Management System - Hải Châu, Đà Nẵng. All rights reserved.
+      {/* ========================================================
+          6. HOW IT WORKS (3 Clean Steps)
+          ======================================================== */}
+      <section id="quy-trinh" style={{ padding: '80px 24px', background: '#ffffff' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          
+          <div style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
+              Quy trình thuê xe trong 3 bước
+            </h2>
+            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+              Tiết kiệm tối đa thời gian của quý khách ngay khi hạ cánh tại Đà Nẵng.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '32px' }} className="search-grid-responsive">
+            <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '10px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Chọn xe và lịch nhận
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                Duyệt qua danh mục xe, chọn điểm nhận tại sân bay Đà Nẵng, ga xe lửa hoặc khách sạn quận Hải Châu, Sơn Trà.
+              </p>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '10px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Giao xe và kiểm tra kỹ thuật
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                Kỹ thuật viên giao xe tận nơi đúng giờ hẹn, hướng dẫn vận hành và cùng bạn kiểm tra phanh, lốp, đèn tín hiệu.
+              </p>
+            </div>
+
+            <div style={{ background: '#f8fafc', padding: '32px', borderRadius: '10px' }}>
+              <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Ký số và nhận xe
+              </div>
+              <p style={{ fontSize: '14px', color: '#64748b', lineHeight: 1.6, margin: 0 }}>
+                Xác thực bằng ảnh chụp CCCD hoặc hộ chiếu, ký hợp đồng điện tử 60 giây và khởi hành hành trình khám phá.
+              </p>
+            </div>
+          </div>
+
+          <div style={{ marginTop: '32px', textAlign: 'center' }}>
+            <button
+              type="button"
+              onClick={() => setShowContractPreview(true)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                background: '#f1f5f9',
+                color: '#0f172a',
+                padding: '12px 24px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '14px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              <FileText style={{ width: '16px', height: '16px' }} />
+              <span>Xem trước mẫu hợp đồng cho thuê xe máy điện tử</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          7. FAQ SECTION
+          ======================================================== */}
+      <section id="hoi-dap" style={{ background: '#f8fafc', padding: '80px 24px' }}>
+        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
+          
+          <div style={{ marginBottom: '40px' }}>
+            <h2 style={{ fontSize: 'clamp(1.75rem, 2.4vw, 2.2rem)', fontWeight: 800, color: '#0f172a', letterSpacing: '-0.02em', margin: '0 0 10px 0' }}>
+              Những câu hỏi thường gặp
+            </h2>
+            <p style={{ fontSize: '16px', color: '#64748b', margin: 0 }}>
+              Giải đáp minh bạch về thủ tục, địa điểm giao nhận và chính sách hỗ trợ.
+            </p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '16px' }}>
+            {[
+              {
+                q: 'Thủ tục thuê xe cần những giấy tờ gì?',
+                a: 'Quý khách chỉ cần có Căn cước công dân gắn chip hoặc Hộ chiếu (Passport) còn hiệu lực và Giấy phép lái xe hợp lệ. Nhân viên chỉ đối chiếu và chụp ảnh lưu hồ sơ điện tử, hoàn toàn không giữ bản gốc của quý khách.'
+              },
+              {
+                q: 'Có cần phải đặt cọc tiền mặt không?',
+                a: 'Khách du lịch có thông tin vé máy bay khứ hồi hoặc đặt phòng khách sạn tại Đà Nẵng được MIỄN THẾ CHẤP tiền mặt đối với hầu hết các dòng xe số và xe ga thông dụng.'
+              },
+              {
+                q: 'Giao nhận xe tại Sân bay Đà Nẵng có tính phí không?',
+                a: 'XTBike giao và nhận xe hoàn toàn miễn phí tại Sảnh đến Sân bay Quốc tế Đà Nẵng, Ga tàu hỏa và các khách sạn trong nội thành quận Hải Châu trong khung giờ từ 06:00 đến 22:00.'
+              },
+              {
+                q: 'Nếu xe gặp sự cố trên Đèo Hải Vân thì hỗ trợ thế nào?',
+                a: 'Đội cứu hộ lưu động của XTBike túc trực trên tuyến đường ven biển và đèo Hải Vân. Khi có sự cố lốp hay động cơ, kỹ thuật viên sẽ có mặt trong 30 đến 45 phút để khắc phục hoặc đổi xe mới tương đương.'
+              }
+            ].map((faq, fIdx) => (
+              <div key={fIdx} style={{ background: '#ffffff', padding: '24px 28px', borderRadius: '8px' }}>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                  {faq.q}
+                </div>
+                <p style={{ fontSize: '14px', color: '#475569', lineHeight: 1.6, margin: 0 }}>
+                  {faq.a}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
+          8. FOOTER — The Mark Built Large
+          ======================================================== */}
+      <footer style={{ background: '#0f172a', color: '#94a3b8', padding: '80px 24px 40px' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr 1fr', gap: '48px', marginBottom: '60px' }}>
+            <div>
+              <div style={{ fontSize: '28px', fontWeight: 900, color: '#ffffff', letterSpacing: '-0.5px', marginBottom: '14px' }}>
+                XTBike Đà Nẵng
+              </div>
+              <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#94a3b8', maxWidth: '420px', margin: '0 0 20px 0' }}>
+                Dịch vụ cho thuê xe máy du lịch tự túc chất lượng cao tại TP Đà Nẵng. 100% xe đời mới bảo dưỡng định kỳ, giao nhận tận nơi và hỗ trợ cứu hộ 24/7.
+              </p>
+              <div style={{ fontSize: '14px', color: '#ffffff', fontWeight: 700 }}>
+                Hotline giao xe: <span style={{ color: '#f97316' }}>0905 123 456</span>
+              </div>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#ffffff', marginBottom: '16px' }}>
+                Địa chỉ và điểm giao nhận
+              </div>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#cbd5e1', margin: '0 0 8px 0' }}>
+                Cửa hàng: 08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng
+              </p>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#cbd5e1', margin: '0 0 8px 0' }}>
+                Sảnh đến: Sân bay Quốc tế Đà Nẵng (giao xe trong 15 phút)
+              </p>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#cbd5e1', margin: 0 }}>
+                Ga đường sắt: 200 Hải Phòng, Tam Thuận, Thanh Khê, Đà Nẵng
+              </p>
+            </div>
+
+            <div>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#ffffff', marginBottom: '16px' }}>
+                Liên kết hệ thống
+              </div>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13.5px', lineHeight: 2.2 }}>
+                <li><a href="#danh-sach-xe" style={{ color: '#cbd5e1', textDecoration: 'none' }}>Bảng xe sẵn có</a></li>
+                <li><a href="#tinh-lo-trinh" style={{ color: '#cbd5e1', textDecoration: 'none' }}>Bộ tính chi phí lộ trình</a></li>
+                <li><Link href="/portal" style={{ color: '#f97316', textDecoration: 'none', fontWeight: 700 }}>Cổng khách hàng (/portal)</Link></li>
+                <li><Link href="/dashboard" style={{ color: '#f97316', textDecoration: 'none', fontWeight: 700 }}>Trang quản trị (/dashboard)</Link></li>
+                <li><Link href="/login" style={{ color: '#94a3b8', textDecoration: 'none' }}>Đăng nhập nhân viên</Link></li>
+              </ul>
+            </div>
+          </div>
+
+          <div style={{ paddingTop: '24px', borderTop: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', color: '#64748b', flexWrap: 'wrap', gap: '12px' }}>
+            <div>
+              2026 XTBike Platform. Toàn bộ xe máy được cấp phép hoạt động vận tải khách du lịch.
+            </div>
+            <div>
+              Ảnh tư liệu: Honda Vietnam và bộ sưu tập ảnh du lịch Đà Nẵng.
+            </div>
+          </div>
         </div>
       </footer>
 
-      {/* QUICK BOOKING MODAL */}
-      {bookingBike && (
-        <div className="modal-overlay" onClick={() => setBookingBike(null)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px' }}>
-            <div className="modal-header">
-              <div className="modal-title">
-                🛵 Đặt Xe: <span className="gradient-text">{bookingBike.name}</span>
+      {/* ========================================================
+          MODAL: VEHICLE SPECIMEN DETAILS
+          ======================================================== */}
+      {selectedBikeDetail && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            zIndex: 50,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setSelectedBikeDetail(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '12px',
+              maxWidth: '840px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '32px'
+            }}
+          >
+            {/* Top modal bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+              <div>
+                <span style={{ fontSize: '12px', fontWeight: 700, color: '#f97316' }}>{selectedBikeDetail.typeName}</span>
+                <h3 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '4px 0 0 0' }}>
+                  {selectedBikeDetail.name}
+                </h3>
               </div>
               <button
-                onClick={() => setBookingBike(null)}
-                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}
+                type="button"
+                onClick={() => setSelectedBikeDetail(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '6px' }}
               >
-                ✕
+                <X style={{ width: '22px', height: '22px', color: '#64748b' }} />
               </button>
             </div>
 
-            {bookingSuccess ? (
-              <div style={{ textAlign: 'center', padding: '24px 0' }}>
-                <div style={{ fontSize: '56px', marginBottom: '16px' }}>🎉</div>
-                <div style={{ fontSize: '20px', fontWeight: 800, color: 'var(--accent-green)', marginBottom: '8px' }}>
-                  Yêu Cầu Đã Được Tiếp Nhận!
+            {/* Gallery photo switcher */}
+            <div style={{ height: '280px', borderRadius: '8px', overflow: 'hidden', background: '#e2e8f0', marginBottom: '14px' }}>
+              <img
+                src={selectedBikeDetail.gallery[activeImageIndex] || selectedBikeDetail.image}
+                alt={selectedBikeDetail.name}
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
+              {selectedBikeDetail.gallery.map((img, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => setActiveImageIndex(idx)}
+                  style={{
+                    width: '64px',
+                    height: '48px',
+                    borderRadius: '4px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    opacity: activeImageIndex === idx ? 1 : 0.5,
+                    border: activeImageIndex === idx ? '2px solid #f97316' : 'none'
+                  }}
+                >
+                  <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px', lineHeight: 1.6 }}>
-                  Cảm ơn bạn đã lựa chọn MotoBike Hải Châu. Nhân viên lễ tân sẽ liên hệ qua số <strong>{customerPhone}</strong> trong vòng 5 phút để xác nhận điểm giao xe.
-                </p>
-                <div className="glass-card" style={{ padding: '16px', textAlign: 'left', marginBottom: '20px', fontSize: '13px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Xe đã chọn:</span>
-                    <strong>{bookingBike.name}</strong>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Điểm nhận:</span>
-                    <span>{pickupLocation}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Đơn giá:</span>
-                    <strong style={{ color: 'var(--brand-primary)' }}>{bookingBike.pricePerDay.toLocaleString('vi-VN')} đ/ngày</strong>
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button onClick={() => setBookingBike(null)} className="btn btn-secondary w-full">
-                    Đóng
-                  </button>
-                  <Link href="/login" className="btn btn-primary w-full">
-                    Đăng Nhập Quản Lý
-                  </Link>
-                </div>
+              ))}
+            </div>
+
+            {/* Technical Specifications Grid */}
+            <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>
+                Thông số kỹ thuật tiêu chuẩn
               </div>
-            ) : (
-              <form onSubmit={handleQuickBook}>
-                <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '20px', padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
-                  <img src={bookingBike.image} alt={bookingBike.name} style={{ width: '80px', height: '60px', borderRadius: '8px', objectFit: 'cover' }} />
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '15px' }}>{bookingBike.name}</div>
-                    <div style={{ fontSize: '13px', color: 'var(--brand-primary)', fontWeight: 600 }}>
-                      {bookingBike.pricePerDay.toLocaleString('vi-VN')} đ/ngày
-                    </div>
-                  </div>
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', fontSize: '13px' }}>
+                <div><span style={{ color: '#64748b' }}>Động cơ:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.engine}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Mức tiêu hao:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.fuelConsumption}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Bình xăng:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.tankCapacity}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Trọng lượng:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.weight}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Hệ thống phanh:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.brake}</strong></div>
+                <div><span style={{ color: '#64748b' }}>Khởi động:</span> <strong style={{ color: '#0f172a' }}>{selectedBikeDetail.specifications.starter}</strong></div>
+              </div>
+            </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Họ và tên quý khách *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Nguyễn Văn A"
-                      className="form-input"
-                      value={customerName}
-                      onChange={e => setCustomerName(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Số điện thoại / Zalo *</label>
-                    <input
-                      type="tel"
-                      required
-                      placeholder="0905 123 456"
-                      className="form-input"
-                      value={customerPhone}
-                      onChange={e => setCustomerPhone(e.target.value)}
-                    />
-                  </div>
-                </div>
+            {/* Description */}
+            <div style={{ marginBottom: '24px' }}>
+              <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>
+                Mô tả và cảm giác lái
+              </div>
+              <p style={{ fontSize: '13.5px', color: '#475569', lineHeight: 1.6, margin: 0 }}>
+                {selectedBikeDetail.description}
+              </p>
+            </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                  <div className="form-group">
-                    <label className="form-label">Ngày nhận xe</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={pickupDate}
-                      onChange={e => setPickupDate(e.target.value)}
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Ngày trả xe</label>
-                    <input
-                      type="date"
-                      className="form-input"
-                      value={returnDate}
-                      onChange={e => setReturnDate(e.target.value)}
-                    />
-                  </div>
-                </div>
+            {/* Bottom Modal Actions */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+              <div>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>
+                  {selectedBikeDetail.pricePerDay.toLocaleString('vi-VN')}₫
+                </span>
+                <span style={{ fontSize: '13px', color: '#64748b' }}> / ngày</span>
+              </div>
 
-                <div className="form-group" style={{ marginBottom: '14px' }}>
-                  <label className="form-label">Điểm nhận xe tại Đà Nẵng</label>
-                  <select
-                    className="form-input"
-                    value={pickupLocation}
-                    onChange={e => setPickupLocation(e.target.value)}
-                  >
-                    <option value="Sân bay Đà Nẵng">Sân bay Quốc tế Đà Nẵng</option>
-                    <option value="Cửa hàng Hải Châu">Cửa hàng trung tâm Hải Châu (128 Bạch Đằng)</option>
-                    <option value="Cầu Rồng / Bạch Đằng">Khu vực Cầu Rồng / Bạch Đằng</option>
-                    <option value="Ga tàu Đà Nẵng">Ga xe lửa Đà Nẵng</option>
-                    <option value="Khách sạn tại Hải Châu">Giao tận khách sạn Quận Hải Châu</option>
-                    <option value="Bãi biển Mỹ Khê">Giao tận nơi Bãi biển Mỹ Khê</option>
-                  </select>
-                </div>
-
-                <div className="form-group" style={{ marginBottom: '20px' }}>
-                  <label className="form-label">Ghi chú thêm (khung giờ đến, số lượng mũ...)</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Ví dụ: Chuyến bay hạ cánh lúc 9h sáng tại Sân bay Đà Nẵng..."
-                    className="form-input"
-                    value={customerNote}
-                    onChange={e => setCustomerNote(e.target.value)}
-                  />
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', padding: '12px 16px', background: 'rgba(249, 115, 22, 0.08)', borderRadius: '10px', border: '1px solid rgba(249, 115, 22, 0.2)' }}>
-                  <div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Ước tính ({calculateDays()} ngày thuê):</div>
-                    <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-primary)' }}>
-                      {(bookingBike.pricePerDay * calculateDays()).toLocaleString('vi-VN')} đ
-                    </div>
-                  </div>
-                  <div style={{ fontSize: '12px', color: 'var(--accent-green)', fontWeight: 600 }}>
-                    Miễn phí giao xe tại Hải Châu!
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px' }}>
-                  <button type="button" onClick={() => setBookingBike(null)} className="btn btn-secondary w-full">
-                    Hủy bỏ
-                  </button>
-                  <button type="submit" className="btn btn-primary w-full">
-                    Xác Nhận Đặt Xe
-                  </button>
-                </div>
-              </form>
-            )}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedBikeDetail(null)}
+                  style={{
+                    padding: '12px 20px',
+                    background: '#ffffff',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontSize: '13.5px'
+                  }}
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const bike = selectedBikeDetail;
+                    setSelectedBikeDetail(null);
+                    setBookingBike(bike);
+                  }}
+                  style={{
+                    padding: '12px 24px',
+                    background: '#f97316',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontSize: '13.5px'
+                  }}
+                >
+                  Tiến hành đặt xe này
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          BOOKING WIZARD MODAL INTEGRATION
+          ======================================================== */}
+      {bookingBike && (
+        <RentalWizard
+          bike={bookingBike}
+          onClose={() => setBookingBike(null)}
+        />
+      )}
+
+      {/* ========================================================
+          CONTRACT PREVIEW MODAL
+          ======================================================== */}
+      {showContractPreview && (
+        <ContractPreviewModal
+          onClose={() => setShowContractPreview(false)}
+        />
+      )}
+
     </div>
   );
 }

@@ -1,4 +1,5 @@
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 
 const generateTokens = (userId) => {
@@ -18,10 +19,12 @@ exports.register = async (req, res) => {
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ success: false, message: 'Email đã được sử dụng.' });
 
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex');
     const user = await User.create({
       fullName, email, phone, password,
       cccd, address,
-      role: 'customer'
+      role: 'customer',
+      emailVerificationToken
     });
 
     const { accessToken, refreshToken } = generateTokens(user._id);
@@ -30,7 +33,7 @@ exports.register = async (req, res) => {
     res.status(201).json({
       success: true,
       message: 'Đăng ký thành công!',
-      data: { user, accessToken, refreshToken }
+      data: { user, accessToken, refreshToken, verificationToken: process.env.NODE_ENV === 'production' ? undefined : emailVerificationToken }
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -42,11 +45,18 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
     if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Vui lòng nhập email và mật khẩu.' });
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập số điện thoại/email và mật khẩu.' });
     }
 
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) return res.status(401).json({ success: false, message: 'Email hoặc mật khẩu không đúng.' });
+    const trimmedInput = email.trim();
+    const user = await User.findOne({
+      $or: [
+        { email: { $regex: new RegExp(`^${trimmedInput.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i') } },
+        { phone: trimmedInput }
+      ]
+    }).select('+password');
+
+    if (!user) return res.status(401).json({ success: false, message: 'Số điện thoại/Email hoặc mật khẩu không đúng.' });
     if (!user.isActive) return res.status(403).json({ success: false, message: 'Tài khoản đã bị vô hiệu hóa.' });
 
     const isMatch = await user.comparePassword(password);
@@ -114,6 +124,54 @@ exports.changePassword = async (req, res) => {
     user.password = newPassword;
     await user.save();
     res.json({ success: true, message: 'Đổi mật khẩu thành công.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @POST /api/auth/forgot-password
+exports.forgotPassword = async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ success: false, message: 'Vui lòng nhập email.' });
+    const user = await User.findOne({ email: email.trim().toLowerCase() });
+    if (!user) return res.json({ success: true, message: 'Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi.' });
+    const token = crypto.randomBytes(32).toString('hex');
+    user.resetPasswordToken = crypto.createHash('sha256').update(token).digest('hex');
+    user.resetPasswordExpire = Date.now() + 15 * 60 * 1000;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, message: 'Đã tạo yêu cầu đặt lại mật khẩu.', resetToken: process.env.NODE_ENV === 'production' ? undefined : token });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @PUT /api/auth/reset-password/:token
+exports.resetPassword = async (req, res) => {
+  try {
+    const hashedToken = crypto.createHash('sha256').update(req.params.token).digest('hex');
+    const user = await User.findOne({ resetPasswordToken: hashedToken, resetPasswordExpire: { $gt: Date.now() } }).select('+password');
+    if (!user) return res.status(400).json({ success: false, message: 'Mã đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.' });
+    if (!req.body.newPassword || req.body.newPassword.length < 6) return res.status(400).json({ success: false, message: 'Mật khẩu mới phải có ít nhất 6 ký tự.' });
+    user.password = req.body.newPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpire = undefined;
+    await user.save();
+    res.json({ success: true, message: 'Đặt lại mật khẩu thành công.' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// @GET /api/auth/verify-email/:token
+exports.verifyEmail = async (req, res) => {
+  try {
+    const user = await User.findOne({ emailVerificationToken: req.params.token });
+    if (!user) return res.status(400).json({ success: false, message: 'Mã xác thực email không hợp lệ.' });
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    await user.save({ validateBeforeSave: false });
+    res.json({ success: true, message: 'Xác thực email thành công.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

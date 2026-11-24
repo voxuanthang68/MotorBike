@@ -9,8 +9,11 @@ router.use(protect);
 router.get('/', async (req, res) => {
   try {
     const query = {};
-    if (req.user.role === 'customer') query.customer = req.user._id;
-    else if (req.user.role === 'support') query.assignedTo = req.user._id;
+    if (req.user.role === 'customer') {
+      query.customer = req.user._id;
+    } else if (req.user.role === 'support' && req.query.assignedOnly === 'true') {
+      query.assignedTo = req.user._id;
+    }
     const tickets = await Ticket.find(query)
       .populate('customer', 'fullName phone avatar')
       .populate('assignedTo', 'fullName')
@@ -38,7 +41,7 @@ router.post('/', upload.array('attachments', 3), async (req, res) => {
   try {
     const data = {
       ...req.body,
-      customer: req.user._id,
+      customer: req.user.role === 'customer' ? req.user._id : (req.body.customerId || req.user._id),
       attachments: req.files?.map(f => ({ url: `/uploads/misc/${f.filename}` })) || []
     };
     const ticket = await Ticket.create(data);

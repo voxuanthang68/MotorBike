@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true, minlength: 6 },
   role: {
     type: String,
-    enum: ['owner', 'admin', 'technician', 'support', 'accountant', 'receptionist', 'customer'],
+    enum: ['owner', 'admin', 'technician', 'support', 'accountant', 'receptionist', 'driver', 'customer'],
     default: 'customer'
   },
   avatar: { type: String, default: null },
@@ -20,8 +20,27 @@ const userSchema = new mongoose.Schema({
   refreshToken: String,
   lastLogin: Date,
   // Customer-specific
+  customerCode: String,
+  customerType: {
+    type: String,
+    enum: ['standard', 'walk_in', 'high_risk'],
+    default: 'standard'
+  },
+  customerTier: {
+    type: String,
+    enum: ['regular', 'silver', 'gold', 'vip', 'diamond'],
+    default: 'regular'
+  },
+  isBlacklisted: { type: Boolean, default: false },
+  riskReason: String,
+  notes: String,
   cccd: String,
+  cccdFrontImage: String,
+  cccdBackImage: String,
   drivingLicense: String,
+  drivingLicenseClass: String,
+  drivingLicenseFrontImage: String,
+  drivingLicenseBackImage: String,
   address: String,
   // Employee-specific
   employeeId: String,

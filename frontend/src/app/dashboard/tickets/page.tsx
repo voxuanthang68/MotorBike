@@ -136,7 +136,7 @@ export default function TicketsPage() {
             <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Có mặt trong 15-30 phút tại các quận trung tâm, đèo Hải Vân và bán đảo Sơn Trà</div>
           </div>
         </div>
-        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-primary)', background: 'rgba(0,0,0,0.4)', padding: '8px 16px', borderRadius: '8px' }}>
+        <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--brand-primary)', background: '#ffffff', border: '1px solid #fed7aa', padding: '8px 16px', borderRadius: '8px' }}>
           Hotline Cứu Hộ: 0905.888.999
         </div>
       </div>
@@ -303,7 +303,7 @@ export default function TicketsPage() {
             </div>
 
             {/* Incident Details Card */}
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '10px', fontSize: '12px', marginBottom: '12px', flexShrink: 0 }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '10px', fontSize: '12px', marginBottom: '12px', flexShrink: 0 }}>
               <div><strong>Khách hàng:</strong> {selectedTicket.customer?.fullName} ({selectedTicket.customer?.phone})</div>
               <div><strong>Nội dung:</strong> {selectedTicket.description}</div>
               <div style={{ marginTop: '6px', display: 'flex', gap: '8px' }}>
@@ -317,7 +317,7 @@ export default function TicketsPage() {
             </div>
 
             {/* Conversation Messages Thread */}
-            <div style={{ flex: 1, overflowY: 'auto', padding: '10px', background: 'rgba(0,0,0,0.2)', borderRadius: '10px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {selectedTicket.messages?.length === 0 ? (
                 <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '30px', fontSize: '13px' }}>
                   Chưa có trao đổi nào. Hãy nhập tin nhắn bên dưới để hỗ trợ khách.
@@ -331,11 +331,11 @@ export default function TicketsPage() {
                       style={{
                         alignSelf: isMe ? 'flex-end' : 'flex-start',
                         maxWidth: '80%',
-                        background: isMe ? 'var(--brand-gradient)' : 'rgba(255,255,255,0.06)',
+                        background: isMe ? 'var(--brand-gradient)' : '#ffffff',
                         padding: '10px 14px',
                         borderRadius: '12px',
                         fontSize: '13px',
-                        color: 'white',
+                        color: isMe ? 'white' : 'var(--text-primary)',
                       }}
                     >
                       <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '2px', fontWeight: 600 }}>

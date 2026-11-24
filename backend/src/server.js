@@ -2,7 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
 
 const app = express();
 
@@ -13,11 +13,13 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/users', require('./routes/user.routes'));
+app.use('/api/permissions', require('./routes/permission.routes'));
 app.use('/api/vehicles', require('./routes/vehicle.routes'));
 app.use('/api/customers', require('./routes/customer.routes'));
 app.use('/api/bookings', require('./routes/booking.routes'));

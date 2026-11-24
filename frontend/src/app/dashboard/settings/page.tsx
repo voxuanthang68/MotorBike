@@ -3,13 +3,13 @@ import { useState } from 'react';
 import toast from 'react-hot-toast';
 
 export default function SettingsPage() {
-  const [storeName, setStoreName] = useState('Hệ Thống Cho Thuê Xe Máy MotoBike Hải Châu');
+  const [storeName, setStoreName] = useState('Hệ Thống Cho Thuê Xe Máy XTBike');
   const [address, setAddress] = useState('128 Bạch Đằng, Phường Hải Châu 1, Quận Hải Châu, TP. Đà Nẵng');
   const [phone, setPhone] = useState('0905.888.999');
   const [email, setEmail] = useState('contact@motobikehaichau.vn');
   const [bankName, setBankName] = useState('Ngân hàng Quân Đội (MBBank)');
   const [bankAccount, setBankAccount] = useState('0905888999');
-  const [bankOwner, setBankOwner] = useState('MOTOBIKE HAI CHAU DANANG');
+  const [bankOwner, setBankOwner] = useState('XTBike');
 
   // Policy configs
   const [hourlyOvertimeFee, setHourlyOvertimeFee] = useState(25000);

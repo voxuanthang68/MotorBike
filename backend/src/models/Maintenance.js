@@ -4,10 +4,10 @@ const maintenanceSchema = new mongoose.Schema({
   vehicle: { type: mongoose.Schema.Types.ObjectId, ref: 'Vehicle', required: true },
   type: {
     type: String,
-    enum: ['routine', 'repair', 'inspection', 'emergency'],
+    enum: ['routine', 'repair', 'inspection', 'emergency', 'pre_rental', 'post_rental'],
     default: 'routine'
   },
-  title: { type: String, required: true },
+  title: { type: String, default: 'Phiếu kiểm tra an toàn kỹ thuật' },
   description: String,
   status: {
     type: String,

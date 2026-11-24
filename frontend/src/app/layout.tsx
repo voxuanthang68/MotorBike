@@ -6,7 +6,7 @@ import Providers from "@/components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MotoBike Hải Châu - Hệ Thống Quản Lý Thuê Xe",
+  title: "XTBike - Hệ Thống Quản Lý Thuê Xe",
   description: "Hệ thống quản lý thuê xe Moto chuyên nghiệp tại Hải Châu, Đà Nẵng",
   keywords: "thuê xe máy, thuê xe moto, Hải Châu, Đà Nẵng",
 };

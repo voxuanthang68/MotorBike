@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import { useAuthStore } from '@/store/authStore';
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; desc: string }> = {
   owner: { label: 'Chủ cửa hàng', color: '#f97316', desc: 'Toàn quyền kiểm soát hệ thống & tài chính' },
@@ -14,10 +15,22 @@ const ROLE_CONFIG: Record<string, { label: string; color: string; desc: string }
   customer: { label: 'Khách hàng', color: '#94a3b8', desc: 'Khách thuê xe máy' },
 };
 
+const MODULE_CONFIG: Record<string, string> = {
+  dashboard: 'Dashboard tổng quan', vehicles: 'Quản lý xe', bookings: 'Đặt xe & thuê xe',
+  contracts: 'Hợp đồng', customers: 'Khách hàng', payments: 'Thanh toán & tiền cọc',
+  reports: 'Báo cáo & thống kê', maintenance: 'Bảo trì & sửa chữa', tickets: 'Hỗ trợ khách hàng',
+  users: 'Nhân viên & tài khoản', settings: 'Cài đặt hệ thống',
+};
+
 export default function UsersPage() {
   const queryClient = useQueryClient();
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [createModal, setCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const { user: currentUser } = useAuthStore();
+  const [permissionModal, setPermissionModal] = useState(false);
+  const [permissionRole, setPermissionRole] = useState('owner');
+  const [permissionDraft, setPermissionDraft] = useState<any[]>([]);
 
   // Form states
   const [fullName, setFullName] = useState('');
@@ -25,6 +38,8 @@ export default function UsersPage() {
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('123456');
   const [role, setRole] = useState('receptionist');
+  const [employeeId, setEmployeeId] = useState('');
+  const [department, setDepartment] = useState('');
 
   // Fetch users
   const { data, isLoading } = useQuery({
@@ -37,6 +52,26 @@ export default function UsersPage() {
     }
   });
 
+  const { data: permissionData } = useQuery({
+    queryKey: ['permission-matrix'],
+    queryFn: async () => (await api.get('/permissions')).data,
+    enabled: ['owner', 'admin'].includes(currentUser?.role || ''),
+  });
+
+  const permissionMutation = useMutation({
+    mutationFn: async () => {
+      const selected = permissionDraft.find(item => item.role === permissionRole);
+      return api.put(`/permissions/${permissionRole}`, {
+        permissions: Object.fromEntries((selected?.permissions || []).map((item: any) => [item.module, item])),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['permission-matrix'] });
+      toast.success('Đã lưu ma trận phân quyền.');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Không thể lưu phân quyền.'),
+  });
+
   // Create user mutation
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
@@ -44,9 +79,27 @@ export default function UsersPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['users'] });
-      setCreateModal(false);
-      resetForm();
+      closeModal();
       toast.success('Tạo tài khoản nhân sự thành công!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra!')
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async (payload: any) => api.put(`/users/${editingUser._id}`, payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      closeModal();
+      toast.success('Cập nhật thông tin nhân viên thành công!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra!')
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => api.delete(`/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users'] });
+      toast.success('Đã xóa nhân viên!');
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi xảy ra!')
   });
@@ -69,20 +122,56 @@ export default function UsersPage() {
     setPhone('');
     setPassword('123456');
     setRole('receptionist');
+    setEmployeeId('');
+    setDepartment('');
+  };
+
+  const closeModal = () => {
+    setCreateModal(false);
+    setEditingUser(null);
+    resetForm();
+  };
+
+  const openEditModal = (user: any) => {
+    setEditingUser(user);
+    setFullName(user.fullName || '');
+    setEmail(user.email || '');
+    setPhone(user.phone || '');
+    setPassword('');
+    setRole(user.role || 'receptionist');
+    setEmployeeId(user.employeeId || '');
+    setDepartment(user.department || '');
+    setCreateModal(true);
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({
+    const payload: any = {
       fullName,
       email,
       phone,
-      password,
       role,
-    });
+      employeeId,
+      department,
+    };
+    if (!editingUser || password) payload.password = password;
+    if (editingUser) updateMutation.mutate(payload);
+    else createMutation.mutate(payload);
   };
 
   const users = data?.data || [];
+  const activePermission = permissionDraft.find(item => item.role === permissionRole);
+  const openPermissionMatrix = () => {
+    setPermissionDraft(JSON.parse(JSON.stringify(permissionData?.data || [])));
+    setPermissionRole('owner');
+    setPermissionModal(true);
+  };
+  const togglePermission = (module: string, action: string) => {
+    setPermissionDraft(previous => previous.map(item => item.role !== permissionRole ? item : {
+      ...item,
+      permissions: item.permissions.map((permission: any) => permission.module !== module ? permission : { ...permission, [action]: !permission[action] }),
+    }));
+  };
 
   return (
     <div className="page-container">
@@ -92,9 +181,12 @@ export default function UsersPage() {
           <h1 className="page-title">👤 Quản Lý Nhân Sự & Phân Quyền (RBAC)</h1>
           <p className="page-subtitle">Phân quyền 7 vai trò: Chủ cửa hàng, Quản trị, Kỹ thuật, Hỗ trợ, Kế toán, Lễ tân, Khách hàng</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setCreateModal(true)}>
+        <div style={{ display: 'flex', gap: 10 }}>
+        {['owner', 'admin'].includes(currentUser?.role || '') && <button className="btn btn-secondary" onClick={openPermissionMatrix}>🔐 Ma trận phân quyền</button>}
+        <button className="btn btn-primary" onClick={() => { resetForm(); setEditingUser(null); setCreateModal(true); }}>
           <span>+</span> Thêm Nhân Viên Mới
         </button>
+        </div>
       </div>
 
       {/* Role Filter tabs */}
@@ -209,6 +301,15 @@ export default function UsersPage() {
                         )}
                       </td>
                       <td style={{ textAlign: 'right' }}>
+                        <button className="btn btn-sm btn-secondary" onClick={() => openEditModal(u)} style={{ marginRight: '6px' }}>Sửa</button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          disabled={deleteMutation.isPending}
+                          onClick={() => {
+                            if (window.confirm(`Bạn có chắc muốn xóa nhân viên ${u.fullName}?`)) deleteMutation.mutate(u._id);
+                          }}
+                          style={{ marginRight: '6px' }}
+                        >Xóa</button>
                         <button
                           className={`btn btn-sm ${u.isActive !== false ? 'btn-danger' : 'btn-success'}`}
                           onClick={() => toggleActiveMutation.mutate({ id: u._id, isActive: u.isActive === false })}
@@ -225,13 +326,45 @@ export default function UsersPage() {
         )}
       </div>
 
+      {permissionModal && (
+        <div className="modal-overlay" onClick={() => setPermissionModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '1050px', maxHeight: '90vh', overflow: 'auto' }}>
+            <div className="modal-header">
+              <div>
+                <div className="modal-title">🔐 Ma trận phân quyền vai trò</div>
+                <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>Thiết lập quyền Xem, Thêm, Sửa, Xóa cho từng chức năng.</div>
+              </div>
+              <button onClick={() => setPermissionModal(false)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>×</button>
+            </div>
+            <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 0', borderBottom: '1px solid #e2e8f0' }}>
+              {Object.entries(ROLE_CONFIG).map(([key, cfg]) => <button key={key} className={`btn btn-sm ${permissionRole === key ? 'btn-primary' : 'btn-secondary'}`} onClick={() => setPermissionRole(key)}>{cfg.label}</button>)}
+            </div>
+            <div style={{ overflowX: 'auto', marginTop: 14 }}>
+              <table className="data-table" style={{ minWidth: 760 }}>
+                <thead><tr><th>Chức năng</th><th style={{ textAlign: 'center' }}>Xem</th><th style={{ textAlign: 'center' }}>Thêm</th><th style={{ textAlign: 'center' }}>Sửa</th><th style={{ textAlign: 'center' }}>Xóa</th></tr></thead>
+                <tbody>
+                  {(activePermission?.permissions || []).map((permission: any) => <tr key={permission.module}>
+                    <td><strong>{MODULE_CONFIG[permission.module] || permission.module}</strong><div style={{ fontSize: 11, color: '#94a3b8' }}>{permission.module}</div></td>
+                    {(['view', 'create', 'update', 'delete'] as const).map(action => <td key={action} style={{ textAlign: 'center' }}><input type="checkbox" checked={Boolean(permission[action])} onChange={() => togglePermission(permission.module, action)} style={{ width: 18, height: 18, accentColor: '#2563eb' }} /></td>)}
+                  </tr>)}
+                </tbody>
+              </table>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 18 }}>
+              <button className="btn btn-secondary" onClick={() => setPermissionModal(false)}>Đóng</button>
+              <button className="btn btn-primary" disabled={permissionMutation.isPending || !activePermission} onClick={() => permissionMutation.mutate()}>{permissionMutation.isPending ? 'Đang lưu...' : `Lưu quyền cho ${ROLE_CONFIG[permissionRole]?.label || permissionRole}`}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* CREATE USER MODAL */}
       {createModal && (
-        <div className="modal-overlay" onClick={() => setCreateModal(false)}>
+        <div className="modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header">
-              <div className="modal-title">👤 Thêm Tài Khoản Nhân Viên Mới</div>
-              <button onClick={() => setCreateModal(false)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              <div className="modal-title">👤 {editingUser ? 'Sửa thông tin nhân viên' : 'Thêm tài khoản nhân viên mới'}</div>
+              <button onClick={closeModal} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
             <form onSubmit={handleCreateSubmit}>
@@ -284,11 +417,22 @@ export default function UsersPage() {
                 </select>
               </div>
 
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div className="form-group">
+                  <label className="form-label">Mã nhân viên</label>
+                  <input type="text" className="form-input" value={employeeId} onChange={e => setEmployeeId(e.target.value)} placeholder="NV-001" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Phòng ban</label>
+                  <input type="text" className="form-input" value={department} onChange={e => setDepartment(e.target.value)} placeholder="Kỹ thuật" />
+                </div>
+              </div>
+
               <div className="form-group" style={{ marginBottom: '20px' }}>
                 <label className="form-label">Mật khẩu khởi tạo *</label>
                 <input
                   type="password"
-                  required
+                  required={!editingUser}
                   placeholder="••••••"
                   className="form-input"
                   value={password}
@@ -297,9 +441,9 @@ export default function UsersPage() {
               </div>
 
               <div style={{ display: 'flex', gap: '12px' }}>
-                <button type="button" onClick={() => setCreateModal(false)} className="btn btn-secondary w-full">Hủy Bỏ</button>
-                <button type="submit" disabled={createMutation.isPending} className="btn btn-primary w-full">
-                  {createMutation.isPending ? 'Đang tạo...' : 'Tạo Tài Khoản'}
+                <button type="button" onClick={closeModal} className="btn btn-secondary w-full">Hủy Bỏ</button>
+                <button type="submit" disabled={createMutation.isPending || updateMutation.isPending} className="btn btn-primary w-full">
+                  {createMutation.isPending || updateMutation.isPending ? 'Đang lưu...' : (editingUser ? 'Lưu thay đổi' : 'Tạo Tài Khoản')}
                 </button>
               </div>
             </form>

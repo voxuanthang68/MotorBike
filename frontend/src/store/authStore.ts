@@ -15,6 +15,11 @@ export interface User {
   drivingLicense?: string;
   address?: string;
   employeeId?: string;
+  cccdFrontImage?: string;
+  cccdBackImage?: string;
+  drivingLicenseClass?: string;
+  drivingLicenseFrontImage?: string;
+  drivingLicenseBackImage?: string;
 }
 
 interface AuthState {
@@ -86,15 +91,16 @@ export const useAuthStore = create<AuthState>()(
       setUser: (user) => set({ user }),
 
       initialize: async () => {
+        set({ isLoading: true });
         const token = localStorage.getItem('accessToken');
-        if (!token) { set({ isAuthenticated: false }); return; }
+        if (!token) { set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false, isLoading: false }); return; }
         try {
           const res = await api.get('/auth/me');
-          set({ user: res.data.data, isAuthenticated: true, accessToken: token });
+          set({ user: res.data.data, isAuthenticated: true, accessToken: localStorage.getItem('accessToken'), refreshToken: localStorage.getItem('refreshToken'), isLoading: false });
         } catch {
           localStorage.removeItem('accessToken');
           localStorage.removeItem('refreshToken');
-          set({ user: null, isAuthenticated: false });
+          set({ user: null, isAuthenticated: false, isLoading: false });
         }
       }
     }),

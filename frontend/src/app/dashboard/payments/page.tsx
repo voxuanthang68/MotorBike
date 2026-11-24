@@ -78,8 +78,11 @@ export default function PaymentsPage() {
     createMutation.mutate({
       type,
       amount: Number(amount),
+      method,
       paymentMethod: method,
-      notes: notes || `Giao dịch ${TYPE_CONFIG[type]?.label || type} đơn ${bookingCode}`,
+      bookingCode,
+      note: notes || `Giao dịch ${TYPE_CONFIG[type]?.label || type}${bookingCode ? ` đơn ${bookingCode}` : ''}`,
+      notes: notes || `Giao dịch ${TYPE_CONFIG[type]?.label || type}${bookingCode ? ` đơn ${bookingCode}` : ''}`,
       status: 'completed',
     });
   };
@@ -97,7 +100,7 @@ export default function PaymentsPage() {
           <p className="page-subtitle">Kiểm soát dòng tiền doanh thu thuê xe, đối soát cọc và xuất hóa đơn tại Hải Châu</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn btn-secondary" onClick={() => setQrModal({ amount: 500000, desc: 'Thanh toan tien thue xe MotoBike Hai Chau' })}>
+          <button className="btn btn-secondary" onClick={() => setQrModal({ amount: 500000, desc: 'Thanh toan tien thue xe XTBike' })}>
             <span>📱</span> Tạo Mã VietQR Thanh Toán
           </button>
           <button className="btn btn-primary" onClick={() => setCreateModal(true)}>
@@ -225,7 +228,7 @@ export default function PaymentsPage() {
                     <tr key={p._id}>
                       <td>
                         <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                          {p.transactionCode || p._id?.slice(-8).toUpperCase()}
+                          {p.paymentCode || p.transactionCode || p._id?.slice(-8).toUpperCase()}
                         </span>
                       </td>
                       <td>
@@ -240,17 +243,17 @@ export default function PaymentsPage() {
                       </td>
                       <td>
                         <span className="tag">
-                          {METHOD_LABELS[p.paymentMethod] || p.paymentMethod || 'Chuyển khoản'}
+                          {METHOD_LABELS[p.method || p.paymentMethod] || p.method || p.paymentMethod || 'Chuyển khoản'}
                         </span>
                       </td>
                       <td>
                         <div style={{ fontSize: '13px', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          {p.notes || 'Thanh toán thuê xe máy'}
+                          {p.note || p.notes || 'Thanh toán thuê xe máy'}
                         </div>
                       </td>
                       <td>
                         <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-                          {new Date(p.createdAt).toLocaleString('vi-VN')}
+                          {new Date(p.transactionDate || p.createdAt).toLocaleString('vi-VN')}
                         </div>
                       </td>
                       <td>
@@ -369,19 +372,19 @@ export default function PaymentsPage() {
               <button onClick={() => setQrModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ background: 'white', padding: '16px', borderRadius: '16px', display: 'inline-block', margin: '16px auto', boxShadow: '0 8px 30px rgba(0,0,0,0.5)' }}>
+            <div style={{ background: 'white', padding: '16px', borderRadius: '16px', display: 'inline-block', margin: '16px auto', boxShadow: '0 8px 30px rgba(15,23,42,0.12)' }}>
               {/* VietQR Dynamic API Image */}
               <img
-                src={`https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${qrModal.amount}&addInfo=${encodeURIComponent(qrModal.desc)}&accountName=MOTOBIKE%20HAI%20CHAU`}
-                alt="VietQR MotoBike Hải Châu"
+                src={`https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${qrModal.amount}&addInfo=${encodeURIComponent(qrModal.desc)}&accountName=XTBike`}
+                alt="VietQR XTBike"
                 style={{ width: '280px', height: 'auto', display: 'block' }}
               />
             </div>
 
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'left', background: 'rgba(255,255,255,0.03)', padding: '12px 16px', borderRadius: '10px' }}>
+            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '10px' }}>
               <div>Ngân hàng: <strong>MBBank (Ngân hàng Quân Đội)</strong></div>
               <div>Số tài khoản: <strong style={{ color: 'var(--brand-primary)' }}>0905 888 999</strong></div>
-              <div>Chủ TK: <strong>MOTOBIKE HAI CHAU DANANG</strong></div>
+              <div>Chủ TK: <strong>XTBike</strong></div>
               <div>Số tiền: <strong style={{ color: 'var(--accent-green)' }}>{qrModal.amount.toLocaleString('vi-VN')} đ</strong></div>
             </div>
 

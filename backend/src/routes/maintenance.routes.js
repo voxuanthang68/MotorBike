@@ -33,7 +33,12 @@ router.get('/', async (req, res) => {
 // CREATE
 router.post('/', authorize('owner', 'admin', 'technician'), upload.array('images', 5), async (req, res) => {
   try {
-    const data = { ...req.body, technician: req.user._id };
+    const data = {
+      ...req.body,
+      technician: req.user._id,
+      title: req.body.title || 'Phiếu kiểm tra an toàn kỹ thuật',
+      odometerAtMaintenance: req.body.odometerAtMaintenance || req.body.odometer || 0
+    };
     if (req.files?.length > 0) {
       data.images = req.files.map(f => ({ url: `/uploads/maintenance/${f.filename}`, caption: '' }));
     }

@@ -9,10 +9,16 @@ export default function RegisterPage() {
   const router = useRouter();
   const { register: registerUser, isLoading } = useAuthStore();
   const [formData, setFormData] = useState({
-    fullName: '', email: '', phone: '', password: '', confirmPassword: '',
-    cccd: '', address: ''
+    fullName: '',
+    email: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+    referralCode: '',
   });
-  const [step, setStep] = useState(1);
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,136 +31,272 @@ export default function RegisterPage() {
       return;
     }
     try {
-      await registerUser(formData);
-      toast.success('Đăng ký thành công!');
+      await registerUser({
+        fullName: formData.fullName,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+      });
+      toast.success('Đăng ký tài khoản thành công!');
       router.push('/portal');
     } catch (error: any) {
-      toast.error(error.message);
+      toast.error(error.message || 'Đăng ký không thành công');
     }
   };
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg-primary)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '20px',
-      position: 'relative',
-      overflow: 'hidden',
-    }}>
-      <div style={{ position: 'fixed', top: '-20%', left: '-10%', width: '600px', height: '600px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(59,130,246,0.08) 0%, transparent 70%)', pointerEvents: 'none' }} />
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(min(450px, 100%), 1fr))',
+        background: '#ffffff',
+      }}
+    >
+      {/* ========================================================
+          LEFT SIDE: EMERALD / TEAL GRADIENT OVER VEHICLE BANNER
+          ======================================================== */}
+      <div
+        style={{
+          position: 'relative',
+          background: `linear-gradient(135deg, rgba(0, 191, 165, 0.88) 0%, rgba(13, 148, 136, 0.92) 100%), url('https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=1400&auto=format&fit=crop&q=80') center/cover no-repeat`,
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          padding: '48px 56px',
+          color: '#ffffff',
+        }}
+      >
+        {/* Brand header on top */}
+        <div>
+          <Link href="/" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '26px', fontWeight: 900, color: '#ffffff', letterSpacing: '0.5px' }}>
+              XTBike<span style={{ color: '#ecfdf5' }}>.VN</span>
+            </span>
+          </Link>
+        </div>
 
-      <div style={{ width: '100%', maxWidth: '480px', animation: 'slideUp 0.4s ease' }}>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <div style={{
-            width: '56px', height: '56px',
-            background: 'var(--brand-gradient)',
-            borderRadius: '16px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '28px', margin: '0 auto 12px',
-            boxShadow: '0 8px 32px rgba(249,115,22,0.4)',
-          }}>🏍️</div>
-          <h1 style={{ fontSize: '22px', fontWeight: 800 }}>
-            Moto<span style={{ color: 'var(--brand-primary)' }}>Bike</span> Hải Châu
+        {/* Hero text matching Image 1 */}
+        <div style={{ maxWidth: '480px', margin: '40px 0' }}>
+          <h1
+            style={{
+              fontSize: '40px',
+              fontWeight: 900,
+              lineHeight: 1.25,
+              marginBottom: '20px',
+              color: '#ffffff',
+              letterSpacing: '-0.5px',
+            }}
+          >
+            Bắt đầu hành trình
+            <br />
+              cùng XTBike
           </h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '13px', marginTop: '4px' }}>
-            Đăng ký tài khoản khách hàng
+          <p
+            style={{
+              fontSize: '15px',
+              lineHeight: 1.65,
+              color: 'rgba(255, 255, 255, 0.92)',
+              fontWeight: 400,
+            }}
+          >
+            Tạo tài khoản để đặt xe nhanh chóng, quản lý chuyến đi và nhận nhiều ưu đãi hấp dẫn.
           </p>
         </div>
 
-        <div className="glass-card" style={{ padding: '32px' }}>
-          {/* Step indicator */}
-          <div style={{ display: 'flex', gap: '8px', marginBottom: '24px' }}>
-            {[1, 2].map(s => (
-              <div key={s} style={{
-                flex: 1, height: '4px', borderRadius: '2px',
-                background: step >= s ? 'var(--brand-primary)' : 'rgba(255,255,255,0.1)',
-                transition: 'background 0.3s',
-              }} />
-            ))}
+        {/* Bottom subtle note */}
+        <div style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
+          © XTBike.VN • Nền tảng thuê xe thông minh Đà Nẵng
+        </div>
+      </div>
+
+      {/* ========================================================
+          RIGHT SIDE: CLEAN WHITE AUTH CARD (MATCHING IMAGE 1)
+          ======================================================== */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '40px 24px',
+          background: '#ffffff',
+        }}
+      >
+        <div
+          style={{
+            width: '100%',
+            maxWidth: '460px',
+            border: '1px solid #e2e8f0',
+            borderRadius: '20px',
+            padding: '36px 34px',
+            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.03)',
+            background: '#ffffff',
+          }}
+        >
+          {/* Header Title */}
+          <div style={{ marginBottom: '24px' }}>
+            <h2
+              style={{
+                fontSize: '26px',
+                fontWeight: 900,
+                color: '#0f172a',
+                marginBottom: '6px',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              Đăng ký
+            </h2>
+            <p style={{ fontSize: '13.5px', color: '#64748b' }}>
+              Tạo tài khoản mới để sử dụng dịch vụ thuê xe
+            </p>
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-            {step === 1 && (
-              <>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Thông tin cơ bản</h3>
-                <div className="form-group">
-                  <label className="form-label">Họ và tên *</label>
-                  <input className="form-input" type="text" placeholder="Nguyễn Văn A" value={formData.fullName}
-                    onChange={e => setFormData({...formData, fullName: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Email *</label>
-                  <input className="form-input" type="email" placeholder="email@example.com" value={formData.email}
-                    onChange={e => setFormData({...formData, email: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Số điện thoại *</label>
-                  <input className="form-input" type="tel" placeholder="0901234567" value={formData.phone}
-                    onChange={e => setFormData({...formData, phone: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Mật khẩu *</label>
-                  <input className="form-input" type="password" placeholder="Ít nhất 6 ký tự" value={formData.password}
-                    onChange={e => setFormData({...formData, password: e.target.value})} required />
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Xác nhận mật khẩu *</label>
-                  <input className="form-input" type="password" placeholder="Nhập lại mật khẩu" value={formData.confirmPassword}
-                    onChange={e => setFormData({...formData, confirmPassword: e.target.value})} required />
-                </div>
-                <button type="button" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }}
-                  onClick={() => {
-                    if (!formData.fullName || !formData.email || !formData.phone || !formData.password || !formData.confirmPassword) {
-                      toast.error('Vui lòng điền đầy đủ thông tin!');
-                      return;
-                    }
-                    if (formData.password !== formData.confirmPassword) {
-                      toast.error('Mật khẩu không khớp!');
-                      return;
-                    }
-                    setStep(2);
-                  }}>
-                  Tiếp theo →
-                </button>
-              </>
-            )}
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+            {/* Input 1: Họ và tên */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Họ và tên *
+              </label>
+              <input
+                type="text"
+                required
+                placeholder="Họ và tên"
+                className="eightcar-auth-input"
+                value={formData.fullName}
+                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+              />
+            </div>
 
-            {step === 2 && (
-              <>
-                <h3 style={{ fontSize: '16px', fontWeight: 600, marginBottom: '4px' }}>Thông tin bổ sung</h3>
-                <div className="form-group">
-                  <label className="form-label">Số CCCD/CMND</label>
-                  <input className="form-input" type="text" placeholder="012345678901" value={formData.cccd}
-                    onChange={e => setFormData({...formData, cccd: e.target.value})} />
-                  <span className="form-hint">Cần thiết để thuê xe</span>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Địa chỉ</label>
-                  <input className="form-input" type="text" placeholder="123 Đường ABC, Đà Nẵng" value={formData.address}
-                    onChange={e => setFormData({...formData, address: e.target.value})} />
-                </div>
-                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                  <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setStep(1)}>
-                    ← Quay lại
-                  </button>
-                  <button type="submit" className="btn btn-primary" style={{ flex: 2 }} disabled={isLoading}>
-                    {isLoading ? <><div className="spinner" style={{width:'16px',height:'16px'}}/> Đang tạo...</> : '✅ Hoàn tất đăng ký'}
-                  </button>
-                </div>
-              </>
-            )}
+            {/* Input 2: Email */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Email *
+              </label>
+              <input
+                type="email"
+                required
+                placeholder="Email"
+                className="eightcar-auth-input"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              />
+            </div>
+
+            {/* Input 3: Số điện thoại */}
+            <div style={{ marginBottom: '14px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Số điện thoại *
+              </label>
+              <input
+                type="tel"
+                required
+                placeholder="Số điện thoại"
+                className="eightcar-auth-input"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              />
+            </div>
+
+            {/* Input 4: Mật khẩu */}
+            <div style={{ marginBottom: '14px', position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Mật khẩu *
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Mật khẩu"
+                  className="eightcar-auth-input"
+                  style={{ paddingRight: '48px' }}
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '16px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: 0,
+                  }}
+                >
+                  {showPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            {/* Input 5: Nhập lại mật khẩu */}
+            <div style={{ marginBottom: '14px', position: 'relative' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Nhập lại mật khẩu *
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  placeholder="Nhập lại mật khẩu"
+                  className="eightcar-auth-input"
+                  style={{ paddingRight: '48px' }}
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '16px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: '#64748b',
+                    cursor: 'pointer',
+                    fontSize: '16px',
+                    padding: 0,
+                  }}
+                >
+                  {showConfirmPassword ? '🙈' : '👁️'}
+                </button>
+              </div>
+            </div>
+
+            {/* Input 6: Mã giới thiệu (Nếu có) */}
+            <div style={{ marginBottom: '22px' }}>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                Mã giới thiệu (Nếu có)
+              </label>
+              <input
+                type="text"
+                placeholder="Mã giới thiệu (Nếu có)"
+                className="eightcar-auth-input"
+                value={formData.referralCode}
+                onChange={(e) => setFormData({ ...formData, referralCode: e.target.value })}
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button type="submit" disabled={isLoading} className="eightcar-auth-btn">
+              {isLoading ? 'ĐANG TẠO TÀI KHOẢN...' : 'ĐĂNG KÝ'}
+            </button>
           </form>
 
-          <div className="divider" />
-          <p style={{ textAlign: 'center', fontSize: '13px', color: 'var(--text-secondary)' }}>
+          {/* Switch to Login link */}
+          <div style={{ textAlign: 'center', fontSize: '13.5px', color: '#64748b', marginTop: '22px' }}>
             Đã có tài khoản?{' '}
-            <Link href="/login" style={{ color: 'var(--brand-primary)', fontWeight: 600, textDecoration: 'none' }}>
+            <Link href="/login" style={{ color: '#00bfa5', fontWeight: 700, textDecoration: 'none' }}>
               Đăng nhập
             </Link>
-          </p>
+          </div>
         </div>
       </div>
     </div>

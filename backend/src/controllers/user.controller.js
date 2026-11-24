@@ -86,7 +86,7 @@ exports.remove = async (req, res) => {
 // @PUT /api/users/profile - Update own profile
 exports.updateProfile = async (req, res) => {
   try {
-    const allowedFields = ['fullName', 'phone', 'address', 'avatar', 'cccd', 'drivingLicense'];
+    const allowedFields = ['fullName', 'phone', 'address', 'avatar', 'cccd', 'cccdFrontImage', 'cccdBackImage', 'drivingLicense', 'drivingLicenseClass', 'drivingLicenseFrontImage', 'drivingLicenseBackImage'];
     const updateData = {};
     allowedFields.forEach(field => {
       if (req.body[field] !== undefined) updateData[field] = req.body[field];

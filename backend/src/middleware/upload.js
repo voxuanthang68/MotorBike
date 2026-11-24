@@ -4,11 +4,12 @@ const fs = require('fs');
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    let folder = 'uploads/misc';
-    if (req.baseUrl.includes('vehicles')) folder = 'uploads/vehicles';
-    else if (req.baseUrl.includes('bookings')) folder = 'uploads/bookings';
-    else if (req.baseUrl.includes('maintenance')) folder = 'uploads/maintenance';
-    else if (req.baseUrl.includes('users')) folder = 'uploads/avatars';
+    let folder = 'misc';
+    if (req.baseUrl.includes('vehicles')) folder = 'vehicles';
+    else if (req.baseUrl.includes('bookings')) folder = 'bookings';
+    else if (req.baseUrl.includes('maintenance')) folder = 'maintenance';
+    else if (req.baseUrl.includes('users')) folder = 'avatars';
+    folder = path.join(__dirname, '..', 'uploads', folder);
     
     if (!fs.existsSync(folder)) fs.mkdirSync(folder, { recursive: true });
     cb(null, folder);

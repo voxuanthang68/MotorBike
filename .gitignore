@@ -33,3 +33,9 @@ Thumbs.db
 .idea/
 *.swp
 *.swo
+
+# Agents and temporary skill files
+.agents/
+.taste-skill/
+skills-lock.json
+

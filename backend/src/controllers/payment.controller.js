@@ -40,7 +40,28 @@ exports.getAll = async (req, res) => {
 // @POST /api/payments
 exports.create = async (req, res) => {
   try {
-    const { bookingId, customerId, type, amount, method, note, referenceNumber } = req.body;
+    let { bookingId, customerId, type, amount, method, paymentMethod, note, notes, referenceNumber, bookingCode } = req.body;
+    method = method || paymentMethod || 'bank_transfer';
+    note = note || notes || '';
+    if (type === 'rental') type = 'rental_fee';
+
+    if (!bookingId && bookingCode) {
+      const foundBooking = await Booking.findOne({ bookingCode: bookingCode.trim() });
+      if (foundBooking) {
+        bookingId = foundBooking._id;
+        if (!customerId) customerId = foundBooking.customer;
+      }
+    }
+
+    if (req.user.role === 'customer') {
+      const booking = await Booking.findById(bookingId);
+      if (!booking || booking.customer.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'Bạn không có quyền thanh toán cho đơn này.' });
+      }
+      if (!['deposit', 'rental_fee'].includes(type) || !['vnpay', 'momo', 'bank_transfer', 'qr', 'cash'].includes(method)) {
+        return res.status(400).json({ success: false, message: 'Thông tin thanh toán không hợp lệ.' });
+      }
+    }
 
     const payment = await Payment.create({
       booking: bookingId,
@@ -77,6 +98,17 @@ exports.getSummary = async (req, res) => {
     const { year = new Date().getFullYear(), month } = req.query;
     const matchStage = { status: 'completed', type: { $ne: 'refund' } };
 
+    // KPI overall totals
+    const typeStats = await Payment.aggregate([
+      { $match: { status: 'completed' } },
+      { $group: { _id: '$type', total: { $sum: '$amount' } } }
+    ]);
+    const typeMap = Object.fromEntries(typeStats.map(s => [s._id, s.total]));
+    const totalRevenue = typeMap['rental_fee'] || 0;
+    const totalDeposit = typeMap['deposit'] || 0;
+    const totalRefund = typeMap['refund'] || 0;
+    const totalFees = (typeMap['damage_fee'] || 0) + (typeMap['late_fee'] || 0) + (typeMap['fuel_fee'] || 0);
+
     const monthlyRevenue = await Payment.aggregate([
       { $match: matchStage },
       {
@@ -108,6 +140,10 @@ exports.getSummary = async (req, res) => {
     res.json({
       success: true,
       data: {
+        totalRevenue,
+        totalDeposit,
+        totalRefund,
+        totalFees,
         monthlyRevenue,
         todayRevenue: todayRevenue[0]?.total || 0,
         methodBreakdown

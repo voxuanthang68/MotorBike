@@ -42,7 +42,7 @@ export default function ReportsPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', 'Bao_cao_doanh_thu_MotoBike_HaiChau.csv');
+    link.setAttribute('download', 'Bao_cao_doanh_thu_XTBike.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -113,11 +113,11 @@ export default function ReportsPage() {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                 <XAxis dataKey="month" stroke="var(--text-muted)" fontSize={11} />
                 <YAxis stroke="var(--text-muted)" fontSize={11} tickFormatter={(v) => `${v / 1000000}tr`} />
                 <Tooltip
-                  contentStyle={{ background: '#141428', border: '1px solid var(--glass-border)', borderRadius: '10px' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}
                   formatter={(val: any) => [`${Number(val).toLocaleString('vi-VN')} đ`]}
                 />
                 <Area type="monotone" dataKey="revenue" name="Doanh thu" stroke="#f97316" fillOpacity={1} fill="url(#colorRev)" />
@@ -149,7 +149,7 @@ export default function ReportsPage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{ background: '#141428', border: '1px solid var(--glass-border)', borderRadius: '10px' }}
+                  contentStyle={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '10px', boxShadow: '0 8px 24px rgba(15,23,42,0.08)' }}
                   formatter={(val: any) => [`${val}% thị phần`]}
                 />
                 <Legend />
@@ -185,12 +185,12 @@ export default function ReportsPage() {
                       width: '26px',
                       height: '26px',
                       borderRadius: '50%',
-                      background: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : 'rgba(255,255,255,0.06)',
+                      background: idx === 0 ? '#f59e0b' : idx === 1 ? '#94a3b8' : idx === 2 ? '#b45309' : '#e2e8f0',
                       display: 'inline-flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontWeight: 700,
-                      color: 'white',
+                      color: idx < 3 ? 'white' : '#475569',
                       fontSize: '12px'
                     }}
                   >

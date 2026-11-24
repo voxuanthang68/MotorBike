@@ -4,6 +4,7 @@ const ctrl = require('../controllers/vehicle.controller');
 const { protect, authorize } = require('../middleware/auth');
 const upload = require('../middleware/upload');
 
+router.get('/public', ctrl.getPublicCatalog);
 router.get('/', protect, ctrl.getAll);
 router.get('/:id', protect, ctrl.getById);
 router.post('/', protect, authorize('owner', 'admin', 'receptionist'), upload.array('images', 10), ctrl.create);

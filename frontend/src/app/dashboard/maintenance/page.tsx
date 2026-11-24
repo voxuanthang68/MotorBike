@@ -152,9 +152,10 @@ export default function MaintenancePage() {
     }
 
     const payload = {
+      title: `Kiểm tra ${TYPE_LABELS[type]?.label || 'kỹ thuật'} - ${description || 'Định kỳ'}`,
       vehicle: vehicleId,
       type,
-      description: `${description}. Checklist: Động cơ: ${checklist.engine ? 'Tốt' : 'Cần xem lại'}, Phanh: ${checklist.brakes ? 'Tốt' : 'Yếu'}, Lốp: ${checklist.tires ? 'Tốt' : 'Mòn'}, Đèn: ${checklist.lights ? 'Sáng' : 'Hỏng'}, Nhớt: ${checklist.oil ? 'Đầy' : 'Cạn'}.`,
+      description: `${description || 'Kiểm định an toàn'}. Checklist: Động cơ: ${checklist.engine ? 'Tốt' : 'Cần xem lại'}, Phanh: ${checklist.brakes ? 'Tốt' : 'Yếu'}, Lốp: ${checklist.tires ? 'Tốt' : 'Mòn'}, Đèn: ${checklist.lights ? 'Sáng' : 'Hỏng'}, Nhớt: ${checklist.oil ? 'Đầy' : 'Cạn'}.`,
       cost,
       odometer,
       status: 'in_progress',
@@ -390,7 +391,7 @@ export default function MaintenancePage() {
               </div>
 
               {/* Technical Inspection Checklist */}
-              <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--glass-border)', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
                 <div style={{ fontWeight: 700, fontSize: '13px', marginBottom: '10px', color: '#06b6d4', textTransform: 'uppercase' }}>
                   ✓ Checklist 8 Hạng Mục An Toàn Kỹ Thuật
                 </div>
@@ -486,7 +487,7 @@ export default function MaintenancePage() {
               <button onClick={() => setDetailModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', marginBottom: '16px', fontSize: '13px', lineHeight: 1.7 }}>
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '16px', borderRadius: '12px', marginBottom: '16px', fontSize: '13px', lineHeight: 1.7 }}>
               <div><strong>Loại:</strong> {TYPE_LABELS[detailModal.type]?.label || detailModal.type}</div>
               <div><strong>Kỹ thuật viên:</strong> {detailModal.technician?.fullName || user?.fullName}</div>
               <div><strong>Số KM (Odo):</strong> {detailModal.odometer || 0} km</div>
@@ -523,7 +524,7 @@ export default function MaintenancePage() {
                   </button>
                 </div>
 
-                <div style={{ border: '2px dashed #06b6d444', borderRadius: '12px', background: 'rgba(0,0,0,0.4)', overflow: 'hidden' }}>
+                <div style={{ border: '2px dashed #67e8f9', borderRadius: '12px', background: '#ffffff', overflow: 'hidden' }}>
                   <canvas
                     ref={techCanvasRef}
                     width={540}

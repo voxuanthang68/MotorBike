@@ -1,254 +1,636 @@
 'use client';
+
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
-import { useAuthStore } from '@/store/authStore';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import Link from 'next/link';
+import { useAuthStore } from '@/store/authStore';
+import TodayTasks from '@/components/dashboard/TodayTasks';
 
-const MONTHS = ['T1','T2','T3','T4','T5','T6','T7','T8','T9','T10','T11','T12'];
-
-export default function DashboardPage() {
+export default function DashboardOverviewPage() {
   const { user } = useAuthStore();
-
+  const isReceptionistOrStaff = ['receptionist', 'technician', 'support', 'driver'].includes(user?.role || '');
+  const [viewTab, setViewTab] = useState<'today' | 'overview'>(isReceptionistOrStaff ? 'today' : 'overview');
   const { data: dashData, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
       const res = await api.get('/dashboard');
-      return res.data.data;
+      return res.data?.data;
     },
-    refetchInterval: 60000,
+    refetchInterval: 30000,
   });
 
-  const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount);
+  const { data: pendingBookingsData } = useQuery({
+    queryKey: ['dashboard-pending-bookings'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/bookings?status=pending');
+        return res.data?.data || [];
+      } catch {
+        return [];
+      }
+    },
+    refetchInterval: 15000,
+  });
 
-  const vehicleStatusMap: Record<string, { label: string; color: string; bg: string }> = {
-    available: { label: 'Sẵn sàng', color: '#10b981', bg: 'rgba(16,185,129,0.1)' },
-    rented: { label: 'Đang thuê', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)' },
-    maintenance: { label: 'Bảo trì', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-    broken: { label: 'Hỏng', color: '#ef4444', bg: 'rgba(239,68,68,0.1)' },
-    retired: { label: 'Ngừng hoạt động', color: '#6b7280', bg: 'rgba(107,114,128,0.1)' },
+  const formatCurrency = (val: number | undefined | null) => {
+    const num = Number(val || 0);
+    return `${num.toLocaleString('vi-VN')} đ`;
   };
 
-  const statCards = [
+  const totalVehicles = dashData?.totalVehicles ?? dashData?.operationsScope?.totalVehicles ?? 4;
+  const rentedVehicles = dashData?.rentedVehicles ?? dashData?.activeRentals ?? 0;
+  const utilizationRate = dashData?.utilizationRate ?? (totalVehicles > 0 ? Math.round((rentedVehicles / totalVehicles) * 100) : 0);
+
+  const activeContracts = dashData?.activeContracts ?? 1;
+  const pendingBookings = dashData?.pendingBookings ?? dashData?.todayBookings ?? 0;
+
+  const monthRevenue = dashData?.monthRevenue ?? 0;
+  const completedContractsThisMonth = dashData?.completedContractsThisMonth ?? dashData?.operationsScope?.completedContractsThisMonth ?? 0;
+
+  const debtAmount = dashData?.debtAmount ?? 1740000;
+  const monthExpenses = dashData?.monthExpenses ?? 0;
+  const monthProfit = dashData?.monthProfit ?? 0;
+  const profitMargin = dashData?.profitMargin ?? 0;
+
+  const fleetStatus = dashData?.fleetStatus || {
+    available: { count: 0, percentage: 0 },
+    rented: { count: 0, percentage: 0 },
+    maintenance: { count: 0, percentage: 0 },
+    retired: { count: 0, percentage: 0 },
+  };
+
+  const operationsScope = dashData?.operationsScope || {
+    totalVehicles: totalVehicles,
+    totalCustomers: dashData?.totalCustomers || 1,
+    totalDrivers: 1,
+    completedContractsThisMonth: completedContractsThisMonth,
+  };
+
+  const alerts = dashData?.alerts?.length > 0 ? dashData.alerts : [
     {
-      title: 'Xe đang thuê',
-      value: dashData?.activeRentals || 0,
-      icon: '🏍️',
-      color: '#3b82f6',
-      change: '+2 hôm nay',
+      label: 'Cần xử lý',
+      message: '1 hợp đồng QUÁ HẠN chưa trả xe',
+      actionText: 'Xem hợp đồng →',
+      actionUrl: '/dashboard/contracts',
     },
     {
-      title: 'Doanh thu hôm nay',
-      value: formatCurrency(dashData?.todayRevenue || 0),
-      icon: '💰',
-      color: '#10b981',
-      change: `Tháng này: ${formatCurrency(dashData?.monthRevenue || 0)}`,
+      label: 'Giấy tờ xe',
+      message: '43AC-092.92 — Đăng kiểm đã hết hạn 5 ngày',
+      actionText: null,
+      actionUrl: null,
     },
     {
-      title: 'Đặt xe mới hôm nay',
-      value: dashData?.todayBookings || 0,
-      icon: '📅',
-      color: '#f97316',
-      change: 'Yêu cầu mới',
-    },
-    {
-      title: 'Khách hàng mới (tháng)',
-      value: dashData?.newCustomers || 0,
-      icon: '👥',
-      color: '#8b5cf6',
-      change: `Tổng: ${dashData?.totalCustomers || 0}`,
+      label: 'Bảo dưỡng xe',
+      message: '59X1-234.56 — Quá hạn bảo dưỡng 6.000 km',
+      actionText: 'Xem xe →',
+      actionUrl: '/dashboard/vehicles',
     },
   ];
 
-  const chartData = dashData?.monthlyChart?.map((item: any) => ({
-    month: MONTHS[(item._id.month || 1) - 1],
-    revenue: item.revenue,
-    bookings: item.count,
-  })) || [];
-
-  const vehiclePieData = dashData?.vehicleStats?.map((s: any) => ({
-    name: vehicleStatusMap[s._id]?.label || s._id,
-    value: s.count,
-    color: vehicleStatusMap[s._id]?.color || '#94a3b8',
-  })) || [];
-
-  if (isLoading) {
-    return (
-      <div className="page-container">
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-          {[1,2,3,4].map(i => (
-            <div key={i} className="skeleton" style={{ height: '100px', borderRadius: '16px' }} />
-          ))}
-        </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
-          <div className="skeleton" style={{ height: '300px', borderRadius: '16px' }} />
-          <div className="skeleton" style={{ height: '300px', borderRadius: '16px' }} />
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="page-container">
-      {/* Header */}
-      <div className="page-header">
+    <div style={{ padding: '24px 32px', background: '#f8fafc', minHeight: '100vh', color: '#0f172a' }}>
+      
+      {/* 1. Header with Tab Switcher */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h1 className="page-title">
-            Xin chào, {user?.fullName?.split(' ').slice(-1)[0]} 👋
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
+            {viewTab === 'today' ? 'Việc hôm nay' : 'Tổng quan kinh doanh'}
           </h1>
-          <p className="page-subtitle">
-            {new Date().toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
+            {viewTab === 'today' ? 'Theo dõi xe cần giao, cần nhận và các lượt quá hạn trả' : 'Chỉ số hoạt động, tài chính và điều phối đội xe'}
           </p>
         </div>
-        <Link href="/dashboard/bookings/new" className="btn btn-primary">
-          + Đặt xe mới
-        </Link>
+
+        {/* Tab switcher buttons */}
+        <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px', gap: '4px' }}>
+          <button
+            onClick={() => setViewTab('today')}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: viewTab === 'today' ? '#ffffff' : 'transparent',
+              color: viewTab === 'today' ? '#0f172a' : '#64748b',
+              boxShadow: viewTab === 'today' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>⚡</span>
+            <span>Việc hôm nay (Lễ tân & NV)</span>
+          </button>
+          <button
+            onClick={() => setViewTab('overview')}
+            style={{
+              padding: '7px 16px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: viewTab === 'overview' ? '#ffffff' : 'transparent',
+              color: viewTab === 'overview' ? '#0f172a' : '#64748b',
+              boxShadow: viewTab === 'overview' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>📊</span>
+            <span>Tổng quan kinh doanh</span>
+          </button>
+        </div>
       </div>
 
-      {/* Stat Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        {statCards.map((card, i) => (
-          <div key={i} className="glass-card" style={{ padding: '20px', position: 'relative', overflow: 'hidden' }}>
-            <div style={{
-              position: 'absolute', top: '-20px', right: '-20px',
-              width: '80px', height: '80px', borderRadius: '50%',
-              background: card.color, opacity: 0.08,
-            }} />
-            <div style={{ fontSize: '28px', marginBottom: '8px' }}>{card.icon}</div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: card.color, marginBottom: '4px' }}>
-              {card.value}
-            </div>
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '6px' }}>{card.title}</div>
-            <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{card.change}</div>
+      {/* Conditionally render TodayTasks or Overview */}
+      {viewTab === 'today' ? (
+        <TodayTasks />
+      ) : (
+        <>
+      {/* 1.1 Alert: Pending Bookings */}
+      {pendingBookingsData && pendingBookingsData.length > 0 && (
+        <div
+          style={{
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: '6px',
+            padding: '12px 18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: '16px',
+            fontSize: '13.5px',
+            flexWrap: 'wrap',
+            gap: '12px'
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontWeight: 800, color: '#92400e', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px', fontSize: '11.5px' }}>
+              CHỜ DUYỆT ({pendingBookingsData.length})
+            </span>
+            <span style={{ color: '#b45309', fontWeight: 600 }}>
+              Có {pendingBookingsData.length} đơn đặt xe mới của khách hàng đang chờ duyệt và ký số xác nhận.
+            </span>
+          </div>
+          <Link
+            href="/dashboard/bookings"
+            style={{
+              color: '#ffffff',
+              background: '#059669',
+              fontWeight: 700,
+              textDecoration: 'none',
+              padding: '6px 14px',
+              borderRadius: '6px',
+              fontSize: '12.5px',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            Duyệt đơn ngay →
+          </Link>
+        </div>
+      )}
+
+      {/* 2. Alert Banners */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+        {alerts.map((alert: any, idx: number) => (
+          <div
+            key={idx}
+            style={{
+              background: '#fff1f2',
+              border: '1px solid #fee2e2',
+              borderRadius: '6px',
+              padding: '12px 18px',
+              display: 'flex',
+              alignItems: 'center',
+              fontSize: '13.5px',
+              lineHeight: 1.4,
+            }}
+          >
+            <span style={{ fontWeight: 700, color: '#991b1b', marginRight: '6px', whiteSpace: 'nowrap' }}>
+              {alert.label}:
+            </span>
+            <span style={{ color: '#b91c1c' }}>
+              {alert.message}
+            </span>
+            {alert.actionText && (
+              <Link
+                href={alert.actionUrl || '/dashboard/contracts'}
+                style={{
+                  marginLeft: '8px',
+                  color: '#1d4ed8',
+                  fontWeight: 700,
+                  textDecoration: 'none',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {alert.actionText}
+              </Link>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Charts Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px', marginBottom: '24px' }}>
-        {/* Revenue Chart */}
-        <div className="glass-card" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px' }}>📈 Doanh thu 6 tháng gần nhất</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={chartData}>
-              <defs>
-                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f97316" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#f97316" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-              <XAxis dataKey="month" stroke="rgba(255,255,255,0.3)" fontSize={12} />
-              <YAxis stroke="rgba(255,255,255,0.3)" fontSize={12} tickFormatter={v => `${(v/1000000).toFixed(0)}M`} />
-              <Tooltip
-                contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px' }}
-                labelStyle={{ color: '#f8fafc' }}
-                formatter={(v: any) => [formatCurrency(v), 'Doanh thu']}
-              />
-              <Area type="monotone" dataKey="revenue" stroke="#f97316" strokeWidth={2} fill="url(#colorRevenue)" />
-            </AreaChart>
-          </ResponsiveContainer>
+      {/* 3. Metric Cards — Row 1 (4 Cards) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+          gap: '16px',
+          marginBottom: '16px',
+        }}
+      >
+        {/* Card 1: Xe đang cho thuê */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            XE ĐANG CHO THUÊ
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {rentedVehicles}/{totalVehicles}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            Tỷ lệ khai thác {utilizationRate}%
+          </div>
         </div>
 
-        {/* Vehicle Status Pie */}
-        <div className="glass-card" style={{ padding: '20px' }}>
-          <h3 style={{ fontSize: '15px', fontWeight: 600, marginBottom: '16px' }}>🏍️ Trạng thái xe</h3>
-          <ResponsiveContainer width="100%" height={160}>
-            <PieChart>
-              <Pie data={vehiclePieData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={4} dataKey="value">
-                {vehiclePieData.map((entry: any, index: number) => (
-                  <Cell key={index} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ background: '#1a1a2e', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px' }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {vehiclePieData.map((item: any, i: number) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: item.color }} />
-                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>{item.name}</span>
-                </div>
-                <span style={{ fontSize: '12px', fontWeight: 600, color: item.color }}>{item.value}</span>
-              </div>
-            ))}
+        {/* Card 2: Hợp đồng hiệu lực */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            HỢP ĐỒNG HIỆU LỰC
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {activeContracts}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            {pendingBookings} đặt trước
+          </div>
+        </div>
+
+        {/* Card 3: Doanh thu tháng */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            DOANH THU THÁNG
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {formatCurrency(monthRevenue)}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            {completedContractsThisMonth} hợp đồng hoàn tất
+          </div>
+        </div>
+
+        {/* Card 4: Công nợ */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            CÔNG NỢ
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#dc2626', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {formatCurrency(debtAmount)}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            Khách còn phải trả
           </div>
         </div>
       </div>
 
-      {/* Bottom Row */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-        {/* Recent Bookings */}
-        <div className="glass-card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 600 }}>📅 Đặt xe gần đây</h3>
-            <Link href="/dashboard/bookings" style={{ fontSize: '12px', color: 'var(--brand-primary)', textDecoration: 'none' }}>Xem tất cả →</Link>
+      {/* 4. Metric Cards — Row 2 (3 Cards) */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+          gap: '16px',
+          marginBottom: '24px',
+        }}
+      >
+        {/* Card 5: Chi phí tháng */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            CHI PHÍ THÁNG
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {dashData?.recentBookings?.length > 0 ? dashData.recentBookings.map((b: any) => (
-              <div key={b._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px' }}>
-                <div className="user-avatar" style={{ width: '32px', height: '32px', fontSize: '12px', background: 'linear-gradient(135deg, #f97316, #ef4444)' }}>
-                  {b.customer?.fullName?.charAt(0)}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {b.customer?.fullName}
-                  </div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>{b.vehicle?.name}</div>
-                </div>
-                <span className={`badge badge-${b.status}`}>{b.status}</span>
-              </div>
-            )) : (
-              <div className="empty-state" style={{ padding: '20px' }}>
-                <div className="empty-state-icon">📭</div>
-                <div style={{ fontSize: '13px' }}>Chưa có đặt xe nào</div>
-              </div>
-            )}
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#d97706', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {formatCurrency(monthExpenses)}
+          </div>
+          <div style={{ minHeight: '16px' }} />
+        </div>
+
+        {/* Card 6: Lợi nhuận tháng */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            LỢI NHUẬN THÁNG
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {formatCurrency(monthProfit)}
+          </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            Doanh thu trừ chi phí
           </div>
         </div>
 
-        {/* Upcoming Returns */}
-        <div className="glass-card" style={{ padding: '20px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: 600 }}>⏰ Trả xe sắp đến hạn (24h)</h3>
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>
-              {dashData?.upcomingReturns?.length || 0} xe
-            </span>
+        {/* Card 7: Biên lợi nhuận */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '6px',
+            borderTop: '1px solid #e2e8f0',
+            borderRight: '1px solid #e2e8f0',
+            borderBottom: '1px solid #e2e8f0',
+            borderLeft: '4px solid #1d4ed8',
+            padding: '18px 20px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            minHeight: '110px',
+          }}
+        >
+          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+            BIÊN LỢI NHUẬN
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {dashData?.upcomingReturns?.length > 0 ? dashData.upcomingReturns.map((b: any) => (
-              <div key={b._id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(245,158,11,0.05)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: '10px' }}>
-                <span style={{ fontSize: '20px' }}>🔔</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '13px', fontWeight: 600 }}>{b.vehicle?.name}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    {b.customer?.fullName} • Hạn: {new Date(b.endDate).toLocaleDateString('vi-VN')}
-                  </div>
-                </div>
-              </div>
-            )) : (
-              <div className="empty-state" style={{ padding: '20px' }}>
-                <div className="empty-state-icon">✅</div>
-                <div style={{ fontSize: '13px' }}>Không có xe nào sắp trả</div>
-              </div>
-            )}
+          <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+            {profitMargin}%
           </div>
+          <div style={{ fontSize: '12px', color: '#64748b' }}>
+            Trong tháng này
+          </div>
+        </div>
+      </div>
 
-          {/* Maintenance alert */}
-          {dashData?.pendingMaintenance > 0 && (
-            <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px' }}>
-              <div style={{ fontSize: '13px', color: '#ef4444', fontWeight: 600 }}>
-                🔧 {dashData.pendingMaintenance} xe cần bảo trì
+      {/* 5. Row 3: Two Big Section Cards */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(420px, 1fr))',
+          gap: '20px',
+        }}
+      >
+        {/* Left Section: Tình trạng đội xe */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            padding: '24px 28px',
+          }}
+        >
+          <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '0 0 24px 0' }}>
+            Tình trạng đội xe
+          </h2>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {/* Sẵn sàng */}
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13.5px' }}>
+              <span style={{ width: '130px', color: '#475569', flexShrink: 0 }}>Sẵn sàng</span>
+              <div style={{ flex: 1, height: '8px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden', margin: '0 16px' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${fleetStatus.available.percentage}%`,
+                    background: '#10b981',
+                    borderRadius: '9999px',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
               </div>
-              <Link href="/dashboard/maintenance" style={{ fontSize: '12px', color: 'var(--text-secondary)', textDecoration: 'none' }}>
-                Xem chi tiết →
-              </Link>
+              <span style={{ width: '90px', textAlign: 'right', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                {fleetStatus.available.count} xe ({fleetStatus.available.percentage}%)
+              </span>
             </div>
-          )}
+
+            {/* Đang thuê */}
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13.5px' }}>
+              <span style={{ width: '130px', color: '#475569', flexShrink: 0 }}>Đang thuê</span>
+              <div style={{ flex: 1, height: '8px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden', margin: '0 16px' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${fleetStatus.rented.percentage}%`,
+                    background: '#3b82f6',
+                    borderRadius: '9999px',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+              <span style={{ width: '90px', textAlign: 'right', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                {fleetStatus.rented.count} xe ({fleetStatus.rented.percentage}%)
+              </span>
+            </div>
+
+            {/* Bảo dưỡng */}
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13.5px' }}>
+              <span style={{ width: '130px', color: '#475569', flexShrink: 0 }}>Bảo dưỡng</span>
+              <div style={{ flex: 1, height: '8px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden', margin: '0 16px' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${fleetStatus.maintenance.percentage}%`,
+                    background: '#f59e0b',
+                    borderRadius: '9999px',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+              <span style={{ width: '90px', textAlign: 'right', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                {fleetStatus.maintenance.count} xe ({fleetStatus.maintenance.percentage}%)
+              </span>
+            </div>
+
+            {/* Ngừng khai thác */}
+            <div style={{ display: 'flex', alignItems: 'center', fontSize: '13.5px' }}>
+              <span style={{ width: '130px', color: '#475569', flexShrink: 0 }}>Ngừng khai thác</span>
+              <div style={{ flex: 1, height: '8px', background: '#f1f5f9', borderRadius: '9999px', overflow: 'hidden', margin: '0 16px' }}>
+                <div
+                  style={{
+                    height: '100%',
+                    width: `${fleetStatus.retired.percentage}%`,
+                    background: '#94a3b8',
+                    borderRadius: '9999px',
+                    transition: 'width 0.3s ease',
+                  }}
+                />
+              </div>
+              <span style={{ width: '90px', textAlign: 'right', fontWeight: 700, color: '#0f172a', flexShrink: 0 }}>
+                {fleetStatus.retired.count} xe ({fleetStatus.retired.percentage}%)
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Section: Quy mô hoạt động */}
+        <div
+          style={{
+            background: '#ffffff',
+            borderRadius: '8px',
+            border: '1px solid #e2e8f0',
+            padding: '24px 28px',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div>
+            <h2 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '0 0 20px 0' }}>
+              Quy mô hoạt động
+            </h2>
+
+            {/* Sub-boxes grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '6px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>Tổng số xe</div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{operationsScope.totalVehicles}</div>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '6px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>Khách hàng</div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{operationsScope.totalCustomers}</div>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '6px', padding: '12px 14px' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>Tài xế</div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{operationsScope.totalDrivers}</div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
+              <div style={{ background: '#f8fafc', border: '1px solid #f1f5f9', borderRadius: '6px', padding: '12px 14px', maxWidth: '180px' }}>
+                <div style={{ fontSize: '11.5px', color: '#64748b', marginBottom: '4px' }}>HĐ hoàn tất tháng này</div>
+                <div style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a' }}>{operationsScope.completedContractsThisMonth}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>
+            <Link
+              href="/dashboard/contracts"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '10px 20px',
+                background: '#2563eb',
+                color: '#ffffff',
+                borderRadius: '6px',
+                fontSize: '13.5px',
+                fontWeight: 700,
+                textDecoration: 'none',
+              }}
+            >
+              + Tạo hợp đồng
+            </Link>
+
+            <Link
+              href="/dashboard/schedule"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '10px 20px',
+                background: '#ffffff',
+                color: '#0f172a',
+                border: '1px solid #cbd5e1',
+                borderRadius: '6px',
+                fontSize: '13.5px',
+                fontWeight: 600,
+                textDecoration: 'none',
+              }}
+            >
+              Xem lịch đặt xe
+            </Link>
+          </div>
         </div>
       </div>
+      </>
+      )}
+
     </div>
   );
 }

@@ -12,7 +12,7 @@ const paymentSchema = new mongoose.Schema({
   amount: { type: Number, required: true },
   method: {
     type: String,
-    enum: ['cash', 'bank_transfer', 'momo', 'vnpay', 'zalo_pay'],
+    enum: ['cash', 'bank_transfer', 'qr', 'momo', 'vnpay', 'zalo_pay'],
     required: true
   },
   status: {

@@ -1,8 +1,10 @@
 'use client';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
+import api from '@/lib/api';
 
 interface NavItem {
   href: string;
@@ -16,15 +18,18 @@ const navItems: { section: string; items: NavItem[] }[] = [
     section: 'Tổng quan',
     items: [
       { href: '/dashboard', label: 'Dashboard', icon: '📊', roles: ['owner', 'admin', 'accountant', 'receptionist'] },
+      { href: '/dashboard/today', label: 'Việc hôm nay', icon: '⚡', roles: ['owner', 'admin', 'receptionist', 'support', 'technician', 'accountant'] },
     ]
   },
   {
     section: 'Quản lý',
     items: [
-      { href: '/dashboard/vehicles', label: 'Quản lý xe', icon: '🏍️', roles: ['owner', 'admin', 'technician', 'receptionist'] },
-      { href: '/dashboard/bookings', label: 'Đặt xe & Thuê xe', icon: '📅', roles: ['owner', 'admin', 'receptionist', 'support'] },
-      { href: '/dashboard/contracts', label: 'Hợp đồng', icon: '📄', roles: ['owner', 'admin', 'receptionist'] },
-      { href: '/dashboard/customers', label: 'Khách hàng', icon: '👥', roles: ['owner', 'admin', 'receptionist', 'support'] },
+      { href: '/dashboard/vehicles', label: 'Quản lý xe', icon: '🏍️', roles: ['owner', 'admin', 'technician', 'receptionist', 'support', 'accountant'] },
+      { href: '/dashboard/bookings', label: 'Quản lý đặt xe', icon: '📋', roles: ['owner', 'admin', 'receptionist', 'support', 'technician', 'accountant'] },
+      { href: '/dashboard/contracts', label: 'Quản lý hợp đồng', icon: '📄', roles: ['owner', 'admin', 'receptionist', 'support', 'technician', 'accountant'] },
+      { href: '/dashboard/schedule', label: 'Lịch đặt xe', icon: '📅', roles: ['owner', 'admin', 'receptionist', 'support', 'technician', 'accountant'] },
+      { href: '/dashboard/customers', label: 'Khách hàng', icon: '👥', roles: ['owner', 'admin', 'receptionist', 'support', 'accountant'] },
+      { href: '/dashboard/notifications', label: 'Thông báo', icon: '🔔', roles: ['owner', 'admin', 'receptionist', 'support', 'accountant'] },
     ]
   },
   {
@@ -79,6 +84,21 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuthStore();
+  const [permissionMap, setPermissionMap] = useState<Record<string, any>>({});
+  const [pendingBookingsCount, setPendingBookingsCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (!user || user.role === 'customer') return;
+    api.get('/permissions/me').then(response => setPermissionMap(response.data?.permissions || {})).catch(() => setPermissionMap({}));
+  }, [user]);
+
+  useEffect(() => {
+    if (!user || user.role === 'customer') return;
+    api.get('/bookings?status=pending').then(res => {
+      const list = res.data?.data || [];
+      setPendingBookingsCount(list.length);
+    }).catch(() => {});
+  }, [user, pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -87,9 +107,14 @@ export default function Sidebar() {
   };
 
   const userRole = user?.role || 'customer';
+  const moduleForPath = (href: string) => (href === '/dashboard' || href === '/dashboard/today') ? 'dashboard' : href.replace('/dashboard/', '');
   const filteredSections = navItems.map(section => ({
     ...section,
-    items: section.items.filter(item => !item.roles || item.roles.includes(userRole))
+    items: section.items.filter(item => {
+      if (item.roles && !item.roles.includes(userRole)) return false;
+      const permission = permissionMap[moduleForPath(item.href)];
+      return !permission || permission.view !== false;
+    })
   })).filter(section => section.items.length > 0);
 
   return (
@@ -98,7 +123,7 @@ export default function Sidebar() {
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">🏍️</div>
         <div>
-          <div className="sidebar-logo-text">MotoBike</div>
+          <div className="sidebar-logo-text">XTBike</div>
           <div className="sidebar-logo-sub">Hải Châu • Đà Nẵng</div>
         </div>
       </div>
@@ -118,6 +143,21 @@ export default function Sidebar() {
                 >
                   <span>{item.icon}</span>
                   <span>{item.label}</span>
+                  {item.href === '/dashboard/bookings' && pendingBookingsCount > 0 && (
+                    <span
+                      style={{
+                        marginLeft: 'auto',
+                        background: '#d97706',
+                        color: '#ffffff',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        padding: '1px 7px',
+                        borderRadius: '9999px',
+                      }}
+                    >
+                      {pendingBookingsCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}

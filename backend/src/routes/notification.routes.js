@@ -27,7 +27,7 @@ router.put('/read-all', async (req, res) => {
 
 router.put('/:id/read', async (req, res) => {
   try {
-    await Notification.findByIdAndUpdate(req.params.id, { isRead: true });
+    await Notification.findOneAndUpdate({ _id: req.params.id, recipient: req.user._id }, { isRead: true });
     res.json({ success: true });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

@@ -8,8 +8,8 @@ const ticketSchema = new mongoose.Schema({
   description: { type: String, required: true },
   category: {
     type: String,
-    enum: ['vehicle_issue', 'payment', 'service', 'complaint', 'other'],
-    default: 'other'
+    enum: ['vehicle_issue', 'rescue', 'breakdown', 'payment', 'service', 'complaint', 'extension', 'deposit', 'general', 'other'],
+    default: 'vehicle_issue'
   },
   priority: {
     type: String,
