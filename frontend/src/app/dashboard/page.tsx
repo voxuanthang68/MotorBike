@@ -6,11 +6,17 @@ import api from '@/lib/api';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/authStore';
 import TodayTasks from '@/components/dashboard/TodayTasks';
+import OwnerVehiclesManager from '@/components/dashboard/OwnerVehiclesManager';
+import OwnerStaffManager from '@/components/dashboard/OwnerStaffManager';
 
 export default function DashboardOverviewPage() {
   const { user } = useAuthStore();
+  const isOwner = user?.role === 'owner';
   const isReceptionistOrStaff = ['receptionist', 'technician', 'support', 'driver'].includes(user?.role || '');
-  const [viewTab, setViewTab] = useState<'today' | 'overview'>(isReceptionistOrStaff ? 'today' : 'overview');
+  
+  const [viewTab, setViewTab] = useState<'today' | 'overview' | 'vehicles' | 'staff'>(
+    isOwner ? 'overview' : 'today'
+  );
   const { data: dashData, isLoading } = useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
@@ -94,41 +100,52 @@ export default function DashboardOverviewPage() {
       {/* 1. Header with Tab Switcher */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '14px' }}>
         <div>
-          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.3px' }}>
-            {viewTab === 'today' ? 'Việc hôm nay' : 'Tổng quan kinh doanh'}
+          <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.3px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span>
+              {viewTab === 'overview'
+                ? isOwner
+                  ? '👑 Trang Chủ Cửa Hàng - Tổng Quan & Doanh Thu'
+                  : '📊 Tổng Quan Kinh Doanh'
+                : viewTab === 'vehicles'
+                ? '🏍️ Quản Lý Đội Xe & Thiết Lập Giá Thuê'
+                : viewTab === 'staff'
+                ? '👥 Quản Lý Nhân Sự Cửa Hàng'
+                : '⚡ Việc Hôm Nay'}
+            </span>
+            {isOwner && (
+              <span
+                style={{
+                  fontSize: '11.5px',
+                  fontWeight: 700,
+                  color: '#f97316',
+                  background: '#fff7ed',
+                  border: '1px solid #ffedd5',
+                  padding: '3px 10px',
+                  borderRadius: '20px',
+                }}
+              >
+                Chủ Cửa Hàng
+              </span>
+            )}
           </h1>
           <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748b' }}>
-            {viewTab === 'today' ? 'Theo dõi xe cần giao, cần nhận và các lượt quá hạn trả' : 'Chỉ số hoạt động, tài chính và điều phối đội xe'}
+            {viewTab === 'overview'
+              ? 'Theo dõi chỉ số kinh doanh, doanh thu độc quyền cho Chủ cửa hàng và hiệu suất đội xe'
+              : viewTab === 'vehicles'
+              ? 'Thêm, sửa, xóa xe, điều chỉnh giá thuê theo ngày / theo giờ và quản lý kho xe'
+              : viewTab === 'staff'
+              ? 'Thêm, sửa, xóa nhân viên, phân quyền lễ tân, kỹ thuật, kế toán và hỗ trợ'
+              : 'Theo dõi xe cần giao, cần nhận và các lượt quá hạn trả'}
           </p>
         </div>
 
         {/* Tab switcher buttons */}
-        <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px', gap: '4px' }}>
-          <button
-            onClick={() => setViewTab('today')}
-            style={{
-              padding: '7px 16px',
-              borderRadius: '6px',
-              border: 'none',
-              fontSize: '13px',
-              fontWeight: 700,
-              cursor: 'pointer',
-              background: viewTab === 'today' ? '#ffffff' : 'transparent',
-              color: viewTab === 'today' ? '#0f172a' : '#64748b',
-              boxShadow: viewTab === 'today' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-              transition: 'all 0.15s ease',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-            }}
-          >
-            <span>⚡</span>
-            <span>Việc hôm nay (Lễ tân & NV)</span>
-          </button>
+        <div style={{ display: 'flex', background: '#e2e8f0', padding: '4px', borderRadius: '8px', gap: '4px', flexWrap: 'wrap' }}>
+          {/* Overview Tab */}
           <button
             onClick={() => setViewTab('overview')}
             style={{
-              padding: '7px 16px',
+              padding: '7px 14px',
               borderRadius: '6px',
               border: 'none',
               fontSize: '13px',
@@ -144,14 +161,91 @@ export default function DashboardOverviewPage() {
             }}
           >
             <span>📊</span>
-            <span>Tổng quan kinh doanh</span>
+            <span>{isOwner ? 'Tổng quan & Doanh thu' : 'Tổng quan'}</span>
+          </button>
+
+          {/* Owner Only: Manage Vehicles */}
+          {isOwner && (
+            <button
+              onClick={() => setViewTab('vehicles')}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: viewTab === 'vehicles' ? '#ffffff' : 'transparent',
+                color: viewTab === 'vehicles' ? '#0f172a' : '#64748b',
+                boxShadow: viewTab === 'vehicles' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>🏍️</span>
+              <span>Quản lý xe & Giá thuê</span>
+            </button>
+          )}
+
+          {/* Owner Only: Manage Staff */}
+          {isOwner && (
+            <button
+              onClick={() => setViewTab('staff')}
+              style={{
+                padding: '7px 14px',
+                borderRadius: '6px',
+                border: 'none',
+                fontSize: '13px',
+                fontWeight: 700,
+                cursor: 'pointer',
+                background: viewTab === 'staff' ? '#ffffff' : 'transparent',
+                color: viewTab === 'staff' ? '#0f172a' : '#64748b',
+                boxShadow: viewTab === 'staff' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                transition: 'all 0.15s ease',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+            >
+              <span>👥</span>
+              <span>Quản lý nhân viên</span>
+            </button>
+          )}
+
+          {/* Today Tasks Tab */}
+          <button
+            onClick={() => setViewTab('today')}
+            style={{
+              padding: '7px 14px',
+              borderRadius: '6px',
+              border: 'none',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              background: viewTab === 'today' ? '#ffffff' : 'transparent',
+              color: viewTab === 'today' ? '#0f172a' : '#64748b',
+              boxShadow: viewTab === 'today' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+              transition: 'all 0.15s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>⚡</span>
+            <span>Việc hôm nay</span>
           </button>
         </div>
       </div>
 
-      {/* Conditionally render TodayTasks or Overview */}
+      {/* Conditionally render Tabs */}
       {viewTab === 'today' ? (
         <TodayTasks />
+      ) : viewTab === 'vehicles' ? (
+        <OwnerVehiclesManager />
+      ) : viewTab === 'staff' ? (
+        <OwnerStaffManager />
       ) : (
         <>
       {/* 1.1 Alert: Pending Bookings */}
@@ -300,149 +394,242 @@ export default function DashboardOverviewPage() {
           </div>
         </div>
 
-        {/* Card 3: Doanh thu tháng */}
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '6px',
-            borderTop: '1px solid #e2e8f0',
-            borderRight: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0',
-            borderLeft: '4px solid #1d4ed8',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: '110px',
-          }}
-        >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
-            DOANH THU THÁNG
+        {/* Card 3: Doanh thu tháng (Chỉ Chủ Cửa Hàng) hoặc Tổng khách hàng */}
+        {isOwner ? (
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #1d4ed8',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+                DOANH THU THÁNG
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#f97316', background: '#fff7ed', border: '1px solid #ffedd5', padding: '1px 6px', borderRadius: '4px' }}>
+                👑 Chỉ Chủ Xem
+              </span>
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {formatCurrency(monthRevenue)}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              {completedContractsThisMonth} hợp đồng hoàn tất
+            </div>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
-            {formatCurrency(monthRevenue)}
+        ) : (
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #2563eb',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+              TỔNG KHÁCH HÀNG
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#2563eb', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {operationsScope.totalCustomers}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              Khách hàng hệ thống
+            </div>
           </div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            {completedContractsThisMonth} hợp đồng hoàn tất
-          </div>
-        </div>
+        )}
 
-        {/* Card 4: Công nợ */}
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '6px',
-            borderTop: '1px solid #e2e8f0',
-            borderRight: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0',
-            borderLeft: '4px solid #1d4ed8',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: '110px',
-          }}
-        >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
-            CÔNG NỢ
+        {/* Card 4: Công nợ (Chỉ Chủ Cửa Hàng) hoặc Lượt hoàn tất */}
+        {isOwner ? (
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #dc2626',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+                CÔNG NỢ
+              </div>
+              <span style={{ fontSize: '10px', fontWeight: 700, color: '#dc2626', background: '#fef2f2', border: '1px solid #fee2e2', padding: '1px 6px', borderRadius: '4px' }}>
+                Phải thu
+              </span>
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#dc2626', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {formatCurrency(debtAmount)}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              Khách còn phải trả
+            </div>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#dc2626', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
-            {formatCurrency(debtAmount)}
+        ) : (
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #059669',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+              LƯỢT THUÊ HOÀN TẤT
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {completedContractsThisMonth}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              Trong tháng này
+            </div>
           </div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Khách còn phải trả
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* 4. Metric Cards — Row 2 (3 Cards) */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-          gap: '16px',
-          marginBottom: '24px',
-        }}
-      >
-        {/* Card 5: Chi phí tháng */}
+      {/* 4. Financial Metrics (Row 2): ONLY OWNER CAN VIEW */}
+      {isOwner ? (
         <div
           style={{
-            background: '#ffffff',
-            borderRadius: '6px',
-            borderTop: '1px solid #e2e8f0',
-            borderRight: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0',
-            borderLeft: '4px solid #1d4ed8',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: '110px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+            gap: '16px',
+            marginBottom: '24px',
           }}
         >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
-            CHI PHÍ THÁNG
+          {/* Card 5: Chi phí tháng */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #d97706',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+              CHI PHÍ THÁNG
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#d97706', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {formatCurrency(monthExpenses)}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              Bảo dưỡng & phụ tùng
+            </div>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#d97706', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
-            {formatCurrency(monthExpenses)}
-          </div>
-          <div style={{ minHeight: '16px' }} />
-        </div>
 
-        {/* Card 6: Lợi nhuận tháng */}
-        <div
-          style={{
-            background: '#ffffff',
-            borderRadius: '6px',
-            borderTop: '1px solid #e2e8f0',
-            borderRight: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0',
-            borderLeft: '4px solid #1d4ed8',
-            padding: '18px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: '110px',
-          }}
-        >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
-            LỢI NHUẬN THÁNG
+          {/* Card 6: Lợi nhuận tháng */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #059669',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+              LỢI NHUẬN THÁNG
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {formatCurrency(monthProfit)}
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              Doanh thu trừ chi phí
+            </div>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#059669', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
-            {formatCurrency(monthProfit)}
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Doanh thu trừ chi phí
-          </div>
-        </div>
 
-        {/* Card 7: Biên lợi nhuận */}
+          {/* Card 7: Biên lợi nhuận */}
+          <div
+            style={{
+              background: '#ffffff',
+              borderRadius: '6px',
+              borderTop: '1px solid #e2e8f0',
+              borderRight: '1px solid #e2e8f0',
+              borderBottom: '1px solid #e2e8f0',
+              borderLeft: '4px solid #1d4ed8',
+              padding: '18px 20px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              minHeight: '110px',
+            }}
+          >
+            <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
+              BIÊN LỢI NHUẬN
+            </div>
+            <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
+              {profitMargin}%
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b' }}>
+              Trong tháng này
+            </div>
+          </div>
+        </div>
+      ) : (
         <div
           style={{
             background: '#ffffff',
-            borderRadius: '6px',
-            borderTop: '1px solid #e2e8f0',
-            borderRight: '1px solid #e2e8f0',
-            borderBottom: '1px solid #e2e8f0',
-            borderLeft: '4px solid #1d4ed8',
-            padding: '18px 20px',
+            border: '1px dashed #cbd5e1',
+            borderRadius: '8px',
+            padding: '16px 20px',
+            marginBottom: '24px',
             display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            minHeight: '110px',
+            alignItems: 'center',
+            gap: '12px',
           }}
         >
-          <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', letterSpacing: '0.2px', textTransform: 'uppercase' }}>
-            BIÊN LỢI NHUẬN
-          </div>
-          <div style={{ fontSize: '28px', fontWeight: 800, color: '#1d4ed8', margin: '6px 0 4px 0', lineHeight: 1.1 }}>
-            {profitMargin}%
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748b' }}>
-            Trong tháng này
+          <span style={{ fontSize: '22px' }}>🔒</span>
+          <div>
+            <div style={{ fontSize: '13.5px', fontWeight: 700, color: '#334155' }}>
+              Dữ liệu Doanh thu & Lợi nhuận cửa hàng được bảo mật
+            </div>
+            <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+              Chỉ tài khoản Chủ cửa hàng (Store Owner) mới có quyền truy cập dữ liệu tài chính & doanh thu này.
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 5. Row 3: Two Big Section Cards */}
       <div

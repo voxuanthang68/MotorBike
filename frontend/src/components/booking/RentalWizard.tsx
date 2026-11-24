@@ -200,6 +200,7 @@ export default function RentalWizard({ bike, onClose: closeWizard }: Props) {
   const [license, setLicense] = useState(user?.drivingLicense || '');
   const [licenseClass, setLicenseClass] = useState('A2');
   const [files, setFiles] = useState<Record<string, string>>({});
+  const [paymentMode, setPaymentMode] = useState<'full' | 'deposit'>('full');
   const [paymentMethod, setPaymentMethod] = useState<'vnpay' | 'momo'>('vnpay');
   const [loading, setLoading] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -217,7 +218,11 @@ export default function RentalWizard({ bike, onClose: closeWizard }: Props) {
   const discountAmount = Math.round((rentalBase + serviceTotal + accessoryTotal) * couponPercent / 100);
   const rentalTotal = rentalBase + serviceTotal + accessoryTotal - discountAmount;
   const deposit = Math.max(20000, Math.round(rentalTotal * 0.1));
-  const depositQrUrl = `https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${deposit}&addInfo=${encodeURIComponent(`COC ${booking?.bookingCode || bike.name}`)}&accountName=XTBike`;
+
+  // Dynamic QR Code according to exact booking amount (including accessories) or deposit
+  const finalPayAmount = paymentMode === 'full' ? rentalTotal : deposit;
+  const qrUrl = `https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${finalPayAmount}&addInfo=${encodeURIComponent(`XTBike ${booking?.bookingCode || bike.name}`)}&accountName=XTBike`;
+  const selectedAccessoriesList = ACCESSORY_OPTIONS.filter(item => accessories[item.key]);
 
   useEffect(() => {
     const today = new Date();
@@ -302,10 +307,21 @@ export default function RentalWizard({ bike, onClose: closeWizard }: Props) {
     if (!booking) return;
     setLoading(true);
     try {
-      await api.post('/payments', { bookingId: booking._id, type: 'deposit', amount: deposit, method: paymentMethod, note: `Cọc đơn ${booking.bookingCode}` });
-      setStep(4); toast.success('Thanh toán cọc thành công!');
-    } catch (error: any) { toast.error(error.response?.data?.message || 'Thanh toán chưa thành công.'); }
-    finally { setLoading(false); }
+      const type = paymentMode === 'full' ? 'rental_fee' : 'deposit';
+      await api.post('/payments', {
+        bookingId: booking._id,
+        type,
+        amount: finalPayAmount,
+        method: 'qr',
+        note: `Thanh toán ${paymentMode === 'full' ? 'toàn bộ (gồm phụ kiện)' : 'cọc'} đơn ${booking.bookingCode}`,
+      });
+      setStep(4);
+      toast.success(paymentMode === 'full' ? 'Thanh toán toàn bộ đơn thành công!' : 'Thanh toán cọc thành công!');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Thanh toán chưa thành công.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const draw = (event: React.PointerEvent<HTMLCanvasElement>) => {
@@ -343,9 +359,7 @@ export default function RentalWizard({ bike, onClose: closeWizard }: Props) {
       <div className="modal-header" style={{ padding: '20px 26px' }}><div><div className="modal-title">Đặt Thuê Xe Mô Tô: {bike.name}</div><div style={{ color: '#64748b', fontSize: 12 }}>Thời gian thuê và hồ sơ điện tử</div></div><button onClick={onClose} style={{ border: 0, background: 'none', fontSize: 24, color: '#94a3b8' }}>×</button></div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', borderBottom: '1px solid #e2e8f0' }}>{steps.map((label, index) => <div key={label} style={{ padding: '14px 6px', textAlign: 'center', color: index === step ? '#1463ff' : index < step ? '#0f9f75' : '#94a3b8', fontWeight: 700, fontSize: 12, borderBottom: index === step ? '2px solid #1463ff' : '2px solid transparent' }}>{index + 1}. {label}</div>)}</div>
       <div className={`rental-wizard-body step-${step}`} style={{ padding: 28 }}>
-        <style>{`.rental-wizard-body > div:nth-child(1), .rental-wizard-body > div:nth-child(2) { display: none; } .rental-wizard-body.step-3 > div:nth-of-type(1) { display: block !important; } .rental-wizard-body.step-3 > div:nth-of-type(3) > div:first-child { display: none; }`}</style>
         <RentalPricingContext.Provider value={{ rentalType, setRentalType, monthlyPrice, couponCode, setCouponCode, couponPercent }}>
-        {step === 3 && <div style={{ textAlign: 'center', padding: 16, marginBottom: 14, border: '1px solid #bfdbfe', borderRadius: 14, background: '#eff6ff' }}><div style={{ fontWeight: 800, color: '#1d4ed8', marginBottom: 10 }}>Mã QR thanh toán tiền cọc</div><img src={depositQrUrl} alt="Mã QR thanh toán tiền cọc" style={{ width: 250, height: 250, objectFit: 'contain', background: '#fff', borderRadius: 10 }} /><div style={{ color: '#1463ff', fontSize: 24, fontWeight: 800, marginTop: 8 }}>{money(deposit)}</div><div style={{ color: '#64748b', fontSize: 12 }}>Nội dung: {booking?.bookingCode} · MBBank 0905888999</div></div>}
         {step === 0 && <><div style={{ background: '#f5f3ff', border: '1px solid #ddd6fe', borderRadius: 14, padding: 16, marginBottom: 20 }}>Xe <strong>{bike.name}</strong> yêu cầu khách thuê có CCCD và GPLX phù hợp.</div><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}><label>Ngày nhận xe<input className="form-input" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} /></label><label>Ngày trả xe<input className="form-input" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} /></label></div><label style={{ display: 'block', marginTop: 16 }}>Địa điểm nhận xe<select className="form-input" value={pickupLocation} onChange={e => setPickupLocation(e.target.value)}><option>Sân bay Đà Nẵng</option><option>128 Bạch Đằng, Hải Châu</option><option>Giao tận khách sạn Hải Châu</option></select></label><div style={{ marginTop: 20 }}><strong>Dịch vụ & trang bị đi kèm</strong>{[['insurance', 'Gói bảo hiểm thân vỏ & phụ tùng xe máy', 100000], ['delivery', 'Giao nhận xe tận nơi', 100000], ['gear', 'Bộ giáp bảo hộ phượt cao cấp', 80000]].map(([key, label, price]) => <label key={String(key)} style={{ display: 'flex', justifyContent: 'space-between', padding: 14, border: '1px solid #dbe3ef', borderRadius: 12, marginTop: 10 }}><span><input type="checkbox" checked={Boolean(services[key as keyof typeof services])} onChange={e => setServices({ ...services, [key]: e.target.checked })} /> {label}</span><strong>+{money(Number(price))}</strong></label>)}</div><div style={{ marginTop: 20 }}><strong>Phụ kiện thuê thêm</strong>{ACCESSORY_OPTIONS.map(item => <label key={item.key} style={{ display: 'flex', justifyContent: 'space-between', padding: 14, border: '1px solid #dbe3ef', borderRadius: 12, marginTop: 10 }}><span><input type="checkbox" checked={accessories[item.key]} onChange={e => setAccessories({ ...accessories, [item.key]: e.target.checked })} /> {item.name}</span><strong>+{money(item.price)}</strong></label>)}</div><textarea className="form-input" style={{ marginTop: 18 }} placeholder="Ghi chú cho bộ phận kỹ thuật & giao xe" value={note} onChange={e => setNote(e.target.value)} /><Summary bike={bike} days={days} serviceTotal={serviceTotal + accessoryTotal} total={rentalTotal} deposit={deposit} /><button className="btn btn-primary" style={{ float: 'right', marginTop: 18 }} onClick={createBooking} disabled={loading}>{loading ? 'Đang tạo đơn...' : 'Tiếp tục cung cấp CCCD & Bằng lái →'}</button></>}
         {step === 1 && <><h3>Cung cấp hình ảnh Căn Cước Công Dân (CCCD) & Bằng Lái Xe (GPLX)</h3><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}><label>Số CCCD<input className="form-input" value={cccd} onChange={e => setCccd(e.target.value)} /></label><label>Số GPLX<input className="form-input" value={license} onChange={e => setLicense(e.target.value)} /></label></div><label style={{ display: 'block', marginTop: 14 }}>Hạng bằng lái<select className="form-input" value={licenseClass} onChange={e => setLicenseClass(e.target.value)}><option>A2</option><option>A1</option></select></label><Upload label="Mặt trước CCCD" value={files.cccdFront} onChange={file => readFile('cccdFront', file)} /><Upload label="Mặt sau CCCD" value={files.cccdBack} onChange={file => readFile('cccdBack', file)} /><Upload label="Mặt trước GPLX" value={files.licenseFront} onChange={file => readFile('licenseFront', file)} /><Upload label="Mặt sau GPLX" value={files.licenseBack} onChange={file => readFile('licenseBack', file)} /><div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}><button className="btn btn-secondary" onClick={() => setStep(0)}>← Quay lại</button><button className="btn btn-primary" onClick={saveDocuments} disabled={loading}>{loading ? 'Đang lưu...' : 'Xác nhận hồ sơ & tiếp tục ký hợp đồng'}</button></div></>}
         {step === 2 && (
@@ -501,7 +515,173 @@ export default function RentalWizard({ bike, onClose: closeWizard }: Props) {
             </div>
           </>
         )}
-        {step === 3 && <><h3>Thanh toán tiền cọc</h3><div style={{ display: 'flex', gap: 12 }}><button className={paymentMethod === 'vnpay' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setPaymentMethod('vnpay')}>VNPay QR</button><button className={paymentMethod === 'momo' ? 'btn btn-primary' : 'btn btn-secondary'} onClick={() => setPaymentMethod('momo')}>Ví MoMo</button></div><div style={{ textAlign: 'center', padding: 30, marginTop: 18, border: '1px solid #dbe3ef', borderRadius: 14 }}><div style={{ fontSize: 54 }}>▦</div><p>Số tiền cọc cần thanh toán:</p><strong style={{ color: '#1463ff', fontSize: 28 }}>{money(deposit)}</strong><p style={{ color: '#64748b' }}>Nội dung CK: {booking?.bookingCode}</p></div><button className="btn btn-primary" style={{ width: '100%', marginTop: 20 }} onClick={payDeposit} disabled={loading}>{loading ? 'Đang xác nhận...' : `Mô phỏng thanh toán cọc (${paymentMethod.toUpperCase()})`}</button></>}
+        {step === 3 && (
+          <div style={{ maxWidth: 640, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>
+                📱 Quét Mã VietQR Thanh Toán Đơn Đặt Xe
+              </h3>
+              <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+                Mã QR được tạo theo đúng số tiền đã đặt xe (bao gồm tiền thuê xe và các phụ kiện đi kèm)
+              </p>
+            </div>
+
+            {/* Toggle Payment Mode: Full (All incl. accessories) vs Deposit */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 18 }}>
+              <button
+                type="button"
+                onClick={() => setPaymentMode('full')}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: paymentMode === 'full' ? '2px solid #059669' : '1px solid #cbd5e1',
+                  background: paymentMode === 'full' ? '#ecfdf5' : '#ffffff',
+                  color: paymentMode === 'full' ? '#047857' : '#475569',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ fontWeight: 800, fontSize: 13.5 }}>Thanh toán trọn gói</div>
+                  <span style={{ fontSize: 10.5, background: '#059669', color: '#fff', padding: '2px 6px', borderRadius: 4, fontWeight: 700 }}>Bao gồm phụ kiện</span>
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#059669', marginTop: 4 }}>
+                  {money(rentalTotal)}
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+                  Tiền xe + dịch vụ & tất cả phụ kiện
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPaymentMode('deposit')}
+                style={{
+                  padding: '12px 14px',
+                  borderRadius: 10,
+                  border: paymentMode === 'deposit' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                  background: paymentMode === 'deposit' ? '#eff6ff' : '#ffffff',
+                  color: paymentMode === 'deposit' ? '#1d4ed8' : '#475569',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <div style={{ fontWeight: 800, fontSize: 13.5 }}>Đặt cọc trước giữ xe</div>
+                <div style={{ fontSize: 18, fontWeight: 900, color: '#2563eb', marginTop: 4 }}>
+                  {money(deposit)}
+                </div>
+                <div style={{ fontSize: 11.5, color: '#64748b', marginTop: 2 }}>
+                  Thanh toán phần còn lại khi nhận xe
+                </div>
+              </button>
+            </div>
+
+            {/* QR Card */}
+            <div style={{ background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: 16, padding: 24, textAlign: 'center', boxShadow: '0 8px 24px rgba(37,99,235,0.08)', marginBottom: 18 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#1e40af', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 12 }}>
+                MÃ VIETQR CHUYỂN KHOẢN TỰ ĐỘNG
+              </div>
+
+              {/* VietQR Dynamic Image */}
+              <div style={{ display: 'inline-block', padding: 8, background: '#ffffff', borderRadius: 12, border: '1px solid #e2e8f0', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+                <img
+                  src={qrUrl}
+                  alt="VietQR XTBike"
+                  style={{ width: 260, height: 260, objectFit: 'contain', display: 'block' }}
+                />
+              </div>
+
+              {/* Amount Display */}
+              <div style={{ marginTop: 14 }}>
+                <div style={{ fontSize: 13, color: '#64748b' }}>
+                  Số tiền quét mã chuyển khoản:
+                </div>
+                <div style={{ fontSize: 30, fontWeight: 900, color: paymentMode === 'full' ? '#059669' : '#2563eb', letterSpacing: -0.5 }}>
+                  {money(finalPayAmount)}
+                </div>
+              </div>
+
+              {/* Bank Details */}
+              <div style={{ marginTop: 12, background: '#f8fafc', padding: '12px 16px', borderRadius: 10, fontSize: 12.5, color: '#334155', textAlign: 'left', lineHeight: 1.6 }}>
+                <div>Ngân hàng: <strong>Quân Đội (MBBank)</strong></div>
+                <div>Số tài khoản: <strong style={{ color: '#1e293b', fontFamily: 'monospace', fontSize: 14 }}>0905888999</strong></div>
+                <div>Chủ tài khoản: <strong>XTBike</strong></div>
+                <div>Nội dung CK: <strong style={{ color: '#2563eb' }}>{booking?.bookingCode || bike.name}</strong></div>
+              </div>
+            </div>
+
+            {/* Detailed Itemized Breakdown (Including Accessories!) */}
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '16px 18px', fontSize: 13, marginBottom: 20 }}>
+              <div style={{ fontWeight: 800, color: '#0f172a', marginBottom: 10, fontSize: 13.5 }}>
+                📋 Bảng Kê Chi Tiết Số Tiền Đặt Xe
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                <span style={{ color: '#475569' }}>Tiền thuê xe ({bike.name} • {days} ngày):</span>
+                <strong>{money(rentalBase)}</strong>
+              </div>
+
+              {/* Accessories breakdown */}
+              {selectedAccessoriesList.length > 0 ? (
+                <div style={{ margin: '8px 0', padding: '8px 12px', background: '#eff6ff', borderRadius: 8, border: '1px solid #dbeafe' }}>
+                  <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: 4 }}>
+                    Phụ kiện đi kèm ({selectedAccessoriesList.length} món):
+                  </div>
+                  {selectedAccessoriesList.map((item) => (
+                    <div key={item.key} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#334155', marginLeft: 6 }}>
+                      <span>+ {item.name}:</span>
+                      <strong>+{money(item.price)}</strong>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12.5, color: '#1e40af', fontWeight: 700, borderTop: '1px dashed #bfdbfe', marginTop: 6, paddingTop: 4 }}>
+                    <span>Tổng tiền phụ kiện:</span>
+                    <span>+{money(accessoryTotal)}</span>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b', fontSize: 12, marginBottom: 6 }}>
+                  <span>Phụ kiện đi kèm:</span>
+                  <span>Không chọn (0 đ)</span>
+                </div>
+              )}
+
+              {serviceTotal > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span style={{ color: '#475569' }}>Dịch vụ bổ sung:</span>
+                  <strong>+{money(serviceTotal)}</strong>
+                </div>
+              )}
+
+              {discountAmount > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669', marginBottom: 6 }}>
+                  <span>Ưu đãi voucher ({couponCode}):</span>
+                  <strong>-{money(discountAmount)}</strong>
+                </div>
+              )}
+
+              <div style={{ borderTop: '2px solid #cbd5e1', marginTop: 10, paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 14.5, fontWeight: 800, color: '#0f172a' }}>
+                  TỔNG CỘNG ĐƠN ĐẶT XE:
+                </span>
+                <span style={{ fontSize: 18, fontWeight: 900, color: '#059669' }}>
+                  {money(rentalTotal)}
+                </span>
+              </div>
+            </div>
+
+            {/* Confirm Payment Button */}
+            <button
+              className="btn btn-primary"
+              style={{ width: '100%', padding: 14, fontSize: 15, fontWeight: 800, borderRadius: 10 }}
+              onClick={payDeposit}
+              disabled={loading}
+            >
+              {loading ? 'Đang xác nhận...' : `✅ Tôi Đã Chuyển Khoản ${money(finalPayAmount)}`}
+            </button>
+          </div>
+        )}
         {step === 4 && <div style={{ textAlign: 'center', padding: 30 }}><div style={{ fontSize: 32, fontWeight: 900, color: '#0f9f75' }}>OK</div><h2>Đặt xe & đặt cọc thành công!</h2><p>Mã đơn hàng: <strong>{booking?.bookingCode}</strong></p><p>Hồ sơ CCCD & GPLX đã lưu · Hợp đồng đã ký · Cọc đã thanh toán</p><button className="btn btn-primary" onClick={onClose}>Xem đơn hàng của tôi</button></div>}
         </RentalPricingContext.Provider>
       </div>

@@ -88,6 +88,8 @@ export default function VehicleBookingSchedulePage() {
   const [approveNote, setApproveNote] = useState('Đã kiểm tra CCCD/GPLX, xác nhận đã nhận cọc');
   const [isDepositConfirmed, setIsDepositConfirmed] = useState(true);
   const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(true);
+  const [bookingQrModal, setBookingQrModal] = useState<any | null>(null);
+  const [bookingQrMode, setBookingQrMode] = useState<'full' | 'deposit'>('full');
 
   // 4. HANDOVER MODAL (GIAO XE: ẢNH XE & CHỮ KÝ 2 BÊN)
   const [handoverModal, setHandoverModal] = useState<any | null>(null);
@@ -1223,6 +1225,29 @@ export default function VehicleBookingSchedulePage() {
                           {/* Thao tác nghiệp vụ chuẩn quy trình */}
                           <td style={{ padding: '14px 18px', verticalAlign: 'top', textAlign: 'right', whiteSpace: 'nowrap' }}>
                             <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', fontSize: '12px', fontWeight: 700 }}>
+                              
+                              {/* NÚT TẠO MÃ VIETQR THEO ĐÚNG SỐ TIỀN ĐẶT XE (GỒM PHỤ KIỆN) */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setBookingQrMode('full');
+                                  setBookingQrModal(booking);
+                                }}
+                                style={{
+                                  padding: '6px 10px',
+                                  borderRadius: '4px',
+                                  background: '#ecfdf5',
+                                  color: '#047857',
+                                  border: '1px solid #a7f3d0',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                }}
+                                title="Mã VietQR theo đúng số tiền đặt xe (gồm phụ kiện)"
+                              >
+                                <span>📱 QR</span>
+                              </button>
                               
                               {/* BƯỚC 1: DUYỆT ĐƠN (Chỉ khi đơn là pending) */}
                               {isPending && (
@@ -2673,8 +2698,134 @@ export default function VehicleBookingSchedulePage() {
       )}
 
       {/* ========================================================
-          MODAL 3: XEM ẢNH XE & CHỮ KÝ BIÊN BẢN GIAO / TRẢ
+          MODAL 4: QUÉT MÃ VIETQR THEO ĐÚNG SỐ TIỀN ĐẶT XE (GỒM PHỤ KIỆN)
           ======================================================== */}
+      {bookingQrModal && (() => {
+        const fullAmount = Number(bookingQrModal.finalPrice || bookingQrModal.totalPrice || 0);
+        const depositAmount = Number(bookingQrModal.deposit || 0);
+        const currentPayAmount = bookingQrMode === 'full' ? fullAmount : depositAmount;
+        const qrUrl = `https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${currentPayAmount}&addInfo=${encodeURIComponent(`XTBike ${bookingQrModal.bookingCode || 'DAT XE'}`)}&accountName=XTBike`;
+        const accessoriesList = Array.isArray(bookingQrModal.accessories) ? bookingQrModal.accessories : [];
+        const accessoryTotal = accessoriesList.reduce((sum: number, item: any) => sum + Number(item.price || 0), 0);
+
+        return (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '540px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', boxShadow: '0 20px 40px rgba(0,0,0,0.2)' }}>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                    📱 Mã VietQR Thanh Toán Đơn Đặt Xe
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    Đơn: <strong>{bookingQrModal.bookingCode}</strong> • Khách: <strong>{bookingQrModal.customer?.fullName || 'Khách hàng'}</strong>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setBookingQrModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <X style={{ width: '20px', height: '20px', color: '#64748b' }} />
+                </button>
+              </div>
+
+              {/* Mode Switcher */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
+                <button
+                  type="button"
+                  onClick={() => setBookingQrMode('full')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: bookingQrMode === 'full' ? '2px solid #059669' : '1px solid #cbd5e1',
+                    background: bookingQrMode === 'full' ? '#ecfdf5' : '#ffffff',
+                    color: bookingQrMode === 'full' ? '#047857' : '#475569',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ fontSize: '12px', fontWeight: 700 }}>Trọn gói (gồm phụ kiện)</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                    {fullAmount.toLocaleString('vi-VN')} đ
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setBookingQrMode('deposit')}
+                  style={{
+                    padding: '10px 12px',
+                    borderRadius: '8px',
+                    border: bookingQrMode === 'deposit' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                    background: bookingQrMode === 'deposit' ? '#eff6ff' : '#ffffff',
+                    color: bookingQrMode === 'deposit' ? '#1d4ed8' : '#475569',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                  }}
+                >
+                  <div style={{ fontSize: '12px', fontWeight: 700 }}>Tiền cọc giữ xe</div>
+                  <div style={{ fontSize: '16px', fontWeight: 800, color: '#2563eb', marginTop: '2px' }}>
+                    {depositAmount.toLocaleString('vi-VN')} đ
+                  </div>
+                </button>
+              </div>
+
+              {/* QR Image Box */}
+              <div style={{ textAlign: 'center', background: '#f8fafc', padding: '18px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
+                <div style={{ display: 'inline-block', padding: '6px', background: '#fff', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
+                  <img src={qrUrl} alt="VietQR" style={{ width: '230px', height: '230px', objectFit: 'contain', display: 'block' }} />
+                </div>
+                <div style={{ fontSize: '26px', fontWeight: 900, color: bookingQrMode === 'full' ? '#059669' : '#2563eb', marginTop: '12px' }}>
+                  {currentPayAmount.toLocaleString('vi-VN')} đ
+                </div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+                  MBBank • STK: <strong>0905888999</strong> • XTBike
+                </div>
+              </div>
+
+              {/* Breakdown including Accessories */}
+              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12.5px', marginBottom: '16px' }}>
+                <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>Chi tiết đơn đặt xe:</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', marginBottom: '4px' }}>
+                  <span>Xe: {bookingQrModal.vehicle?.name} ({bookingQrModal.vehicle?.licensePlate})</span>
+                  <span>{bookingQrModal.totalDays || 1} ngày</span>
+                </div>
+
+                {accessoriesList.length > 0 && (
+                  <div style={{ padding: '6px 10px', background: '#eff6ff', borderRadius: '6px', margin: '6px 0', border: '1px solid #dbeafe' }}>
+                    <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '4px' }}>
+                      Phụ kiện đã đặt ({accessoriesList.length} món):
+                    </div>
+                    {accessoriesList.map((acc: any, i: number) => (
+                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', fontSize: '12px' }}>
+                        <span>+ {acc.name}:</span>
+                        <strong>+{Number(acc.price || 0).toLocaleString('vi-VN')} đ</strong>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#1e40af', borderTop: '1px dashed #bfdbfe', marginTop: '4px', paddingTop: '2px' }}>
+                      <span>Tổng phụ kiện:</span>
+                      <span>+{accessoryTotal.toLocaleString('vi-VN')} đ</span>
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '6px', fontWeight: 800, fontSize: '13.5px' }}>
+                  <span>Tổng tiền đơn (gồm phụ kiện):</span>
+                  <span style={{ color: '#059669' }}>{fullAmount.toLocaleString('vi-VN')} đ</span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+                <button
+                  type="button"
+                  onClick={() => setBookingQrModal(null)}
+                  style={{ padding: '8px 18px', background: '#0f172a', color: '#ffffff', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
+                >
+                  Đóng
+                </button>
+              </div>
+
+            </div>
+          </div>
+        );
+      })()}
       {viewHandoverImagesModal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
           <div style={{ background: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>

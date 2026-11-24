@@ -7,6 +7,25 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
 
+function playNotificationSound() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (e) {}
+}
+
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   pending: { label: 'Chờ duyệt', color: '#b45309', bg: '#fef3c7' },
   confirmed: { label: 'Đã đặt (Chờ nhận xe)', color: '#1d4ed8', bg: '#eff6ff' },
@@ -88,6 +107,11 @@ export default function CustomerPortalPage() {
   const [rescueSubject, setRescueSubject] = useState('');
   const [rescueDescription, setRescueDescription] = useState('');
   const [replyMessage, setReplyMessage] = useState('');
+  const [chatAttachedImage, setChatAttachedImage] = useState<string | null>(null);
+  const [chatLightboxImage, setChatLightboxImage] = useState<string | null>(null);
+  const chatCameraInputRef = useRef<HTMLInputElement | null>(null);
+  const chatFileInputRef = useRef<HTMLInputElement | null>(null);
+  const portalChatBottomRef = useRef<HTMLDivElement | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [documentImages, setDocumentImages] = useState<Record<string, string>>({
     cccdFrontImage: user?.cccdFrontImage || '',
@@ -136,15 +160,64 @@ export default function CustomerPortalPage() {
     enabled: !!isAuthenticated && !authLoading
   });
 
-  // Query my support tickets
+  // Query my support tickets with 3s polling for real-time staff replies
   const { data: ticketsData } = useQuery({
     queryKey: ['my-tickets'],
     queryFn: async () => {
       const res = await api.get('/tickets');
       return res.data;
     },
-    enabled: !!isAuthenticated && !authLoading
+    enabled: !!isAuthenticated && !authLoading,
+    refetchInterval: 3000,
   });
+
+  // Real-time polling active ticket chat in portal
+  useEffect(() => {
+    if (!selectedTicket?._id) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await api.get(`/tickets/${selectedTicket._id}`);
+        const fresh = res.data?.data;
+        if (fresh) {
+          const oldLen = selectedTicket.messages?.length || 0;
+          const newLen = fresh.messages?.length || 0;
+          if (newLen > oldLen) {
+            const lastMsg = fresh.messages[newLen - 1];
+            const isMe = lastMsg.sender?._id === user?._id || lastMsg.sender?.role === 'customer';
+            if (!isMe) {
+              playNotificationSound();
+              toast('🔔 Đội hỗ trợ Hải Châu vừa phản hồi!', { icon: '💬' });
+            }
+          }
+          setSelectedTicket(fresh);
+        }
+      } catch (err) {}
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [selectedTicket?._id, user?._id, selectedTicket?.messages?.length]);
+
+  // Scroll to bottom when message list changes
+  useEffect(() => {
+    if (selectedTicket) {
+      setTimeout(() => {
+        portalChatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [selectedTicket?.messages?.length]);
+
+  const handleOpenPortalTicket = async (ticket: any) => {
+    setSelectedTicket(ticket);
+    try {
+      api.put(`/tickets/${ticket._id}/mark-read`).catch(() => {});
+      const res = await api.get(`/tickets/${ticket._id}`);
+      if (res.data?.data) {
+        setSelectedTicket(res.data.data);
+      }
+      queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const { data: notificationsData } = useQuery({
     queryKey: ['my-notifications'],
@@ -218,17 +291,53 @@ export default function CustomerPortalPage() {
 
   // Reply message mutation
   const replyMutation = useMutation({
-    mutationFn: async ({ id, content }: { id: string; content: string }) => {
-      return api.post(`/tickets/${id}/reply`, { content });
+    mutationFn: async ({ id, content, attachments }: { id: string; content: string; attachments?: string[] }) => {
+      return api.post(`/tickets/${id}/reply`, { content, attachments });
     },
     onSuccess: (res) => {
       queryClient.invalidateQueries({ queryKey: ['my-tickets'] });
       setSelectedTicket(res.data.data);
       setReplyMessage('');
+      setChatAttachedImage(null);
       toast.success('Đã gửi phản hồi!');
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Gửi thất bại!')
   });
+
+  const handleChatImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Kích thước ảnh tối đa 5MB');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setChatAttachedImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleChatGetLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Trình duyệt không hỗ trợ định vị GPS');
+      return;
+    }
+    toast.loading('Đang lấy tọa độ GPS...', { id: 'chat-gps' });
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const { latitude, longitude } = pos.coords;
+        const mapsLink = `📍 Vị trí xe của tôi: https://maps.google.com/?q=${latitude},${longitude}`;
+        setReplyMessage((prev) => (prev ? `${prev} - ${mapsLink}` : mapsLink));
+        toast.success('Đã gắn tọa độ định vị xe!', { id: 'chat-gps' });
+      },
+      (err) => {
+        toast.error('Không thể lấy vị trí GPS. Hãy bật định vị trên điện thoại.', { id: 'chat-gps' });
+      },
+      { timeout: 10000, enableHighAccuracy: true }
+    );
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -476,6 +585,22 @@ export default function CustomerPortalPage() {
                 )}
                 <span style={{ fontSize: '18px', width: '24px', textAlign: 'center', flexShrink: 0 }}>{item.icon}</span>
                 {!sidebarCollapsed && <span>{item.label}</span>}
+                {item.key === 'feedback' && tickets.some((t: any) => t.hasUnreadStaffMessage) && (
+                  <span
+                    style={{
+                      marginLeft: 'auto',
+                      background: '#ef4444',
+                      color: '#fff',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      padding: '2px 6px',
+                      borderRadius: '10px',
+                      animation: 'pulse 1.5s infinite',
+                    }}
+                  >
+                    Tin mới
+                  </span>
+                )}
               </button>
             );
           })}
@@ -1346,60 +1471,83 @@ export default function CustomerPortalPage() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-                  {tickets.map((t: any) => (
-                    <div
-                      key={t._id}
-                      style={{
-                        background: '#ffffff',
-                        borderRadius: '16px',
-                        border: '1px solid #e8e8e8',
-                        padding: '20px',
-                        transition: 'all 0.2s ease',
-                      }}
-                      onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; }}
-                      onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL, fontSize: '12px' }}>#{t._id?.slice(-6).toUpperCase()}</span>
-                        <span
-                          style={{
-                            padding: '3px 10px',
-                            borderRadius: '20px',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            background: t.status === 'resolved' ? '#d1fae5' : t.status === 'in_progress' ? '#dbeafe' : '#fef3c7',
-                            color: t.status === 'resolved' ? '#059669' : t.status === 'in_progress' ? '#2563eb' : '#d97706',
-                          }}
-                        >
-                          {t.status === 'in_progress' ? 'Đang xử lý' : t.status === 'resolved' ? 'Đã xử lý' : 'Chờ tiếp nhận'}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '15px', fontWeight: 700, color: '#424242', marginBottom: '6px' }}>{t.subject}</div>
-                      <p style={{ fontSize: '13px', color: '#757575', marginBottom: '14px', lineHeight: 1.6 }}>
-                        {t.description}
-                      </p>
-                      <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div style={{ fontSize: '11px', color: '#9e9e9e' }}>
-                          {new Date(t.createdAt).toLocaleString('vi-VN')}
+                  {tickets.map((t: any) => {
+                    const hasStaffReply = t.hasUnreadStaffMessage;
+                    return (
+                      <div
+                        key={t._id}
+                        style={{
+                          background: hasStaffReply ? '#f0fdfa' : '#ffffff',
+                          borderRadius: '16px',
+                          border: hasStaffReply ? `2px solid ${TEAL}` : '1px solid #e8e8e8',
+                          padding: '20px',
+                          transition: 'all 0.2s ease',
+                          boxShadow: hasStaffReply ? `0 4px 16px ${TEAL}25` : 'none',
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.boxShadow = hasStaffReply ? `0 4px 16px ${TEAL}25` : 'none'; }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL, fontSize: '12px' }}>#{t._id?.slice(-6).toUpperCase()}</span>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                            {hasStaffReply && (
+                              <span
+                                style={{
+                                  padding: '3px 8px',
+                                  borderRadius: '20px',
+                                  fontSize: '11px',
+                                  fontWeight: 800,
+                                  background: '#fef2f2',
+                                  color: '#dc2626',
+                                  border: '1px solid #fca5a5',
+                                  animation: 'pulse 1.5s infinite',
+                                }}
+                              >
+                                🔴 Có phản hồi mới!
+                              </span>
+                            )}
+                            <span
+                              style={{
+                                padding: '3px 10px',
+                                borderRadius: '20px',
+                                fontSize: '11px',
+                                fontWeight: 700,
+                                background: t.status === 'resolved' ? '#d1fae5' : t.status === 'in_progress' ? '#dbeafe' : '#fef3c7',
+                                color: t.status === 'resolved' ? '#059669' : t.status === 'in_progress' ? '#2563eb' : '#d97706',
+                              }}
+                            >
+                              {t.status === 'in_progress' ? 'Đang xử lý' : t.status === 'resolved' ? 'Đã xử lý' : 'Chờ tiếp nhận'}
+                            </span>
+                          </div>
                         </div>
-                        <button
-                          onClick={() => setSelectedTicket(t)}
-                          style={{
-                            padding: '6px 14px',
-                            borderRadius: '10px',
-                            border: `1px solid ${TEAL}`,
-                            background: 'transparent',
-                            color: TEAL,
-                            fontWeight: 600,
-                            fontSize: '12px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          💬 Trò chuyện ({t.messages?.length || 0})
-                        </button>
+                        <div style={{ fontSize: '15px', fontWeight: 700, color: '#424242', marginBottom: '6px' }}>{t.subject}</div>
+                        <p style={{ fontSize: '13px', color: '#757575', marginBottom: '14px', lineHeight: 1.6 }}>
+                          {t.description}
+                        </p>
+                        <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div style={{ fontSize: '11px', color: '#9e9e9e' }}>
+                            {new Date(t.createdAt).toLocaleString('vi-VN')}
+                          </div>
+                          <button
+                            onClick={() => handleOpenPortalTicket(t)}
+                            style={{
+                              padding: '6px 14px',
+                              borderRadius: '10px',
+                              border: hasStaffReply ? 'none' : `1px solid ${TEAL}`,
+                              background: hasStaffReply ? `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})` : 'transparent',
+                              color: hasStaffReply ? '#ffffff' : TEAL,
+                              fontWeight: 700,
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              boxShadow: hasStaffReply ? `0 2px 8px ${TEAL}50` : 'none',
+                            }}
+                          >
+                            {hasStaffReply ? `⚡ Xem Phản Hồi Mới (${t.messages?.length || 0})` : `💬 Trò chuyện (${t.messages?.length || 0})`}
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -1819,13 +1967,13 @@ export default function CustomerPortalPage() {
           style={{
             position: 'fixed',
             inset: 0,
-            background: 'rgba(0,0,0,0.5)',
-            backdropFilter: 'blur(4px)',
+            background: 'rgba(0,0,0,0.6)',
+            backdropFilter: 'blur(5px)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 200,
-            padding: '20px',
+            padding: '16px',
           }}
           onClick={() => setSelectedTicket(null)}
         >
@@ -1834,81 +1982,302 @@ export default function CustomerPortalPage() {
             style={{
               background: '#fff',
               borderRadius: '24px',
-              maxWidth: '580px',
+              maxWidth: '620px',
               width: '100%',
-              height: '70vh',
+              height: '75vh',
               display: 'flex',
               flexDirection: 'column',
               overflow: 'hidden',
-              boxShadow: '0 25px 60px rgba(0,0,0,0.2)',
+              boxShadow: '0 25px 60px rgba(0,0,0,0.25)',
             }}
           >
-            <div style={{ padding: '16px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            {/* Header */}
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <div style={{ fontSize: '15px', fontWeight: 800, color: '#1a1a1a' }}>💬 {selectedTicket.subject}</div>
-                <div style={{ fontSize: '11px', color: '#9e9e9e' }}>Mã: #{selectedTicket._id?.slice(-6).toUpperCase()}</div>
+                <div style={{ fontSize: '15px', fontWeight: 800, color: '#1a1a1a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  💬 {selectedTicket.subject}
+                </div>
+                <div style={{ fontSize: '12px', color: '#71717a', marginTop: '2px' }}>
+                  Khách hàng: <strong style={{ color: '#09090b' }}>{user?.fullName || 'Khách hàng'}</strong> • Mã sự cố: #{selectedTicket._id?.slice(-6).toUpperCase()}
+                </div>
               </div>
-              <button onClick={() => setSelectedTicket(null)} style={{ background: 'none', border: 'none', color: '#9e9e9e', fontSize: '20px', cursor: 'pointer' }}>✕</button>
+              <button
+                onClick={() => setSelectedTicket(null)}
+                style={{ background: 'none', border: 'none', color: '#9e9e9e', fontSize: '22px', cursor: 'pointer' }}
+              >
+                ✕
+              </button>
             </div>
 
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#f5f5f5', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              {selectedTicket.messages?.map((msg: any, idx: number) => {
-                const isMe = msg.sender?._id === user?._id;
-                return (
-                  <div
-                    key={idx}
-                    style={{
-                      alignSelf: isMe ? 'flex-end' : 'flex-start',
-                      maxWidth: '80%',
-                      background: isMe ? `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})` : '#ffffff',
-                      border: isMe ? 'none' : '1px solid #e8e8e8',
-                      padding: '10px 14px',
-                      borderRadius: '14px',
-                      fontSize: '13px',
-                      color: isMe ? '#ffffff' : '#424242',
-                      boxShadow: isMe ? `0 2px 10px ${TEAL}30` : '0 1px 3px rgba(0,0,0,0.06)',
-                    }}
-                  >
-                    <div style={{ fontSize: '10px', opacity: 0.7, marginBottom: '3px' }}>
-                      {isMe ? 'Bạn' : 'Đội cứu hộ Hải Châu'}
+            {/* Messages Thread */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {selectedTicket.messages?.length === 0 ? (
+                <div style={{ textAlign: 'center', color: '#94a3b8', padding: '40px 20px', fontSize: '13px' }}>
+                  Chưa có trao đổi nào. Hãy nhập tin nhắn hoặc chụp ảnh sự cố xe gửi cho đội cứu hộ.
+                </div>
+              ) : (
+                selectedTicket.messages?.map((msg: any, idx: number) => {
+                  const isMe = msg.sender?._id === user?._id || msg.sender?.role === 'customer' || !msg.sender?.role;
+                  const senderName = isMe
+                    ? (user?.fullName || 'Bạn (Khách hàng)')
+                    : (msg.sender?.fullName || 'Đội cứu hộ Hải Châu');
+                  const senderRole = isMe
+                    ? 'Khách hàng'
+                    : (msg.sender?.role === 'admin' ? 'Quản lý' : msg.sender?.role === 'owner' ? 'Chủ cửa hàng' : 'Nhân viên cứu hộ');
+
+                  return (
+                    <div
+                      key={idx}
+                      style={{
+                        alignSelf: isMe ? 'flex-end' : 'flex-start',
+                        maxWidth: '82%',
+                        background: isMe ? `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})` : '#ffffff',
+                        border: isMe ? 'none' : '1px solid #e2e8f0',
+                        padding: '10px 14px',
+                        borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                        fontSize: '13px',
+                        color: isMe ? '#ffffff' : '#0f172a',
+                        boxShadow: isMe ? `0 2px 10px ${TEAL}30` : '0 2px 4px rgba(0,0,0,0.04)',
+                      }}
+                    >
+                      {/* Tên khách hàng / người gửi rõ ràng */}
+                      <div
+                        style={{
+                          fontSize: '11px',
+                          marginBottom: '4px',
+                          fontWeight: 700,
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          color: isMe ? 'rgba(255,255,255,0.9)' : '#0284c7',
+                        }}
+                      >
+                        <span>{isMe ? '👤' : '🛠️'} {senderName}</span>
+                        <span
+                          style={{
+                            fontSize: '9px',
+                            padding: '1px 6px',
+                            borderRadius: '6px',
+                            background: isMe ? 'rgba(255,255,255,0.2)' : '#e0f2fe',
+                            color: isMe ? '#ffffff' : '#0369a1',
+                            fontWeight: 600,
+                          }}
+                        >
+                          {senderRole}
+                        </span>
+                      </div>
+
+                      {/* Text content */}
+                      {msg.content && (
+                        <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.45 }}>
+                          {msg.content}
+                        </div>
+                      )}
+
+                      {/* Attachments (Ảnh xe, sự cố) */}
+                      {msg.attachments && msg.attachments.length > 0 && (
+                        <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                          {msg.attachments.map((imgUrl: string, aIdx: number) => (
+                            <img
+                              key={aIdx}
+                              src={imgUrl}
+                              alt="Ảnh sự cố"
+                              onClick={() => setChatLightboxImage(imgUrl)}
+                              style={{
+                                width: '180px',
+                                height: '130px',
+                                borderRadius: '8px',
+                                objectFit: 'cover',
+                                cursor: 'zoom-in',
+                                border: isMe ? '2px solid rgba(255,255,255,0.3)' : '1px solid #cbd5e1',
+                              }}
+                            />
+                          ))}
+                        </div>
+                      )}
+
+                      <div style={{ fontSize: '9px', opacity: 0.7, marginTop: '4px', textAlign: 'right' }}>
+                        {new Date(msg.createdAt || Date.now()).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
-                    <div>{msg.content}</div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
+              <div ref={portalChatBottomRef} />
             </div>
 
+            {/* Image Preview before sending */}
+            {chatAttachedImage && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '8px 16px', background: '#ecfdf5', borderTop: '1px solid #d1fae5' }}>
+                <img src={chatAttachedImage} alt="Ảnh chụp sự cố" style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
+                <span style={{ fontSize: '12px', color: '#047857', flex: 1, fontWeight: 600 }}>Ảnh chụp sự cố sẵn sàng gửi</span>
+                <button
+                  type="button"
+                  onClick={() => setChatAttachedImage(null)}
+                  style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', fontSize: '12px', lineHeight: '22px' }}
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Hidden Inputs for Camera and File selection */}
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              ref={chatCameraInputRef}
+              style={{ display: 'none' }}
+              onChange={handleChatImageFileChange}
+            />
+            <input
+              type="file"
+              accept="image/*"
+              ref={chatFileInputRef}
+              style={{ display: 'none' }}
+              onChange={handleChatImageFileChange}
+            />
+
+            {/* Chat Input & Action Buttons */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (!replyMessage.trim()) return;
-                replyMutation.mutate({ id: selectedTicket._id, content: replyMessage });
+                if ((!replyMessage.trim() && !chatAttachedImage) || !selectedTicket) return;
+                replyMutation.mutate({
+                  id: selectedTicket._id,
+                  content: replyMessage.trim(),
+                  attachments: chatAttachedImage ? [chatAttachedImage] : []
+                });
               }}
-              style={{ padding: '14px 20px', borderTop: '1px solid #f0f0f0', display: 'flex', gap: '10px' }}
+              style={{ padding: '12px 16px', borderTop: '1px solid #f0f0f0', display: 'flex', flexDirection: 'column', gap: '8px' }}
             >
-              <input
-                type="text"
-                placeholder="Nhập tin nhắn..."
-                style={{ flex: 1, padding: '10px 16px', borderRadius: '12px', border: '1px solid #e0e0e0', fontSize: '14px', outline: 'none' }}
-                value={replyMessage}
-                onChange={e => setReplyMessage(e.target.value)}
-              />
-              <button
-                type="submit"
-                style={{
-                  padding: '10px 20px',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})`,
-                  color: '#fff',
-                  fontWeight: 700,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                Gửi
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <input
+                  type="text"
+                  placeholder="Nhập nội dung tin nhắn gửi cứu hộ..."
+                  style={{ flex: 1, padding: '10px 16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '14px', outline: 'none' }}
+                  value={replyMessage}
+                  onChange={e => setReplyMessage(e.target.value)}
+                />
+                <button
+                  type="submit"
+                  disabled={replyMutation.isPending || (!replyMessage.trim() && !chatAttachedImage)}
+                  style={{
+                    padding: '10px 22px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})`,
+                    color: '#fff',
+                    fontWeight: 700,
+                    fontSize: '14px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {replyMutation.isPending ? 'Đang gửi...' : 'Gửi'}
+                </button>
+              </div>
+
+              {/* Action Buttons: Chụp hình, Chọn ảnh, Gửi định vị GPS */}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => chatCameraInputRef.current?.click()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    background: '#f8fafc',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📷 Chụp hình xe
+                </button>
+                <button
+                  type="button"
+                  onClick={() => chatFileInputRef.current?.click()}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    background: '#f8fafc',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  🖼️ Tải ảnh từ máy
+                </button>
+                <button
+                  type="button"
+                  onClick={handleChatGetLocation}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '6px 12px',
+                    borderRadius: '10px',
+                    border: '1px solid #e2e8f0',
+                    background: '#f8fafc',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    color: '#334155',
+                    cursor: 'pointer',
+                  }}
+                >
+                  📍 Gửi định vị GPS
+                </button>
+              </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox Modal for Customer Portal */}
+      {chatLightboxImage && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.85)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setChatLightboxImage(null)}
+        >
+          <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
+            <img src={chatLightboxImage} alt="Ảnh phóng to" style={{ width: '100%', maxHeight: '85vh', objectFit: 'contain', borderRadius: '12px' }} />
+            <button
+              onClick={() => setChatLightboxImage(null)}
+              style={{
+                position: 'absolute',
+                top: '-15px',
+                right: '-15px',
+                background: '#ffffff',
+                border: 'none',
+                borderRadius: '50%',
+                width: '32px',
+                height: '32px',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
+              }}
+            >
+              ✕
+            </button>
           </div>
         </div>
       )}

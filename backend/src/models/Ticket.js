@@ -29,6 +29,10 @@ const ticketSchema = new mongoose.Schema({
     attachments: [String],
     createdAt: { type: Date, default: Date.now }
   }],
+  hasUnreadCustomerMessage: { type: Boolean, default: false },
+  hasUnreadStaffMessage: { type: Boolean, default: false },
+  lastMessageAt: { type: Date, default: Date.now },
+  lastSenderRole: { type: String, default: 'customer' },
   resolvedAt: Date,
   resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   resolution: String,

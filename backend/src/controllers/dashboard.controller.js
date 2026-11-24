@@ -166,9 +166,14 @@ exports.getDashboard = async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(5);
 
+    const isOwner = Boolean(req.user && req.user.role === 'owner');
+
     res.json({
       success: true,
       data: {
+        // Permission flag
+        canViewRevenue: isOwner,
+
         // New Overview Schema (matching screenshot)
         alerts,
         rentedVehicles,
@@ -176,12 +181,13 @@ exports.getDashboard = async (req, res) => {
         utilizationRate,
         activeContracts: Math.max(activeContracts, 1),
         pendingBookings,
-        monthRevenue,
+        // Revenue strictly restricted to owner
+        monthRevenue: isOwner ? monthRevenue : null,
         completedContractsThisMonth,
-        debtAmount,
-        monthExpenses,
-        monthProfit,
-        profitMargin,
+        debtAmount: isOwner ? debtAmount : null,
+        monthExpenses: isOwner ? monthExpenses : null,
+        monthProfit: isOwner ? monthProfit : null,
+        profitMargin: isOwner ? profitMargin : null,
         fleetStatus,
         operationsScope: {
           totalVehicles,
@@ -191,7 +197,7 @@ exports.getDashboard = async (req, res) => {
         },
 
         // Legacy compatibility
-        todayRevenue,
+        todayRevenue: isOwner ? todayRevenue : null,
         todayBookings,
         activeRentals,
         newCustomers,

@@ -94,6 +94,42 @@ export default function VehiclesPage() {
     onError: (err: any) => toast.error(err.response?.data?.message || 'Có lỗi!'),
   });
 
+  const [quickPriceVehicle, setQuickPriceVehicle] = useState<any>(null);
+  const [quickPricePerDay, setQuickPricePerDay] = useState('');
+  const [quickPricePerHour, setQuickPricePerHour] = useState('');
+  const [quickDeposit, setQuickDeposit] = useState('');
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/vehicles/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      toast.success('Đã xóa xe thành công!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Không thể xóa xe!'),
+  });
+
+  const updatePriceMutation = useMutation({
+    mutationFn: ({ id, pricePerDay, pricePerHour, deposit }: any) =>
+      api.put(`/vehicles/${id}`, {
+        pricePerDay: Number(pricePerDay),
+        pricePerHour: Number(pricePerHour || 0),
+        deposit: Number(deposit || 0),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      toast.success('Đã cập nhật giá thuê xe thành công!');
+      setQuickPriceVehicle(null);
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Không thể cập nhật giá!'),
+  });
+
+  const openQuickPrice = (v: any) => {
+    setQuickPriceVehicle(v);
+    setQuickPricePerDay(String(v.pricePerDay || ''));
+    setQuickPricePerHour(String(v.pricePerHour || ''));
+    setQuickDeposit(String(v.deposit || ''));
+  };
+
   /* ── Helpers ── */
   const resetForm = () => {
     setFormData({ name:'', brand:'', model:'', year: new Date().getFullYear(), licensePlate:'', color:'', type:'scooter', engineCC:'', pricePerDay:'', pricePerHour:'', deposit:'', description:'', location:'Kho chính', status:'available' });
@@ -291,15 +327,42 @@ export default function VehiclesPage() {
                           >
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                           </button>
+
+                          {/* Quick Edit Price */}
+                          <button
+                            onClick={() => openQuickPrice(v)}
+                            title="Sửa giá thuê xe"
+                            style={{ ...btnIcon, color: '#059669' }}
+                            onMouseEnter={e => Object.assign(e.currentTarget.style, { background: '#ecfdf5', borderColor: '#a7f3d0' })}
+                            onMouseLeave={e => Object.assign(e.currentTarget.style, { background: '#f8fafc', borderColor: '#e2e8f0' })}
+                          >
+                            <span style={{ fontSize: '12px', fontWeight: 700 }}>₫</span>
+                          </button>
+
                           {/* Edit */}
                           <button
                             onClick={() => openEdit(v)}
-                            title="Chỉnh sửa"
+                            title="Chỉnh sửa thông tin xe"
                             style={btnIcon}
                             onMouseEnter={e => Object.assign(e.currentTarget.style, { background: '#f0fdfa', borderColor: '#99f6e4' })}
                             onMouseLeave={e => Object.assign(e.currentTarget.style, { background: '#f8fafc', borderColor: '#e2e8f0' })}
                           >
                             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+
+                          {/* Delete */}
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`Bạn có chắc chắn muốn xóa xe ${v.name} (${v.licensePlate}) khỏi hệ thống?`)) {
+                                deleteMutation.mutate(v._id);
+                              }
+                            }}
+                            title="Xóa xe"
+                            style={{ ...btnIcon, color: '#dc2626' }}
+                            onMouseEnter={e => Object.assign(e.currentTarget.style, { background: '#fef2f2', borderColor: '#fecaca' })}
+                            onMouseLeave={e => Object.assign(e.currentTarget.style, { background: '#f8fafc', borderColor: '#e2e8f0' })}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </button>
                         </div>
                       </td>
@@ -469,6 +532,79 @@ export default function VehiclesPage() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Hủy</button>
                 <button type="submit" className="btn btn-primary" disabled={saveMutation.isPending}>
                   {saveMutation.isPending ? <><div className="spinner" style={{ width: '16px', height: '16px' }} /> Đang lưu...</> : editVehicle ? '💾 Cập nhật' : '✅ Thêm xe'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════
+          QUICK PRICE EDIT MODAL
+      ══════════════════════════════════════════════════════ */}
+      {quickPriceVehicle && (
+        <div className="modal-overlay" onClick={e => e.target === e.currentTarget && setQuickPriceVehicle(null)}>
+          <div className="modal-content" style={{ maxWidth: '460px' }}>
+            <div className="modal-header">
+              <div>
+                <h2 className="modal-title">🏷️ Sửa giá thuê xe</h2>
+                <div style={{ fontSize: '13px', color: '#64748b', marginTop: '2px' }}>
+                  {quickPriceVehicle.name} ({quickPriceVehicle.licensePlate})
+                </div>
+              </div>
+              <button className="btn btn-secondary btn-icon" onClick={() => setQuickPriceVehicle(null)}>✕</button>
+            </div>
+
+            <form
+              onSubmit={e => {
+                e.preventDefault();
+                updatePriceMutation.mutate({
+                  id: quickPriceVehicle._id,
+                  pricePerDay: quickPricePerDay,
+                  pricePerHour: quickPricePerHour,
+                  deposit: quickDeposit,
+                });
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <FormGroup label="Giá thuê theo ngày (VNĐ/ngày) *">
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={quickPricePerDay}
+                    onChange={e => setQuickPricePerDay(e.target.value)}
+                    placeholder="150000"
+                    required
+                  />
+                </FormGroup>
+
+                <FormGroup label="Giá thuê theo giờ (VNĐ/giờ)">
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={quickPricePerHour}
+                    onChange={e => setQuickPricePerHour(e.target.value)}
+                    placeholder="25000"
+                  />
+                </FormGroup>
+
+                <FormGroup label="Tiền đặt cọc (VNĐ)">
+                  <input
+                    className="form-input"
+                    type="number"
+                    value={quickDeposit}
+                    onChange={e => setQuickDeposit(e.target.value)}
+                    placeholder="500000"
+                  />
+                </FormGroup>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '20px', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setQuickPriceVehicle(null)}>
+                  Hủy
+                </button>
+                <button type="submit" className="btn btn-primary" disabled={updatePriceMutation.isPending}>
+                  {updatePriceMutation.isPending ? 'Đang cập nhật...' : '💾 Lưu giá mới'}
                 </button>
               </div>
             </form>

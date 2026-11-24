@@ -71,7 +71,7 @@ const contractSchema = new mongoose.Schema({
   // Status
   status: {
     type: String,
-    enum: ['draft', 'pending_signature', 'active', 'completed', 'terminated', 'cancelled'],
+    enum: ['draft', 'pending_signature', 'pending_approval', 'confirmed', 'active', 'completed', 'terminated', 'cancelled'],
     default: 'draft'
   },
   createdBy: { type: mongoose.Schema.Types.Mixed, ref: 'User' },
