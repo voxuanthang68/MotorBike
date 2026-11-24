@@ -375,6 +375,7 @@ export default function HomePage() {
 
   const [selectedType, setSelectedType] = useState<string>('all');
   const [showVehicleDropdown, setShowVehicleDropdown] = useState(false);
+  const [showContactDropdown, setShowContactDropdown] = useState(false);
   const [pickupDate, setPickupDate] = useState<string>('');
   const [returnDate, setReturnDate] = useState<string>('');
   const [pickupLocation, setPickupLocation] = useState<string>('Sân bay Đà Nẵng');
@@ -537,7 +538,7 @@ export default function HomePage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
 
       {/* ========================================================
-          1. HEADER NAVBAR (MotoRent Clean Modern Style)
+          1. HEADER NAVBAR (XTMotoBike Clean Modern Style)
           ======================================================== */}
       <header
         style={{
@@ -563,7 +564,7 @@ export default function HomePage() {
             </div>
             <div>
               <div style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.3px', lineHeight: 1.1 }}>
-                MotoRent
+                XTMotoBike
               </div>
               <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 500 }}>
                 Thuê xe dễ dàng
@@ -716,23 +717,125 @@ export default function HomePage() {
               <span>Hướng dẫn</span>
             </a>
 
-            <a
-              href="tel:0905123456"
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                color: '#1e293b',
-                padding: '8px 14px',
-                borderRadius: '8px',
-                fontSize: '13.5px',
-                fontWeight: 600,
-                textDecoration: 'none',
-              }}
-            >
-              <Phone size={15} style={{ color: '#475569' }} />
-              <span>Liên hệ</span>
-            </a>
+            {/* Contact Popover Dropdown */}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setShowContactDropdown(!showContactDropdown)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  color: showContactDropdown ? '#2563eb' : '#1e293b',
+                  background: showContactDropdown ? '#eff6ff' : 'transparent',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '8px',
+                  fontSize: '13.5px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Phone size={15} style={{ color: showContactDropdown ? '#2563eb' : '#475569' }} />
+                <span>Liên hệ</span>
+                <ChevronDown
+                  size={14}
+                  style={{
+                    transform: showContactDropdown ? 'rotate(180deg)' : 'none',
+                    transition: 'transform 0.2s ease',
+                    opacity: 0.7,
+                  }}
+                />
+              </button>
+
+              {showContactDropdown && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '14px',
+                    boxShadow: '0 16px 36px rgba(15, 23, 42, 0.15)',
+                    padding: '16px',
+                    width: '300px',
+                    zIndex: 100,
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
+                    <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                      <Phone size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>Hotline Tư Vấn & Đặt Xe</div>
+                      <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 600 }}>● Hỗ trợ 24/7 trực tuyến</div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, textTransform: 'uppercase', marginBottom: '2px' }}>
+                      Số điện thoại đặt xe trực tiếp
+                    </div>
+                    <div style={{ fontSize: '20px', fontWeight: 900, color: '#2563eb', letterSpacing: '0.5px' }}>
+                      0905 123 456
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <a
+                      href="tel:0905123456"
+                      onClick={() => setShowContactDropdown(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        background: '#2563eb',
+                        color: '#ffffff',
+                        padding: '10px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                      }}
+                    >
+                      <Phone size={15} />
+                      Gọi ngay: 0905 123 456
+                    </a>
+
+                    <a
+                      href="https://zalo.me/0905123456"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setShowContactDropdown(false)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        background: '#eff6ff',
+                        color: '#1d4ed8',
+                        padding: '9px',
+                        borderRadius: '8px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        border: '1px solid #bfdbfe',
+                      }}
+                    >
+                      <span>💬 Nhắn tin Zalo tư vấn</span>
+                    </a>
+                  </div>
+
+                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9', fontSize: '11.5px', color: '#64748b', lineHeight: 1.5 }}>
+                    📍 <strong>Điểm giao xe:</strong> Sân bay, Ga tàu & Khách sạn TP Đà Nẵng (giao xe trong 15 phút).
+                  </div>
+                </div>
+              )}
+            </div>
           </nav>
 
           {/* Action / Auth Button */}
@@ -882,7 +985,7 @@ export default function HomePage() {
             >
               Khám phá Đà Nẵng<br />
               <span style={{ color: '#0f172a' }}>cùng </span>
-              <span style={{ color: '#1d4ed8' }}>MotoRent</span>
+              <span style={{ color: '#1d4ed8' }}>XTMotoBike</span>
             </h1>
 
             <p style={{ fontSize: '17px', color: '#334155', lineHeight: 1.6, margin: '0 0 32px 0', maxWidth: '520px', fontWeight: 500 }}>
@@ -959,7 +1062,7 @@ export default function HomePage() {
             >
               <img
                 src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=1000&auto=format&fit=crop&q=80"
-                alt="Khám phá Đà Nẵng cùng MotoRent"
+                alt="Khám phá Đà Nẵng cùng XTMotoBike"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <div
@@ -1383,7 +1486,7 @@ export default function HomePage() {
           )}
 
           {/* ========================================================
-              BOTTOM PROMO / CTA BANNER (MotoRent Companion Banner)
+              BOTTOM PROMO / CTA BANNER (XTMotoBike Companion Banner)
               ======================================================== */}
           <div style={{ marginTop: '48px' }}>
             <div
@@ -1441,7 +1544,7 @@ export default function HomePage() {
                 </div>
                 <div>
                   <h3 style={{ fontSize: '20px', fontWeight: 800, margin: '0 0 4px', color: '#ffffff' }}>
-                    MotoRent – Đồng hành cùng bạn trên mọi nẻo đường!
+                    XTMotoBike – Đồng hành cùng bạn trên mọi nẻo đường!
                   </h3>
                   <p style={{ fontSize: '14px', margin: 0, color: 'rgba(255, 255, 255, 0.9)', fontWeight: 500 }}>
                     Thuê xe dễ dàng, khám phá Đà Nẵng trọn vẹn hơn
@@ -1647,11 +1750,11 @@ export default function HomePage() {
               },
               {
                 q: 'Giao nhận xe tại Sân bay Đà Nẵng có tính phí không?',
-                a: 'MotoRent giao và nhận xe hoàn toàn miễn phí tại Sảnh đến Sân bay Quốc tế Đà Nẵng, Ga tàu hỏa và các khách sạn trong nội thành quận Hải Châu trong khung giờ từ 06:00 đến 22:00.'
+                a: 'XTMotoBike giao và nhận xe hoàn toàn miễn phí tại Sảnh đến Sân bay Quốc tế Đà Nẵng, Ga tàu hỏa và các khách sạn trong nội thành quận Hải Châu trong khung giờ từ 06:00 đến 22:00.'
               },
               {
                 q: 'Nếu xe gặp sự cố trên Đèo Hải Vân thì hỗ trợ thế nào?',
-                a: 'Đội cứu hộ lưu động của MotoRent túc trực trên tuyến đường ven biển và đèo Hải Vân. Khi có sự cố lốp hay động cơ, kỹ thuật viên sẽ có mặt trong 30 đến 45 phút để khắc phục hoặc đổi xe mới tương đương.'
+                a: 'Đội cứu hộ lưu động của XTMotoBike túc trực trên tuyến đường ven biển và đèo Hải Vân. Khi có sự cố lốp hay động cơ, kỹ thuật viên sẽ có mặt trong 30 đến 45 phút để khắc phục hoặc đổi xe mới tương đương.'
               }
             ].map((faq, fIdx) => (
               <div key={fIdx} style={{ background: '#f8fafc', padding: '24px 28px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
@@ -1679,7 +1782,7 @@ export default function HomePage() {
                 <div style={{ width: '34px', height: '34px', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '8px', boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)' }}>
                   <Bike style={{ width: '20px', height: '20px', color: '#ffffff' }} />
                 </div>
-                <span>MotoRent Đà Nẵng</span>
+                <span>XTMotoBike Đà Nẵng</span>
               </div>
               <p style={{ fontSize: '14px', lineHeight: 1.6, color: '#475569', maxWidth: '420px', margin: '0 0 20px 0' }}>
                 Dịch vụ cho thuê xe máy du lịch tự túc chất lượng cao tại TP Đà Nẵng. 100% xe đời mới bảo dưỡng định kỳ, giao nhận tận nơi và hỗ trợ cứu hộ 24/7.
@@ -1719,7 +1822,7 @@ export default function HomePage() {
 
           <div style={{ paddingTop: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '12.5px', color: '#94a3b8', flexWrap: 'wrap', gap: '12px' }}>
             <div>
-              © 2026 MotoRent Platform Đà Nẵng. Toàn bộ xe máy được cấp phép hoạt động vận tải khách du lịch.
+              © 2026 XTMotoBike Platform Đà Nẵng. Toàn bộ xe máy được cấp phép hoạt động vận tải khách du lịch.
             </div>
             <div>
               Dịch vụ giao nhận xe máy tận nơi 06:00 - 22:00 hàng ngày.
