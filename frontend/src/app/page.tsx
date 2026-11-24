@@ -1771,6 +1771,64 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================
+          7.5 STORE LOCATION MAP (Nằm trên Footer)
+          ======================================================== */}
+      <section style={{ padding: '0 24px 60px', maxWidth: '1240px', margin: '0 auto' }}>
+        <div style={{ background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', padding: '24px 28px', boxShadow: '0 10px 30px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>
+                📍
+              </div>
+              <div>
+                <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: '0 0 3px' }}>
+                  Vị trí cửa hàng XTMotoBike Đà Nẵng
+                </h3>
+                <p style={{ fontSize: '13.5px', color: '#64748b', margin: 0 }}>
+                  08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng (Cách Cầu Rồng 800m, Sân bay 2km)
+                </p>
+              </div>
+            </div>
+            
+            <a
+              href="https://maps.google.com/?q=08+Phan+Chu+Trinh,+H%E1%BA%A3i+Ch%C3%A2u+1,+H%E1%BA%A3i+Ch%C3%A2u,+%C4%90%C3%A0+N%E1%BA%B5ng"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: '#2563eb',
+                textDecoration: 'none',
+                background: '#eff6ff',
+                padding: '9px 18px',
+                borderRadius: '8px',
+                border: '1px solid #bfdbfe',
+                boxShadow: '0 2px 6px rgba(37, 99, 235, 0.08)'
+              }}
+            >
+              <span>🗺️ Mở Google Maps chỉ đường &rarr;</span>
+            </a>
+          </div>
+          
+          <div style={{ borderRadius: '14px', overflow: 'hidden', height: '320px', border: '1px solid #cbd5e1', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)' }}>
+            <iframe
+              title="Bản đồ cửa hàng XTMotoBike Đà Nẵng"
+              src="https://maps.google.com/maps?q=08%20Phan%20Chu%20Trinh,%20H%E1%BA%A3i%20Ch%C3%A2u%201,%20H%E1%BA%A3i%20Ch%C3%A2u,%20%C4%90%C3%A0%20N%E1%BA%B5ng&t=&z=15&ie=UTF8&iwloc=&output=embed"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen={false}
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* ========================================================
           8. FOOTER — Modern Light Cohesive Blue Theme
           ======================================================== */}
       <footer style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#64748b', padding: '70px 24px 40px' }}>
@@ -1802,29 +1860,9 @@ export default function HomePage() {
               <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: '0 0 8px 0' }}>
                 ✈️ Sảnh đến: Sân bay Quốc tế Đà Nẵng (giao xe trong 15 phút)
               </p>
-              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: '0 0 16px 0' }}>
+              <p style={{ fontSize: '13.5px', lineHeight: 1.6, color: '#475569', margin: 0 }}>
                 🚂 Ga đường sắt: 200 Hải Phòng, Tam Thuận, Thanh Khê, Đà Nẵng
               </p>
-              <a
-                href="https://maps.google.com/?q=08+Phan+Chu+Trinh,+H%E1%BA%A3i+Ch%C3%A2u+1,+H%E1%BA%A3i+Ch%C3%A2u,+%C4%90%C3%A0+N%E1%BA%B5ng"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '13px',
-                  fontWeight: 700,
-                  color: '#2563eb',
-                  textDecoration: 'none',
-                  background: '#eff6ff',
-                  padding: '6px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #bfdbfe'
-                }}
-              >
-                <span>🗺️ Mở Google Maps chỉ đường</span>
-              </a>
             </div>
 
             <div>
@@ -1837,52 +1875,6 @@ export default function HomePage() {
                 <li><Link href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 700 }}>Trang quản trị (/dashboard)</Link></li>
                 <li><Link href="/login" style={{ color: '#64748b', textDecoration: 'none' }}>Đăng nhập nhân viên</Link></li>
               </ul>
-            </div>
-          </div>
-
-          {/* Bản đồ vị trí cửa hàng */}
-          <div style={{ marginBottom: '40px', background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px', boxShadow: '0 4px 16px rgba(15, 23, 42, 0.04)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '18px' }}>📍</span>
-                <div>
-                  <div style={{ fontSize: '14.5px', fontWeight: 800, color: '#0f172a' }}>
-                    Vị trí cửa hàng XTMotoBike Đà Nẵng
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: '#64748b' }}>
-                    08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng (Cách Cầu Rồng 800m, Sân bay 2km)
-                  </div>
-                </div>
-              </div>
-              <a
-                href="https://maps.google.com/?q=08+Phan+Chu+Trinh,+H%E1%BA%A3i+Ch%C3%A2u+1,+H%E1%BA%A3i+Ch%C3%A2u,+%C4%90%C3%A0+N%E1%BA%B5ng"
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  fontSize: '12.5px',
-                  fontWeight: 700,
-                  color: '#2563eb',
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px'
-                }}
-              >
-                Chỉ đường tới cửa hàng &rarr;
-              </a>
-            </div>
-            
-            <div style={{ borderRadius: '12px', overflow: 'hidden', height: '260px', border: '1px solid #cbd5e1' }}>
-              <iframe
-                title="Bản đồ cửa hàng XTMotoBike Đà Nẵng"
-                src="https://maps.google.com/maps?q=08%20Phan%20Chu%20Trinh,%20H%E1%BA%A3i%20Ch%C3%A2u%201,%20H%E1%BA%A3i%20Ch%C3%A2u,%20%C4%90%C3%A0%20N%E1%BA%B5ng&t=&z=15&ie=UTF8&iwloc=&output=embed"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen={false}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
             </div>
           </div>
 
