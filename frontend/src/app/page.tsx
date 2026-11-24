@@ -538,16 +538,17 @@ export default function HomePage() {
     <div style={{ minHeight: '100vh', background: '#f8fafc', color: '#0f172a', fontFamily: 'Inter, system-ui, -apple-system, sans-serif' }}>
 
       {/* ========================================================
-          1. HEADER NAVBAR (XTMotoBike Clean Modern Style)
+          1. HEADER NAVBAR (XTMotoBike Soft Blue Modern Style)
           ======================================================== */}
       <header
         style={{
-          background: '#ffffff',
-          borderBottom: '1px solid #e2e8f0',
+          background: 'rgba(239, 246, 255, 0.95)',
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid #bfdbfe',
           position: 'sticky',
           top: 0,
           zIndex: 50,
-          boxShadow: '0 2px 10px rgba(0, 0, 0, 0.03)',
+          boxShadow: '0 2px 12px rgba(37, 99, 235, 0.06)',
         }}
       >
         <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -1829,9 +1830,9 @@ export default function HomePage() {
       </section>
 
       {/* ========================================================
-          8. FOOTER — Modern Light Cohesive Blue Theme
+          8. FOOTER — Modern Soft Light Blue Theme
           ======================================================== */}
-      <footer style={{ background: '#f8fafc', borderTop: '1px solid #e2e8f0', color: '#64748b', padding: '70px 24px 40px' }}>
+      <footer style={{ background: '#f0f7ff', borderTop: '1px solid #bfdbfe', color: '#64748b', padding: '70px 24px 40px' }}>
         <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.1fr 1fr', gap: '36px', marginBottom: '40px' }}>
