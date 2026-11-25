@@ -25,6 +25,8 @@ export default function LoginPage() {
       const updatedUser = useAuthStore.getState().user;
       if (updatedUser?.role === 'customer') {
         router.push('/portal');
+      } else if (updatedUser?.role === 'technician') {
+        router.push('/technician');
       } else {
         router.push('/dashboard');
       }
@@ -42,6 +44,8 @@ export default function LoginPage() {
       const updatedUser = useAuthStore.getState().user;
       if (updatedUser?.role === 'customer') {
         router.push('/portal');
+      } else if (updatedUser?.role === 'technician') {
+        router.push('/technician');
       } else {
         router.push('/dashboard');
       }
@@ -308,6 +312,13 @@ export default function LoginPage() {
               ⚡ Tài khoản mẫu để kiểm tra nhanh:
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin({ email: 'technician@motobike.vn', pass: 'Tech@123', role: 'Kỹ thuật viên' })}
+                style={{ padding: '6px 8px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontWeight: 800, gridColumn: 'span 2' }}
+              >
+                🔧 Kỹ thuật viên (Technician Demo)
+              </button>
               <button
                 type="button"
                 onClick={() => handleQuickDemoLogin({ email: 'owner@motobike.vn', pass: 'Owner@123', role: 'Chủ xe' })}

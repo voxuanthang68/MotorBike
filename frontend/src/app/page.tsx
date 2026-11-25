@@ -1875,6 +1875,7 @@ export default function HomePage() {
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, fontSize: '13.5px', lineHeight: 2.2 }}>
                 <li><a href="#danh-sach-xe" style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}>Bảng xe sẵn có</a></li>
                 <li><Link href="/portal" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 700 }}>Cổng khách hàng (/portal)</Link></li>
+                <li><Link href="/technician" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 700 }}>Trang kỹ thuật viên (/technician)</Link></li>
                 <li><Link href="/dashboard" style={{ color: '#2563eb', textDecoration: 'none', fontWeight: 700 }}>Trang quản trị (/dashboard)</Link></li>
                 <li><Link href="/login" style={{ color: '#64748b', textDecoration: 'none' }}>Đăng nhập nhân viên</Link></li>
               </ul>
