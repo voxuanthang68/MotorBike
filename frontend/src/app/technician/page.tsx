@@ -1,54 +1,53 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import {
-  Wrench,
+  LayoutGrid,
   Bike,
-  Calendar,
-  Clock,
-  CheckCircle2,
+  ClipboardCheck,
   AlertTriangle,
+  Wrench,
+  Package,
+  CalendarClock,
   History,
-  FileText,
-  Search,
+  BarChart2,
   Bell,
+  UserCircle,
+  Users,
+  Search,
+  RefreshCw,
   LogOut,
-  ChevronRight,
-  Eye,
-  Check,
   Menu,
   X,
   Plus,
-  RefreshCw,
-  Gauge,
-  Phone,
-  ShieldCheck,
-  Filter,
+  Eye,
   Camera,
-  ClipboardCheck,
-  User,
-  Download,
-  Printer,
-  Package,
-  DollarSign,
-  Trash2,
+  FileText,
   FileWarning,
-  Send,
-  ThumbsUp,
-  ThumbsDown,
-  ArrowRight,
-  Sparkles,
-  Layers,
-  Users
+  Printer,
+  Download,
+  DollarSign,
+  CheckCircle2,
+  Clock,
+  ChevronRight,
+  Gauge,
+  Check,
+  Star,
+  Calendar
 } from 'lucide-react';
 import ReturnInspectionWorkspace from './ReturnInspectionWorkspace';
 import RepairManagementWorkspace from './RepairManagementWorkspace';
 import UserManagementWorkspace from './UserManagementWorkspace';
+import {
+  MonthlyWorkBarChart,
+  VehicleStatusDonutChart,
+  CostTrendLineChart,
+  MonthlyChartDatum
+} from './TechnicianCharts';
 import {
   ReturnInspectionItem,
   DamagePosition,
@@ -61,9 +60,8 @@ import {
 } from './types';
 
 // ==========================================
-// 1. DATA INTERFACES & DEFINITIONS
+// 1. LOCAL INTERFACES & CONSTANTS
 // ==========================================
-
 export interface VehicleItem {
   _id: string;
   name: string;
@@ -95,75 +93,128 @@ export interface MaintenanceRecord {
   completedDate?: string;
   odometerAtMaintenance?: number;
   cost?: number;
-  partsReplaced?: Array<{ name: string; cost: number; quantity: number }>;
   notes?: string;
-  beforeImage?: string;
-  afterImage?: string;
   nextMaintenanceDate?: string;
 }
 
 export interface AppNotification {
   id: string;
   title: string;
+  description?: string;
   time: string;
   unread: boolean;
   type: 'inspection' | 'damage' | 'repair' | 'maintenance' | 'system';
+  targetTab?: TabId;
 }
 
-// Danh mục phụ tùng xe máy chính hãng
-const PARTS_CATALOG: PartItem[] = [
+type TabId =
+  | 'home'
+  | 'vehicles'
+  | 'return_inspection'
+  | 'damage_management'
+  | 'repair_management'
+  | 'parts_management'
+  | 'maintenance'
+  | 'history'
+  | 'reports'
+  | 'notifications'
+  | 'profile'
+  | 'user_management';
+
+const INITIAL_PARTS_CATALOG: PartItem[] = [
   { id: 'p1', code: 'PT-OIL-01', name: 'Dầu nhớt Motul Scooter Expert LE 10W40 (0.8L)', category: 'Dầu nhớt', unitPrice: 120000, laborFee: 20000, warranty: '1.500 km', stock: 45, compatible: 'Xe ga (Vision, AirBlade, SH, Lead)' },
   { id: 'p2', code: 'PT-OIL-02', name: 'Dầu nhớt Castrol Power1 4T 10W40 (1.0L)', category: 'Dầu nhớt', unitPrice: 135000, laborFee: 20000, warranty: '1.500 km', stock: 32, compatible: 'Xe số & Côn tay (Wave, Exciter, Winner)' },
   { id: 'p3', code: 'PT-BRK-01', name: 'Má phanh đĩa trước Nissin chính hãng Honda', category: 'Hệ thống phanh', unitPrice: 180000, laborFee: 30000, warranty: '6 tháng', stock: 24, compatible: 'AirBlade, Vision, Lead, SH' },
   { id: 'p4', code: 'PT-BRK-02', name: 'Bộ má phanh đùm/cơ sau Honda OEM', category: 'Hệ thống phanh', unitPrice: 110000, laborFee: 30000, warranty: '6 tháng', stock: 28, compatible: 'Wave Alpha, Future, Blade, Vision' },
   { id: 'p5', code: 'PT-TIR-01', name: 'Lốp không săm Michelin City Extra (Trước 80/90-14)', category: 'Lốp & Bánh xe', unitPrice: 460000, laborFee: 40000, warranty: '12 tháng', stock: 15, compatible: 'Vision, Air Blade, Vario' },
-  { id: 'p6', code: 'PT-TIR-02', name: 'Lốp không săm Michelin City Extra (Sau 90/90-14)', category: 'Lốp & Bánh xe', unitPrice: 520000, laborFee: 40000, warranty: '12 tháng', stock: 12, compatible: 'Vision, Air Blade, Vario' },
+  { id: 'p6', code: 'PT-TIR-02', name: 'Lốp không săm Michelin City Extra (Sau 90/90-14)', category: 'Lốp & Bánh xe', unitPrice: 520000, laborFee: 40000, warranty: '12 tháng', stock: 6, compatible: 'Vision, Air Blade, Vario' },
   { id: 'p7', code: 'PT-BAT-01', name: 'Bình ắc quy khô GS GTZ5S (12V-3.5Ah)', category: 'Hệ thống điện', unitPrice: 380000, laborFee: 20000, warranty: '9 tháng', stock: 20, compatible: 'Xe ga & Xe số phổ thông' },
   { id: 'p8', code: 'PT-SPK-01', name: 'Bugi chân dài NGK Iridium CPR8EAIX-9', category: 'Động cơ & Đánh lửa', unitPrice: 95000, laborFee: 15000, warranty: '15.000 km', stock: 35, compatible: 'PGM-FI Fi Phun xăng điện tử' },
   { id: 'p9', code: 'PT-BEL-01', name: 'Dây Curoa truyền động Bando Honda chính hãng', category: 'Truyền động', unitPrice: 280000, laborFee: 50000, warranty: '12 tháng (15.000 km)', stock: 14, compatible: 'Air Blade 125/160, Lead 125, SH' },
-  { id: 'p10', code: 'PT-CHN-01', name: 'Nhông sên dĩa phốt cao su O-Ring DID 428HD', category: 'Truyền động', unitPrice: 380000, laborFee: 45000, warranty: '12 tháng', stock: 16, compatible: 'Exciter 155, Winner X, Raider 150' },
+  { id: 'p10', code: 'PT-CHN-01', name: 'Nhông sên dĩa phốt cao su O-Ring DID 428HD', category: 'Truyền động', unitPrice: 380000, laborFee: 45000, warranty: '12 tháng', stock: 9, compatible: 'Exciter 155, Winner X, Raider 150' },
   { id: 'p11', code: 'PT-MIR-01', name: 'Gương chiếu hậu nguyên bản Honda (Cặp)', category: 'Dàn ngoài', unitPrice: 150000, laborFee: 15000, warranty: '6 tháng', stock: 25, compatible: 'Các dòng xe Honda' },
-  { id: 'p12', code: 'PT-BDY-01', name: 'Ốp yếm trước dàn áo chính hãng Honda Vision', category: 'Dàn áo & Nhựa', unitPrice: 420000, laborFee: 60000, warranty: '12 tháng', stock: 8, compatible: 'Honda Vision 2023-2026' },
-  { id: 'p13', code: 'PT-LGT-01', name: 'Cụm chóa đèn pha LED 2 tầng siêu sáng', category: 'Hệ thống đèn', unitPrice: 550000, laborFee: 50000, warranty: '12 tháng', stock: 9, compatible: 'Exciter, Winner X, Air Blade' }
+  { id: 'p12', code: 'PT-BDY-01', name: 'Ốp yếm trước dàn áo chính hãng Honda', category: 'Dàn áo & Nhựa', unitPrice: 780000, laborFee: 80000, warranty: '12 tháng', stock: 4, compatible: 'Air Blade, Vision, Winner X' },
+  { id: 'p13', code: 'PT-LGT-01', name: 'Cụm chóa đèn pha LED 2 tầng siêu sáng', category: 'Hệ thống đèn', unitPrice: 550000, laborFee: 50000, warranty: '12 tháng', stock: 7, compatible: 'Exciter, Winner X, Air Blade' }
+];
+
+const FALLBACK_VEHICLES: VehicleItem[] = [
+  { _id: 'v-1', name: 'Honda Air Blade 160 ABS', brand: 'Honda', licensePlate: '43C1-892.45', type: 'Xe tay ga', year: 2025, engineCC: 160, odometer: 14820, status: 'available', lastMaintenanceDate: '2026-11-10', image: SAMPLE_PHOTOS.cleanFront },
+  { _id: 'v-2', name: 'Honda CB150X Adventure', brand: 'Honda', licensePlate: '43A1-118.62', type: 'Xe côn tay', year: 2025, engineCC: 150, odometer: 16210, status: 'maintenance', lastMaintenanceDate: '2026-10-20', image: SAMPLE_PHOTOS.adventureSide },
+  { _id: 'v-3', name: 'Honda Winner X 150 ABS', brand: 'Honda', licensePlate: '43D1-654.12', type: 'Xe côn tay', year: 2024, engineCC: 150, odometer: 18400, status: 'broken', lastMaintenanceDate: '2026-10-15', image: SAMPLE_PHOTOS.cleanRear },
+  { _id: 'v-4', name: 'Honda Vision 2026 Smartkey', brand: 'Honda', licensePlate: '43E1-737.37', type: 'Xe tay ga', year: 2026, engineCC: 110, odometer: 12540, status: 'rented', lastMaintenanceDate: '2026-11-05', image: SAMPLE_PHOTOS.cleanFront },
+  { _id: 'v-5', name: 'Honda ADV 160 ABS Touring', brand: 'Honda', licensePlate: '43A1-045.88', type: 'Xe tay ga', year: 2025, engineCC: 160, odometer: 11200, status: 'available', lastMaintenanceDate: '2026-11-24', image: SAMPLE_PHOTOS.adventureSide },
+  { _id: 'v-6', name: 'Yamaha Exciter 155 VVA', brand: 'Yamaha', licensePlate: '43C1-530.77', type: 'Xe côn tay', year: 2024, engineCC: 155, odometer: 19600, status: 'rented', lastMaintenanceDate: '2026-11-14', image: SAMPLE_PHOTOS.cleanRear }
+];
+
+const FALLBACK_MAINTENANCES: MaintenanceRecord[] = [
+  { _id: 'm-1', vehicle: { _id: 'v-2', name: 'Honda CB150X Adventure', licensePlate: '43A1-118.62' }, technician: { fullName: 'Nguyễn Minh Quân' }, type: 'Định kỳ 5.000 km', title: 'Bảo dưỡng định kỳ 5.000 km (Thay nhớt + Lọc gió)', status: 'in_progress', scheduledDate: '2026-11-25', odometerAtMaintenance: 16210, cost: 350000, notes: 'Kiểm tra thêm xích tải và áp suất lốp.' },
+  { _id: 'm-2', vehicle: { _id: 'v-1', name: 'Honda Air Blade 160 ABS', licensePlate: '43C1-892.45' }, technician: { fullName: 'Trần Đình Huy' }, type: 'Thay nhớt & Kiểm tra phanh', title: 'Kiểm tra tổng quát trước cao điểm cuối tuần', status: 'scheduled', scheduledDate: '2026-11-26', odometerAtMaintenance: 14820, cost: 220000, notes: 'Kiểm tra má phanh ABS trước sau.' },
+  { _id: 'm-3', vehicle: { _id: 'v-4', name: 'Honda Vision 2026 Smartkey', licensePlate: '43E1-737.37' }, technician: { fullName: 'Lê Minh Tuấn' }, type: 'Bảo dưỡng định kỳ 3.000 km', title: 'Vệ sinh nồi côn & Thay dầu hộp số', status: 'scheduled', scheduledDate: '2026-11-27', odometerAtMaintenance: 12540, cost: 280000, notes: 'Xe đang chuẩn bị cho đơn thuê dài ngày.' },
+  { _id: 'm-4', vehicle: { _id: 'v-5', name: 'Honda ADV 160 ABS Touring', licensePlate: '43A1-045.88' }, technician: { fullName: 'Nguyễn Minh Quân' }, type: 'Kiểm tra sau sửa chữa', title: 'Bảo dưỡng tổng thể & Thay nhớt Motul', status: 'completed', scheduledDate: '2026-11-24', completedDate: '2026-11-24', odometerAtMaintenance: 11200, cost: 320000, notes: 'Xe vận hành mượt mà, đạt chuẩn bàn giao.' }
+];
+
+const CHART_DATA_6M: MonthlyChartDatum[] = [
+  { label: '06/26', inspections: 18, maintenance: 9, repairs: 4, cost: 4200000 },
+  { label: '07/26', inspections: 22, maintenance: 11, repairs: 6, cost: 5800000 },
+  { label: '08/26', inspections: 26, maintenance: 12, repairs: 5, cost: 5100000 },
+  { label: '09/26', inspections: 20, maintenance: 10, repairs: 4, cost: 4600000 },
+  { label: '10/26', inspections: 29, maintenance: 14, repairs: 7, cost: 7200000 },
+  { label: '11/26', inspections: 24, maintenance: 12, repairs: 5, cost: 5010000 }
 ];
 
 // ==========================================
-// 2. MAIN TECHNICIAN DASHBOARD COMPONENT
+// 2. MAIN TECHNICIAN PORTAL PAGE
 // ==========================================
-
 export default function TechnicianPortalPage() {
   const router = useRouter();
   const { user, logout, initialize } = useAuthStore();
-  
-  // 11 MENU CHÍNH THỨC CỦA NHÂN VIÊN KỸ THUẬT
-  const [activeTab, setActiveTab] = useState<
-    | 'home'                // 1. Dashboard
-    | 'vehicles'            // 2. Quản lý xe
-    | 'return_inspection'   // 3. Kiểm tra xe khi trả
-    | 'damage_management'   // 4. Quản lý hư hỏng
-    | 'repair_management'   // 5. Quản lý sửa chữa
-    | 'parts_management'    // 6. Quản lý phụ tùng
-    | 'maintenance'         // 7. Quản lý bảo dưỡng
-    | 'history'             // 8. Lịch sử kỹ thuật
-    | 'reports'             // 9. Báo cáo thống kê
-    | 'notifications'       // 10. Thông báo
-    | 'profile'             // 11. Tài khoản cá nhân
-    | 'user_management'     // 12. Quản lý người dùng
-  >('home');
 
+  const [activeTab, setActiveTab] = useState<TabId>('home');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Database States
-  const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
-  const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>([]);
+  // Core States
+  const [vehicles, setVehicles] = useState<VehicleItem[]>(FALLBACK_VEHICLES);
+  const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>(FALLBACK_MAINTENANCES);
+  const [partsCatalog, setPartsCatalog] = useState<PartItem[]>(INITIAL_PARTS_CATALOG);
   const [realBookings, setRealBookings] = useState<any[]>([]);
-  const [selectedRealBookingId, setSelectedRealBookingId] = useState<string>('');
-  const [activeInspectionId, setActiveInspectionId] = useState<string>('ins-042');
+  const [selectedRealBookingId, setSelectedRealBookingId] = useState('');
+  const [activeInspectionId, setActiveInspectionId] = useState('ins-042');
   const [selectedRepairId, setSelectedRepairId] = useState<string | null>(null);
 
-  // 1. Dữ liệu Kiểm tra xe khi trả (đồng bộ 8 hạng mục + ghim vị trí hư hỏng)
+  // Filter States for various tabs
+  const [vehStatusFilter, setVehStatusFilter] = useState<string>('all');
+  const [vehTypeFilter, setVehTypeFilter] = useState<string>('all');
+  const [selectedVehicleDetail, setSelectedVehicleDetail] = useState<VehicleItem | null>(null);
+
+  const [dmgFilter, setDmgFilter] = useState<'all' | 'confirmed' | 'repair_proposed'>('all');
+
+  const [partCatFilter, setPartCatFilter] = useState<string>('all');
+  const [partViewMode, setPartViewMode] = useState<'table' | 'grid'>('table');
+  const [showAddPartModal, setShowAddPartModal] = useState(false);
+  const [newPartCode, setNewPartCode] = useState('');
+  const [newPartName, setNewPartName] = useState('');
+  const [newPartCategory, setNewPartCategory] = useState('Động cơ & Đánh lửa');
+  const [newPartPrice, setNewPartPrice] = useState(150000);
+  const [newPartLabor, setNewPartLabor] = useState(30000);
+  const [newPartStock, setNewPartStock] = useState(10);
+
+  const [maintStatusFilter, setMaintStatusFilter] = useState<string>('all');
+  const [selectedMaintDetail, setSelectedMaintDetail] = useState<MaintenanceRecord | null>(null);
+  const [showNewMaintModal, setShowNewMaintModal] = useState(false);
+  const [newMaintVehId, setNewMaintVehId] = useState('');
+  const [newMaintTitle, setNewMaintTitle] = useState('Bảo dưỡng định kỳ 5.000 km');
+  const [newMaintDate, setNewMaintDate] = useState('2026-11-28');
+  const [newMaintCost, setNewMaintCost] = useState(250000);
+  const [newMaintNotes, setNewMaintNotes] = useState('');
+
+  const [historyTypeFilter, setHistoryTypeFilter] = useState<'all' | 'inspection' | 'damage' | 'repair' | 'maintenance'>('all');
+  const [historyVehicleFilter, setHistoryVehicleFilter] = useState<string>('all');
+  const [reportPeriod, setReportPeriod] = useState<'1m' | '3m' | '6m' | '12m'>('6m');
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
+
+  // Return Inspections
   const [returnInspections, setReturnInspections] = useState<ReturnInspectionItem[]>([
     {
       id: 'ins-041',
@@ -173,15 +224,15 @@ export default function TechnicianPortalPage() {
       customerName: 'Trần Quốc Khánh',
       customerPhone: '0905 412 889',
       customerIdCard: '048096005678',
-      vehicleId: 'v-2',
+      vehicleId: 'v-1',
       vehicleName: 'Honda Air Blade 160 ABS',
       licensePlate: '43C1-892.45',
       vehicleImage: SAMPLE_PHOTOS.cleanFront,
       rentalStartDate: '2026-11-22 09:00',
       rentalEndDate: '2026-11-25 09:00',
       returnDate: '2026-11-25 08:50',
-      deliveryOdometer: 10200,
-      returnOdometer: 10345,
+      deliveryOdometer: 14680,
+      returnOdometer: 14820,
       fuelLevel: 95,
       deliveryImages: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.cleanRear],
       returnImages: [SAMPLE_PHOTOS.cleanRear],
@@ -194,7 +245,7 @@ export default function TechnicianPortalPage() {
       mirrorsAndBody: true,
       status: 'passed',
       notes: 'Xe nguyên vẹn, đầy đủ xăng, không trầy xước, bàn giao hoàn tất.',
-      inspectorName: 'Nguyễn Văn Minh',
+      inspectorName: 'Nguyễn Minh Quân',
       hasDamageReport: false
     },
     {
@@ -205,7 +256,7 @@ export default function TechnicianPortalPage() {
       customerName: 'Lê Thảo Nguyên',
       customerPhone: '0983 511 042',
       customerIdCard: '048198004321',
-      vehicleId: 'v-3',
+      vehicleId: 'v-2',
       vehicleName: 'Honda CB150X Adventure',
       licensePlate: '43A1-118.62',
       vehicleImage: SAMPLE_PHOTOS.adventureSide,
@@ -246,7 +297,7 @@ export default function TechnicianPortalPage() {
       engine: true,
       mirrorsAndBody: false,
       status: 'draft',
-      notes: 'Khách báo xe chạy đường đèo Sơn Trà ổn, nhưng lốp sau hơi non và chân gương phải lỏng nhẹ. Đang lưu nháp chờ chụp ảnh cận cảnh.',
+      notes: 'Khách báo xe chạy đèo Hải Vân ổn, lốp sau hơi non và chân gương phải lỏng nhẹ.',
       inspectorName: 'Nguyễn Minh Quân',
       hasDamageReport: false
     },
@@ -258,13 +309,13 @@ export default function TechnicianPortalPage() {
       customerName: 'Trần Văn Hoàng',
       customerPhone: '0912 345 678',
       customerIdCard: '048096001234',
-      vehicleId: 'v-1',
-      vehicleName: 'Honda Vision 2026',
+      vehicleId: 'v-4',
+      vehicleName: 'Honda Vision 2026 Smartkey',
       licensePlate: '43E1-737.37',
       vehicleImage: SAMPLE_PHOTOS.cleanFront,
-      rentalStartDate: '22/11/2026 09:00',
-      rentalEndDate: '25/11/2026 12:00',
-      returnDate: '25/11/2026 11:30',
+      rentalStartDate: '2026-11-22 09:00',
+      rentalEndDate: '2026-11-25 12:00',
+      returnDate: '2026-11-25 11:30',
       deliveryOdometer: 12200,
       returnOdometer: 12540,
       fuelLevel: 75,
@@ -297,29 +348,67 @@ export default function TechnicianPortalPage() {
       mirrorsAndBody: false,
       status: 'damaged',
       notes: 'Khách bị va quẹt nhẹ: Trầy xước dàn áo yếm phải và nứt viền chóa đèn pha.',
-      inspectorName: 'Nguyễn Văn Minh',
+      inspectorName: 'Nguyễn Minh Quân',
       hasDamageReport: true,
       damageReportId: 'dmg-01'
     }
   ]);
 
-  // 2. Dữ liệu Quản lý hư hỏng
+  // Damage Reports
   const [damageReports, setDamageReports] = useState<DamageReportItem[]>([
     {
       id: 'dmg-01',
-      code: 'BBHD-2611-001',
+      code: 'BBHH-2026-023',
+      inspectionId: 'ins-042',
+      bookingCode: 'HD-DN-2026-318',
+      customerName: 'Lê Thảo Nguyên',
+      customerPhone: '0983 511 042',
+      vehicleId: 'v-2',
+      vehicleName: 'Honda CB150X Adventure',
+      licensePlate: '43A1-118.62',
+      reportedAt: '2026-11-25 16:45',
+      inspectorName: 'Nguyễn Minh Quân',
+      positions: [
+        {
+          id: 'pos-1',
+          position: 'Lốp sau & Vành xe',
+          severity: 'medium',
+          description: 'Lốp hơi non hơi nghi dính đinh nhỏ, cần kiểm tra vá ép nhiệt hoặc thay van',
+          photo: SAMPLE_PHOTOS.adventureSide,
+          suggestedAction: 'repair',
+          suggestedPartName: 'Kiểm tra lốp & bơm chuẩn 2.25 kg'
+        },
+        {
+          id: 'pos-2',
+          position: 'Chân gương chiếu hậu phải',
+          severity: 'medium',
+          description: 'Lỏng chân ren bắt gương và xước nhẹ mặt vỏ gương',
+          photo: SAMPLE_PHOTOS.damageScratched,
+          suggestedAction: 'replace',
+          suggestedPartName: 'Gương chiếu hậu nguyên bản Honda'
+        }
+      ],
+      overallSeverity: 'medium',
+      notes: 'Khách hàng xác nhận kiểm tra cùng KTV, đồng ý lập phương án xử lý.',
+      status: 'repair_proposed',
+      repairId: 'rep-020',
+      customerAgreedSignature: true
+    },
+    {
+      id: 'dmg-02',
+      code: 'BBHH-2026-022',
       inspectionId: 'ins-01',
       bookingCode: 'DH-202611-028',
       customerName: 'Trần Văn Hoàng',
       customerPhone: '0912 345 678',
-      vehicleId: 'v-1',
-      vehicleName: 'Honda Vision 2026',
+      vehicleId: 'v-4',
+      vehicleName: 'Honda Vision 2026 Smartkey',
       licensePlate: '43E1-737.37',
-      reportedAt: '25/11/2026 11:45',
-      inspectorName: 'Nguyễn Văn Minh',
+      reportedAt: '2026-11-25 11:45',
+      inspectorName: 'Nguyễn Minh Quân',
       positions: [
         {
-          id: 'pos-1',
+          id: 'pos-21',
           position: 'Dàn áo yếm trước bên phải',
           severity: 'medium',
           description: 'Trầy xước sâu 15cm, tróc sơn lót do cọ xát với tường đá',
@@ -328,7 +417,7 @@ export default function TechnicianPortalPage() {
           suggestedPartName: 'Sơn dặm & đánh bóng dàn áo'
         },
         {
-          id: 'pos-2',
+          id: 'pos-22',
           position: 'Cụm đèn pha LED trước',
           severity: 'high',
           description: 'Nứt chân bắt chóa đèn và vỡ nhẹ viền mica góc trái',
@@ -338,14 +427,13 @@ export default function TechnicianPortalPage() {
         }
       ],
       overallSeverity: 'high',
-      notes: 'Khách hàng xác nhận va quẹt tại bãi xe chùa Linh Ứng. Đồng ý xem xét phương án sửa chữa.',
-      status: 'repair_proposed',
-      repairId: 'rep-01',
+      notes: 'Khách đã ký biên bản hiện trạng khi trả xe.',
+      status: 'confirmed',
       customerAgreedSignature: true
     }
   ]);
 
-  // 3. Dữ liệu Quản lý sửa chữa
+  // Repair Orders
   const [repairs, setRepairs] = useState<RepairItem[]>([
     {
       id: 'rep-020',
@@ -353,7 +441,7 @@ export default function TechnicianPortalPage() {
       damageReportId: 'dmg-01',
       damageReportCode: 'BBHH-2026-023',
       bookingCode: 'HD-DN-2026-318',
-      vehicleId: 'v-3',
+      vehicleId: 'v-2',
       vehicleCode: 'MR-DN-002',
       vehicleName: 'Honda CB150X Adventure',
       licensePlate: '43A1-118.62',
@@ -409,7 +497,7 @@ export default function TechnicianPortalPage() {
       id: 'rep-014',
       code: 'PSC-2026-014',
       bookingCode: 'HD-DN-2026-278',
-      vehicleId: 'v-2',
+      vehicleId: 'v-3',
       vehicleCode: 'MR-DN-003',
       vehicleName: 'Honda Winner X 150 ABS',
       licensePlate: '43D1-654.12',
@@ -457,7 +545,7 @@ export default function TechnicianPortalPage() {
       id: 'rep-015',
       code: 'PSC-2026-015',
       bookingCode: 'HD-DN-2026-295',
-      vehicleId: 'v-1',
+      vehicleId: 'v-5',
       vehicleCode: 'MR-DN-004',
       vehicleName: 'Honda ADV 160 ABS Touring',
       licensePlate: '43A1-045.88',
@@ -494,7 +582,7 @@ export default function TechnicianPortalPage() {
       id: 'rep-011',
       code: 'PSC-2026-011',
       bookingCode: 'HD-DN-2026-240',
-      vehicleId: 'v-3',
+      vehicleId: 'v-6',
       vehicleCode: 'MR-DN-005',
       vehicleName: 'Yamaha Exciter 155 VVA',
       licensePlate: '43C1-530.77',
@@ -559,27 +647,28 @@ export default function TechnicianPortalPage() {
 
   // Notifications
   const [notifications, setNotifications] = useState<AppNotification[]>([
-    { id: 'nt-1', title: 'Khách Trần Văn Hoàng vừa trả xe #43E1-737.37 cần kiểm tra', time: '15 phút trước', unread: true, type: 'inspection' },
-    { id: 'nt-2', title: 'Biên bản hư hỏng #BBHD-2611-001 đã được khách đồng ý báo giá', time: '1 giờ trước', unread: true, type: 'damage' },
-    { id: 'nt-3', title: 'Phiếu sửa chữa #SC-2611-002 đã hoàn tất nghiệm thu', time: 'Hôm nay 09:30', unread: false, type: 'repair' },
-    { id: 'nt-4', title: 'Nhắc nhở: Lịch bảo dưỡng định kỳ xe Honda Vision đến hạn', time: 'Hôm qua', unread: false, type: 'maintenance' }
+    { id: 'nt-1', title: 'Khách Lê Thảo Nguyên vừa trả xe Honda CB150X (43A1-118.62) cần kiểm tra', description: 'Phiếu KT-2026-042 đang lưu nháp, còn 2 mục cần kiểm tra thêm.', time: '15 phút trước', unread: true, type: 'inspection', targetTab: 'return_inspection' },
+    { id: 'nt-2', title: 'Phiếu PSC-2026-020 đã được khách xác nhận báo giá 930.000 đ', description: 'Khách Lê Thảo Nguyên đồng ý thay gương và xử lý lốp sau.', time: '32 phút trước', unread: true, type: 'repair', targetTab: 'repair_management' },
+    { id: 'nt-3', title: 'Biên bản BBHH-2026-022 (43E1-737.37) đang chờ lập báo giá sửa chữa', description: 'Hư hỏng đèn pha LED và trầy xước dàn áo yếm phải.', time: '1 giờ trước', unread: true, type: 'damage', targetTab: 'damage_management' },
+    { id: 'nt-4', title: 'Xe Honda Winner X (43D1-654.12) đang thi công sửa chữa đạt 70%', description: 'Đã thay yếm trước và tay phanh, đang chờ chụp ảnh nghiệm thu.', time: '2 giờ trước', unread: true, type: 'repair', targetTab: 'repair_management' },
+    { id: 'nt-5', title: 'Cảnh báo tồn kho: Ốp yếm trước Honda chỉ còn 4 cái', description: 'Nên đề xuất nhập thêm 10 cái vào kho phụ tùng.', time: '3 giờ trước', unread: true, type: 'system', targetTab: 'parts_management' },
+    { id: 'nt-6', title: 'Lịch bảo dưỡng định kỳ Honda Air Blade (43C1-892.45) ngày mai', description: 'Kiểm tra tổng quát và má phanh ABS.', time: 'Hôm nay 09:30', unread: true, type: 'maintenance', targetTab: 'maintenance' },
+    { id: 'nt-7', title: 'Phiếu sửa chữa PSC-2026-015 (ADV 160) đã nghiệm thu hoàn thành', description: 'Xe đã chuyển về trạng thái Sẵn sàng cho thuê.', time: 'Hôm nay 08:15', unread: true, type: 'repair', targetTab: 'history' },
+    { id: 'nt-8', title: 'Nhắc nhở kiểm tra định kỳ đội xe cuối tháng 11/2026', description: 'Còn 2 xe đến mốc bảo dưỡng 5.000 km.', time: 'Hôm qua', unread: true, type: 'maintenance', targetTab: 'maintenance' }
   ]);
 
   // Profile Form States
-  const [profName, setProfName] = useState(user?.fullName || 'Nguyễn Văn Minh');
+  const [profName, setProfName] = useState(user?.fullName || 'Nguyễn Minh Quân');
   const [profPhone, setProfPhone] = useState(user?.phone || '0905 999 888');
   const [profEmail, setProfEmail] = useState(user?.email || 'technician@motobike.vn');
   const [profOldPass, setProfOldPass] = useState('');
   const [profNewPass, setProfNewPass] = useState('');
 
-  // Modals & Popups
+  // Shared Modals
   const [showNewInspectionModal, setShowNewInspectionModal] = useState(false);
   const [selectedInspectionForDetail, setSelectedInspectionForDetail] = useState<ReturnInspectionItem | null>(null);
   const [showCreateDamageReportModal, setShowCreateDamageReportModal] = useState<ReturnInspectionItem | null>(null);
-  const [selectedDamageReportDetail, setSelectedDamageReportDetail] = useState<DamageReportItem | null>(null);
   const [showCreateRepairModal, setShowCreateRepairModal] = useState<DamageReportItem | null>(null);
-  const [selectedRepairDetail, setSelectedRepairDetail] = useState<RepairItem | null>(null);
-  const [showCompleteRepairModal, setShowCompleteRepairModal] = useState<RepairItem | null>(null);
   const [showPhotoCompareModal, setShowPhotoCompareModal] = useState<{
     title: string;
     subtitle: string;
@@ -588,8 +677,8 @@ export default function TechnicianPortalPage() {
     notes?: string;
   } | null>(null);
 
-  // Form State: Tạo kiểm tra xe khi trả mới
-  const [newInsBookingCode, setNewInsBookingCode] = useState('DH-202611-040');
+  // New Inspection Modal Form States
+  const [newInsBookingCode, setNewInsBookingCode] = useState('HD-DN-2026-322');
   const [newInsCustName, setNewInsCustName] = useState('Đỗ Minh Tiến');
   const [newInsCustPhone, setNewInsCustPhone] = useState('0987 654 321');
   const [newInsVehicleId, setNewInsVehicleId] = useState('');
@@ -603,10 +692,8 @@ export default function TechnicianPortalPage() {
   const [newInsBody, setNewInsBody] = useState(true);
   const [newInsStatus, setNewInsStatus] = useState<'passed' | 'damaged'>('passed');
   const [newInsNotes, setNewInsNotes] = useState('');
-  const [newInsBeforeImg, setNewInsBeforeImg] = useState<string>(SAMPLE_PHOTOS.cleanFront);
-  const [newInsAfterImg, setNewInsAfterImg] = useState<string>(SAMPLE_PHOTOS.cleanRear);
 
-  // Form State: Tạo biên bản hư hỏng
+  // Damage Report Modal States
   const [dmgPositionsList, setDmgPositionsList] = useState<DamagePosition[]>([
     {
       id: 'p-init-1',
@@ -621,17 +708,13 @@ export default function TechnicianPortalPage() {
   const [dmgNotes, setDmgNotes] = useState('');
   const [dmgOverallSeverity, setDmgOverallSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
 
-  // Form State: Tạo đề xuất sửa chữa & báo giá
+  // Create Repair Quote Modal (from BBHH)
   const [repSelectedParts, setRepSelectedParts] = useState<{ partId: string; quantity: number }[]>([]);
   const [repSolutionText, setRepSolutionText] = useState('');
 
-  // Form State: Hoàn thành sửa chữa nghiệm thu
-  const [compActualCost, setCompActualCost] = useState<number>(0);
-  const [compNotes, setCompNotes] = useState('');
-  const [compAfterPhoto, setCompAfterPhoto] = useState<string>(SAMPLE_PHOTOS.repairedPerfect);
-  const [compPartPhoto, setCompPartPhoto] = useState<string>(SAMPLE_PHOTOS.newPartInstalled);
+  const displayTechName = user?.fullName || profName || 'Nguyễn Minh Quân';
 
-  // Load Real Data
+  // Load Real Data from MongoDB backend (gracefully preserving fallback when backend list is empty)
   const loadData = async () => {
     try {
       setLoading(true);
@@ -640,29 +723,26 @@ export default function TechnicianPortalPage() {
         api.get('/maintenance'),
         api.get('/bookings?limit=25')
       ]);
-      if (vRes.status === 'fulfilled' && vRes.value.data?.data) {
+
+      if (vRes.status === 'fulfilled' && Array.isArray(vRes.value.data?.data) && vRes.value.data.data.length > 0) {
         setVehicles(vRes.value.data.data);
-        if (!newInsVehicleId && vRes.value.data.data.length > 0) {
-          setNewInsVehicleId(vRes.value.data.data[0]._id);
-        }
+        if (!newInsVehicleId) setNewInsVehicleId(vRes.value.data.data[0]._id);
+      } else {
+        try {
+          const pubRes = await api.get('/vehicles/public');
+          if (Array.isArray(pubRes.data?.data) && pubRes.data.data.length > 0) {
+            setVehicles(pubRes.data.data);
+            if (!newInsVehicleId) setNewInsVehicleId(pubRes.data.data[0]._id);
+          }
+        } catch {}
       }
-      if (mRes.status === 'fulfilled' && mRes.value.data?.data) {
+
+      if (mRes.status === 'fulfilled' && Array.isArray(mRes.value.data?.data) && mRes.value.data.data.length > 0) {
         setMaintenances(mRes.value.data.data);
       }
-      if (bRes.status === 'fulfilled' && bRes.value.data?.data) {
-        const list = bRes.value.data.data;
-        setRealBookings(list);
+      if (bRes.status === 'fulfilled' && Array.isArray(bRes.value.data?.data)) {
+        setRealBookings(bRes.value.data.data);
       }
-    } catch (err) {
-      try {
-        const pubRes = await api.get('/vehicles/public');
-        if (pubRes.data?.data) {
-          setVehicles(pubRes.data.data);
-          if (!newInsVehicleId && pubRes.data.data.length > 0) {
-            setNewInsVehicleId(pubRes.data.data[0]._id);
-          }
-        }
-      } catch (e) {}
     } finally {
       setLoading(false);
     }
@@ -673,44 +753,51 @@ export default function TechnicianPortalPage() {
     loadData();
   }, []);
 
-  // Dashboard Metrics
-  const stats = useMemo(() => {
-    const totalVehicles = vehicles.length || 10;
-    const pendingInspections = returnInspections.filter(
-      i => i.status === 'pending_inspection' || i.status === 'draft'
-    ).length;
-    const damagedVehicles = returnInspections.filter(i => i.status === 'damaged').length;
-    const activeRepairs = repairs.filter(r => r.status === 'in_progress' || r.status === 'waiting_approval').length;
-    const completedRepairs = repairs.filter(r => r.status === 'completed').length;
-    const totalDamageCost = repairs.reduce((acc, r) => acc + (r.actualCost || r.totalEstimatedCost || 0), 0);
+  // Computed Metrics
+  const activeRepairsCount = repairs.filter(
+    r => r.status !== 'completed' && r.status !== 'customer_rejected'
+  ).length;
+  const unreadNotifsCount = notifications.filter(n => n.unread).length;
 
+  const stats = useMemo(() => {
+    const totalVehicles = vehicles.length;
+    const needInspection = returnInspections.filter(
+      i => i.status === 'draft' || i.status === 'pending_inspection' || i.status === 'damaged'
+    ).length;
+    const repairingCount = activeRepairsCount;
+    const maintainingCount = maintenances.filter(m => m.status === 'in_progress' || m.status === 'scheduled').length;
+    const completedTotal =
+      repairs.filter(r => r.status === 'completed').length +
+      maintenances.filter(m => m.status === 'completed').length +
+      returnInspections.filter(i => i.status === 'passed').length;
+    const totalDamageCost = repairs.reduce(
+      (acc, r) => acc + (r.actualCost || r.totalEstimatedCost || 0),
+      0
+    );
     return {
       totalVehicles,
-      pendingInspections,
-      damagedVehicles,
-      activeRepairs,
-      completedRepairs,
+      needInspection,
+      repairingCount,
+      maintainingCount,
+      completedTotal,
       totalDamageCost
     };
-  }, [vehicles, returnInspections, repairs]);
+  }, [vehicles, returnInspections, activeRepairsCount, maintenances, repairs]);
 
-  // Live calculation for repair quote in modal
   const modalQuoteCalc = useMemo(() => {
     let partsPrice = 0;
     let laborPrice = 0;
-    const lines = repSelectedParts.map(item => {
-      const p = PARTS_CATALOG.find(x => x.id === item.partId);
-      if (!p) return null;
-      const pTotal = p.unitPrice * item.quantity;
-      const lTotal = p.laborFee * item.quantity;
-      partsPrice += pTotal;
-      laborPrice += lTotal;
-      return {
-        ...p,
-        quantity: item.quantity,
-        total: pTotal + lTotal
-      };
-    }).filter(Boolean);
+    const lines = repSelectedParts
+      .map(item => {
+        const p = partsCatalog.find(x => x.id === item.partId);
+        if (!p) return null;
+        const pTotal = p.unitPrice * item.quantity;
+        const lTotal = p.laborFee * item.quantity;
+        partsPrice += pTotal;
+        laborPrice += lTotal;
+        return { ...p, quantity: item.quantity, total: pTotal + lTotal };
+      })
+      .filter(Boolean);
 
     return {
       lines,
@@ -718,27 +805,24 @@ export default function TechnicianPortalPage() {
       laborPrice,
       grandTotal: partsPrice + laborPrice
     };
-  }, [repSelectedParts]);
+  }, [repSelectedParts, partsCatalog]);
 
   // ==========================================
-  // 3. EVENT HANDLERS & WORKFLOW LINKING
+  // 3. EVENT HANDLERS
   // ==========================================
-
-  // 3.1. Lưu phiếu kiểm tra trả xe mới (từ Modal)
   const handleSaveInspection = (e: React.FormEvent) => {
     e.preventDefault();
-    const veh = vehicles.find(v => v._id === newInsVehicleId);
+    const veh = vehicles.find(v => v._id === newInsVehicleId) || vehicles[0];
     const selectedBk = realBookings.find(b => b._id === selectedRealBookingId);
     const newId = `ins-${Date.now()}`;
-    const nextNumber = returnInspections.length + 43;
-    const newCode = `KT-2026-0${nextNumber}`;
+    const newCode = `KT-2026-0${returnInspections.length + 43}`;
 
     const checklist = createDefaultChecklist({
-      brakes: newInsBrakes ? undefined : { status: 'damage', damageLocation: 'Hệ thống phanh', note: 'Cần kiểm tra lại má phanh.' },
+      brakes: newInsBrakes ? undefined : { status: 'damage', damageLocation: 'Hệ thống phanh', note: 'Cần kiểm tra má phanh.' },
       tires: newInsTires ? undefined : { status: 'check', damageLocation: 'Lốp xe', note: 'Lốp non hơi hoặc mòn.' },
-      lights: newInsLights ? undefined : { status: 'damage', damageLocation: 'Cụm đèn / còi', note: 'Đèn hoặc còi có dấu hiệu trục trặc.' },
+      lights: newInsLights ? undefined : { status: 'damage', damageLocation: 'Đèn pha / Còi', note: 'Kiểm tra hệ thống chiếu sáng.' },
       engine: newInsEngine ? undefined : { status: 'damage', damageLocation: 'Động cơ', note: 'Tiếng máy không đều.' },
-      body: newInsBody ? undefined : { status: 'damage', damageLocation: 'Dàn áo / gương', note: 'Phát hiện trầy xước hoặc lỏng gương.' }
+      body: newInsBody ? undefined : { status: 'damage', damageLocation: 'Dàn áo / Gương', note: 'Phát hiện trầy xước.' }
     });
 
     const backendImgBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
@@ -746,7 +830,7 @@ export default function TechnicianPortalPage() {
       ? selectedBk.checkInImages.map((img: any) =>
           img.url?.startsWith('http') ? img.url : `${backendImgBase}${img.url}`
         )
-      : [newInsBeforeImg];
+      : [SAMPLE_PHOTOS.cleanFront];
 
     const newRecord: ReturnInspectionItem = {
       id: newId,
@@ -757,10 +841,10 @@ export default function TechnicianPortalPage() {
       customerName: newInsCustName,
       customerPhone: newInsCustPhone,
       customerIdCard: selectedBk?.customer?.cccd || '048096009999',
-      vehicleId: veh?._id || selectedBk?.vehicle?._id || 'v-gen',
-      vehicleName: veh?.name || selectedBk?.vehicle?.name || 'Honda Vision',
-      licensePlate: veh?.licensePlate || selectedBk?.vehicle?.licensePlate || '43C1-999.99',
-      vehicleImage: veh?.image || newInsAfterImg,
+      vehicleId: veh?._id || 'v-gen',
+      vehicleName: veh?.name || 'Honda Vision',
+      licensePlate: veh?.licensePlate || '43C1-999.99',
+      vehicleImage: veh?.image || SAMPLE_PHOTOS.cleanFront,
       rentalStartDate: selectedBk?.startDate
         ? new Date(selectedBk.startDate).toISOString().slice(0, 16).replace('T', ' ')
         : '2026-11-23 08:00',
@@ -772,7 +856,7 @@ export default function TechnicianPortalPage() {
       returnOdometer: newInsOdo,
       fuelLevel: newInsFuelLevel,
       deliveryImages: deliveryImgs,
-      returnImages: [newInsAfterImg],
+      returnImages: [veh?.image || SAMPLE_PHOTOS.cleanRear],
       checklist,
       pins: [],
       brakes: newInsBrakes,
@@ -781,8 +865,8 @@ export default function TechnicianPortalPage() {
       engine: newInsEngine,
       mirrorsAndBody: newInsBody,
       status: 'draft',
-      notes: newInsNotes || (newInsStatus === 'passed' ? 'Xe sạch sẽ, chuẩn bị hoàn tất kiểm tra 8 hạng mục.' : 'Phát hiện dấu hiệu hư hỏng cần kiểm tra kỹ 8 hạng mục.'),
-      inspectorName: user?.fullName || 'Nguyễn Văn Minh',
+      notes: newInsNotes || 'Đang kiểm tra 8 hạng mục kỹ thuật khi khách trả xe.',
+      inspectorName: displayTechName,
       hasDamageReport: false
     };
 
@@ -791,47 +875,28 @@ export default function TechnicianPortalPage() {
     setActiveTab('return_inspection');
     setShowNewInspectionModal(false);
     setSelectedRealBookingId('');
-
-    if (newInsStatus === 'damaged') {
-      toast.success(`Đã tạo phiếu ${newCode}! Hãy đánh dấu vị trí hư hỏng hoặc lập biên bản.`);
-    } else {
-      toast.success(`Đã tiếp nhận phiếu ${newCode} để kiểm tra 8 hạng mục!`);
-    }
+    toast.success(`Đã tiếp nhận phiếu ${newCode}!`);
   };
 
-  // 3.1b. Cập nhật live trạng thái phiếu kiểm tra đang thao tác
   const handleUpdateInspection = (updated: ReturnInspectionItem) => {
     setReturnInspections(prev => prev.map(item => (item.id === updated.id ? updated : item)));
   };
 
-  // 3.1c. Xác nhận kiểm tra hoàn tất (đạt hoặc ghi nhận tình trạng & cập nhật backend nếu là đơn thật)
   const handleConfirmInspection = async (ins: ReturnInspectionItem) => {
     const damageItems = ins.checklist.filter(c => c.status === 'damage');
     const checkItems = ins.checklist.filter(c => c.status === 'check');
     const finalStatus: ReturnInspectionItem['status'] = damageItems.length > 0 ? 'damaged' : 'passed';
 
-    const confirmedItem: ReturnInspectionItem = {
-      ...ins,
-      status: finalStatus
-    };
-    handleUpdateInspection(confirmedItem);
+    handleUpdateInspection({ ...ins, status: finalStatus });
 
-    // Cập nhật trạng thái xe tương ứng trong danh sách đội xe
-    if (ins.vehicleId) {
-      setVehicles(prev =>
-        prev.map(v =>
-          v._id === ins.vehicleId
-            ? {
-                ...v,
-                odometer: ins.returnOdometer,
-                status: finalStatus === 'passed' ? 'available' : 'broken'
-              }
-            : v
-        )
-      );
-    }
+    setVehicles(prev =>
+      prev.map(v =>
+        v._id === ins.vehicleId
+          ? { ...v, odometer: ins.returnOdometer, status: finalStatus === 'passed' ? 'available' : 'broken' }
+          : v
+      )
+    );
 
-    // Nếu là đơn thuê thật trong MongoDB và xe đạt yêu cầu -> cập nhật odo xe
     if (ins.isRealBooking && ins.vehicleId && !ins.vehicleId.startsWith('v-')) {
       try {
         await api.put(`/vehicles/${ins.vehicleId}`, {
@@ -844,17 +909,16 @@ export default function TechnicianPortalPage() {
     if (finalStatus === 'passed') {
       toast.success(
         checkItems.length > 0
-          ? `Đã xác nhận kiểm tra ${ins.inspectionCode} (Lưu ý còn ${checkItems.length} mục cần theo dõi thêm).`
-          : `Đã xác nhận kiểm tra ĐẠT cho xe ${ins.licensePlate}! Xe sẵn sàng cho thuê lại.`
+          ? `Đã xác nhận ${ins.inspectionCode} (lưu ý ${checkItems.length} mục kiểm tra thêm).`
+          : `Đã xác nhận ĐẠT cho xe ${ins.licensePlate}!`
       );
     } else {
-      toast.error(`Phát hiện ${damageItems.length} hạng mục HƯ HỎNG! Hãy bấm "Lập biên bản hư hỏng".`);
+      toast.error(`Phát hiện ${damageItems.length} hư hỏng! Hãy bấm "Lập biên bản hư hỏng".`);
     }
   };
 
-  // 3.1d. Chuyển từ Kiểm tra trả xe -> Lập biên bản hư hỏng (tự động nạp các vị trí hỏng/cần check + ghim ảnh)
   const handleOpenDamageReportFromInspection = (ins: ReturnInspectionItem) => {
-    const flaggedFromChecklist: DamagePosition[] = ins.checklist
+    const fromChecklist: DamagePosition[] = ins.checklist
       .filter(c => c.status === 'damage' || c.status === 'check')
       .map((c, idx) => ({
         id: `pos-chk-${c.id}-${Date.now()}-${idx}`,
@@ -863,49 +927,47 @@ export default function TechnicianPortalPage() {
         description: c.note || c.title,
         photo: c.photos[0] || ins.returnImages[0] || SAMPLE_PHOTOS.damageScratched,
         suggestedAction: c.damageSeverity === 'high' ? 'replace' : 'repair',
-        suggestedPartName: c.damageSeverity === 'high' ? `Thay mới bộ phận (${c.damageLocation || c.title})` : 'Sửa chữa / căn chỉnh'
+        suggestedPartName: c.damageSeverity === 'high' ? `Thay mới (${c.damageLocation || c.title})` : 'Sửa chữa / căn chỉnh'
       }));
 
-    const flaggedFromPins: DamagePosition[] = ins.pins.map((pin, idx) => ({
+    const fromPins: DamagePosition[] = ins.pins.map((pin, idx) => ({
       id: `pos-pin-${pin.id}-${idx}`,
       position: pin.label,
       severity: pin.severity,
-      description: `Điểm ghim #${idx + 1} trên ảnh xe (${Math.round(pin.x)}%, ${Math.round(pin.y)}%)`,
+      description: `Vị trí ghim #${idx + 1} trên xe`,
       photo: ins.returnImages[0] || SAMPLE_PHOTOS.damageScratched,
       suggestedAction: pin.severity === 'high' ? 'replace' : 'repair',
       suggestedPartName: pin.severity === 'high' ? 'Thay linh kiện mới' : 'Khắc phục / sơn dặm'
     }));
 
-    const combinedPositions = [...flaggedFromChecklist, ...flaggedFromPins];
-    if (combinedPositions.length === 0) {
-      combinedPositions.push({
+    const combined = [...fromChecklist, ...fromPins];
+    if (combined.length === 0) {
+      combined.push({
         id: `p-init-${Date.now()}`,
         position: 'Dàn áo yếm trước bên phải',
         severity: 'medium',
-        description: ins.notes || 'Phát hiện trầy xước khi kiểm tra trả xe',
+        description: ins.notes || 'Phát hiện trầy xước khi trả xe',
         photo: ins.returnImages[0] || SAMPLE_PHOTOS.damageScratched,
         suggestedAction: 'repair',
         suggestedPartName: 'Sơn dặm phục hồi'
       });
     }
 
-    const hasHigh = combinedPositions.some(p => p.severity === 'high' || p.severity === 'critical');
     const updatedIns: ReturnInspectionItem = { ...ins, status: 'damaged' };
     handleUpdateInspection(updatedIns);
-    setDmgPositionsList(combinedPositions);
-    setDmgOverallSeverity(hasHigh ? 'high' : 'medium');
-    setDmgNotes(ins.notes || 'Khách hàng xác nhận các vị trí hư hỏng phát hiện khi kiểm tra trả xe.');
+    setDmgPositionsList(combined);
+    setDmgOverallSeverity(combined.some(p => p.severity === 'high') ? 'high' : 'medium');
+    setDmgNotes(ins.notes || 'Khách hàng xác nhận các vị trí hư hỏng phát hiện khi trả xe.');
     setShowCreateDamageReportModal(updatedIns);
   };
 
-  // 3.2. Lưu Biên bản hư hỏng
   const handleSaveDamageReport = (e: React.FormEvent) => {
     e.preventDefault();
     if (!showCreateDamageReportModal) return;
 
     const ins = showCreateDamageReportModal;
     const newDmgId = `dmg-${Date.now()}`;
-    const newCode = `BBHD-${Date.now().toString().slice(-6)}`;
+    const newCode = `BBHH-2026-0${damageReports.length + 24}`;
 
     const newReport: DamageReportItem = {
       id: newDmgId,
@@ -917,41 +979,45 @@ export default function TechnicianPortalPage() {
       vehicleId: ins.vehicleId,
       vehicleName: ins.vehicleName,
       licensePlate: ins.licensePlate,
-      reportedAt: new Date().toLocaleString('vi-VN'),
-      inspectorName: user?.fullName || 'Nguyễn Văn Minh',
+      reportedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
+      inspectorName: displayTechName,
       positions: dmgPositionsList,
       overallSeverity: dmgOverallSeverity,
-      notes: dmgNotes || 'Khách hàng đã ký xác nhận biên bản ghi nhận hiện trạng hư hỏng tại quầy.',
+      notes: dmgNotes || 'Khách hàng đã ký xác nhận biên bản hư hỏng.',
       status: 'confirmed',
       customerAgreedSignature: true
     };
 
-    // Cập nhật liên kết trong returnInspections
-    setReturnInspections(prev => prev.map(i => i.id === ins.id ? { ...i, hasDamageReport: true, damageReportId: newDmgId } : i));
-    setDamageReports([newReport, ...damageReports]);
+    setReturnInspections(prev =>
+      prev.map(i => (i.id === ins.id ? { ...i, hasDamageReport: true, damageReportId: newDmgId } : i))
+    );
+    setDamageReports(prev => [newReport, ...prev]);
     setShowCreateDamageReportModal(null);
-    toast.success(`Đã lập Biên bản hư hỏng ${newCode}! Bạn có thể chuyển sang lập Phiếu sửa chữa.`);
+    toast.success(`Đã lập Biên bản hư hỏng ${newCode}!`);
   };
 
-  // 3.3. Tạo Phiếu sửa chữa & Báo giá từ Biên bản hư hỏng
   const handleSaveRepairOrder = (e: React.FormEvent) => {
     e.preventDefault();
     if (!showCreateRepairModal) return;
 
     const dmg = showCreateRepairModal;
     const newRepId = `rep-${Date.now()}`;
-    const newCode = `SC-${Date.now().toString().slice(-6)}`;
+    const newCode = `PSC-2026-0${repairs.length + 21}`;
 
     const partsLines: RepairPartLine[] = modalQuoteCalc.lines.map((l: any) => ({
       partId: l.id,
       partCode: l.code,
       name: l.name,
+      actionMethod: 'Thay mới chính hãng',
       quantity: l.quantity,
       unitPrice: l.unitPrice,
       laborFee: l.laborFee,
-      total: l.total,
-      isActualUsed: true
+      total: l.unitPrice * l.quantity,
+      isActualUsed: false
     }));
+
+    const vehObj = vehicles.find(v => v._id === dmg.vehicleId);
+    const ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
 
     const newRepair: RepairItem = {
       id: newRepId,
@@ -962,17 +1028,21 @@ export default function TechnicianPortalPage() {
       vehicleId: dmg.vehicleId,
       vehicleName: dmg.vehicleName,
       licensePlate: dmg.licensePlate,
+      vehicleOdo: vehObj?.odometer || 14500,
+      vehicleType: vehObj?.type || 'Xe tay ga',
+      vehicleImage: vehObj?.image || SAMPLE_PHOTOS.cleanFront,
       customerName: dmg.customerName,
       customerPhone: dmg.customerPhone,
       issueSummary: dmg.positions.map(p => `${p.position}: ${p.description}`).join('; '),
       proposedSolution: repSolutionText || 'Thay thế phụ tùng mới chính hãng và phục hồi vị trí hư hỏng',
       parts: partsLines,
-      totalPartsPrice: modalQuoteCalc.partsPrice,
-      totalLaborFee: modalQuoteCalc.laborPrice,
-      totalEstimatedCost: modalQuoteCalc.grandTotal,
+      totalPartsPrice: partsLines.reduce((s, p) => s + p.total, 0),
+      totalLaborFee: modalQuoteCalc.laborPrice || 150000,
+      totalEstimatedCost:
+        partsLines.reduce((s, p) => s + p.total, 0) + (modalQuoteCalc.laborPrice || 150000),
       status: 'waiting_approval',
       progressPercent: 25,
-      technicianName: user?.fullName || 'Nguyễn Văn Minh',
+      technicianName: displayTechName,
       damageItems: dmg.positions.map(p => ({
         id: p.id,
         title: p.position,
@@ -987,88 +1057,204 @@ export default function TechnicianPortalPage() {
       beforePhotos: dmg.positions.map(p => p.photo || SAMPLE_PHOTOS.damageScratched),
       afterPhotos: [],
       replacementPhotos: [],
-      createdAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+      logs: [
+        {
+          id: `log-${Date.now()}`,
+          title: `Tạo phiếu sửa chữa ${newCode} từ ${dmg.code}`,
+          note: repSolutionText || 'Lập phương án báo giá gửi khách hàng',
+          actor: displayTechName,
+          timestamp: ts
+        }
+      ],
+      createdAt: ts,
+      updatedAt: ts
     };
 
-    // Cập nhật trạng thái biên bản hư hỏng
-    setDamageReports(prev => prev.map(d => d.id === dmg.id ? { ...d, status: 'repair_proposed', repairId: newRepId } : d));
-    setRepairs([newRepair, ...repairs]);
+    setDamageReports(prev =>
+      prev.map(d => (d.id === dmg.id ? { ...d, status: 'repair_proposed', repairId: newRepId } : d))
+    );
+    setRepairs(prev => [newRepair, ...prev]);
     setSelectedRepairId(newRepId);
     setShowCreateRepairModal(null);
     setRepSelectedParts([]);
     setRepSolutionText('');
-    toast.success(`Đã lập Phiếu sửa chữa & Báo giá ${newCode} (${modalQuoteCalc.grandTotal.toLocaleString()}đ) gửi khách xác nhận!`);
     setActiveTab('repair_management');
+    toast.success(`Đã tạo phiếu sửa chữa ${newCode} từ ${dmg.code}!`);
   };
 
-  // 3.4. Khách hàng duyệt / từ chối sửa chữa
-  const handleCustomerConfirmRepair = (repairId: string, approved: boolean) => {
-    setRepairs(prev => prev.map(r => {
-      if (r.id === repairId) {
-        return {
-          ...r,
-          status: approved ? 'customer_approved' : 'customer_rejected',
-          customerFeedbackDate: new Date().toLocaleString('vi-VN'),
-          customerFeedbackNote: approved ? 'Khách hàng đã ký duyệt phương án và chi phí sửa chữa.' : 'Khách từ chối sửa chữa tại cửa hàng, chọn giải quyết bồi thường riêng.'
-        };
-      }
-      return r;
-    }));
-    toast.success(approved ? 'Khách hàng ĐÃ ĐỒNG Ý sửa chữa! Sẵn sàng tiến hành thi công.' : 'Đã ghi nhận khách hàng TỪ CHỐI sửa chữa.');
+  const handleUpdateVehicleStatus = async (veh: VehicleItem, newStatus: VehicleItem['status']) => {
+    setVehicles(prev => prev.map(v => (v._id === veh._id ? { ...v, status: newStatus } : v)));
+    if (selectedVehicleDetail?._id === veh._id) {
+      setSelectedVehicleDetail({ ...selectedVehicleDetail, status: newStatus });
+    }
+    if (!veh._id.startsWith('v-')) {
+      try {
+        await api.put(`/vehicles/${veh._id}`, { status: newStatus });
+      } catch {}
+    }
+    toast.success(`Đã cập nhật trạng thái xe ${veh.licensePlate}!`);
   };
 
-  // 3.5. Tiến hành sửa chữa
-  const handleStartRepairing = (repairId: string) => {
-    setRepairs(prev => prev.map(r => r.id === repairId ? { ...r, status: 'in_progress', progressPercent: 30 } : r));
-    toast.success('Đã tiếp nhận và bắt đầu thực hiện sửa chữa xe!');
+  const handleExportCsvReport = () => {
+    const rows = [
+      ['Tháng', 'Kiểm tra trả xe', 'Bảo dưỡng', 'Sửa chữa', 'Chi phí (VND)'],
+      ...CHART_DATA_6M.map(d => [d.label, d.inspections, d.maintenance, d.repairs, d.cost])
+    ];
+    const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'BaoCao_KyThuat_MotoRent.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success('Đã xuất file Excel (.csv) thành công!');
   };
 
-  // 3.6. Nghiệm thu & Cập nhật kết quả sửa chữa (kèm ảnh Trước/Sau)
-  const handleCompleteRepairOrder = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!showCompleteRepairModal) return;
+  // ==========================================
+  // SIDEBAR MENU (11 OFFICIAL ITEMS MATCHING SCREENSHOT)
+  // ==========================================
+  const SIDEBAR_ITEMS: Array<{
+    id: TabId;
+    label: string;
+    icon: React.ElementType;
+    badge?: number;
+  }> = [
+    { id: 'home', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'vehicles', label: 'Quản lý xe', icon: Bike },
+    { id: 'return_inspection', label: 'Kiểm tra xe khi trả', icon: ClipboardCheck },
+    { id: 'damage_management', label: 'Quản lý hư hỏng', icon: AlertTriangle },
+    { id: 'repair_management', label: 'Quản lý sửa chữa', icon: Wrench, badge: activeRepairsCount },
+    { id: 'parts_management', label: 'Quản lý phụ tùng', icon: Package },
+    { id: 'maintenance', label: 'Quản lý bảo dưỡng', icon: CalendarClock },
+    { id: 'history', label: 'Lịch sử kỹ thuật', icon: History },
+    { id: 'reports', label: 'Báo cáo thống kê', icon: BarChart2 },
+    { id: 'notifications', label: 'Thông báo', icon: Bell, badge: unreadNotifsCount },
+    { id: 'profile', label: 'Tài khoản cá nhân', icon: UserCircle }
+  ];
 
-    const rep = showCompleteRepairModal;
-    setRepairs(prev => prev.map(r => {
-      if (r.id === rep.id) {
-        return {
-          ...r,
-          status: 'completed',
-          progressPercent: 100,
-          actualCost: compActualCost || r.totalEstimatedCost,
-          afterPhotos: [compAfterPhoto || SAMPLE_PHOTOS.repairedPerfect],
-          replacementPhotos: [compPartPhoto || SAMPLE_PHOTOS.newPartInstalled],
-          completionNotes: compNotes || 'Đã sửa chữa hoàn thiện, thay phụ tùng chính hãng, cân chỉnh phanh lốp, xe chạy êm ái an toàn.',
-          completedAt: new Date().toLocaleString('vi-VN')
-        };
-      }
-      return r;
-    }));
+  // Unified History Records (for Tab 8)
+  const unifiedHistory = useMemo(() => {
+    const list: Array<{
+      id: string;
+      date: string;
+      kind: 'inspection' | 'damage' | 'repair' | 'maintenance';
+      code: string;
+      vehicleName: string;
+      licensePlate: string;
+      title: string;
+      actor: string;
+      cost?: number;
+      statusLabel: string;
+      statusBg: string;
+      statusColor: string;
+      beforeImgs: string[];
+      afterImgs: string[];
+    }> = [];
 
-    // Cập nhật trạng thái xe sang 'available'
-    setVehicles(prev => prev.map(v => v._id === rep.vehicleId ? { ...v, status: 'available' } : v));
+    returnInspections.forEach(ins => {
+      list.push({
+        id: ins.id,
+        date: ins.returnDate,
+        kind: 'inspection',
+        code: ins.inspectionCode,
+        vehicleName: ins.vehicleName,
+        licensePlate: ins.licensePlate,
+        title: `Kiểm tra trả xe (Đơn ${ins.bookingCode} • KH ${ins.customerName})`,
+        actor: ins.inspectorName,
+        statusLabel: ins.status === 'passed' ? 'Đạt yêu cầu' : ins.status === 'damaged' ? 'Phát hiện hư hỏng' : 'Đang lưu nháp',
+        statusBg: ins.status === 'passed' ? '#f0fdf4' : ins.status === 'damaged' ? '#fef2f2' : '#f1f5f9',
+        statusColor: ins.status === 'passed' ? '#16a34a' : ins.status === 'damaged' ? '#dc2626' : '#475569',
+        beforeImgs: ins.deliveryImages,
+        afterImgs: [...ins.returnImages, ...ins.checklist.flatMap(c => c.photos)]
+      });
+    });
 
-    setShowCompleteRepairModal(null);
-    setCompNotes('');
-    toast.success(`Nghiệm thu thành công Phiếu sửa chữa #${rep.code}! Xe ${rep.licensePlate} đã sẵn sàng phục vụ.`);
-  };
+    damageReports.forEach(d => {
+      list.push({
+        id: d.id,
+        date: d.reportedAt,
+        kind: 'damage',
+        code: d.code,
+        vehicleName: d.vehicleName,
+        licensePlate: d.licensePlate,
+        title: `Biên bản hư hỏng (${d.positions.length} vị trí • ${d.customerName})`,
+        actor: d.inspectorName,
+        statusLabel: d.status === 'repair_proposed' ? 'Đã lập phiếu sửa' : 'Đã xác nhận',
+        statusBg: d.status === 'repair_proposed' ? '#eff6ff' : '#fef2f2',
+        statusColor: d.status === 'repair_proposed' ? '#2563eb' : '#dc2626',
+        beforeImgs: d.positions.map(p => p.photo || SAMPLE_PHOTOS.damageScratched),
+        afterImgs: []
+      });
+    });
+
+    repairs.forEach(r => {
+      list.push({
+        id: r.id,
+        date: r.completedAt || r.createdAt,
+        kind: 'repair',
+        code: r.code,
+        vehicleName: r.vehicleName,
+        licensePlate: r.licensePlate,
+        title: r.proposedSolution,
+        actor: r.technicianName,
+        cost: r.actualCost || r.totalEstimatedCost,
+        statusLabel: r.status === 'completed' ? 'Đã hoàn thành' : r.status === 'customer_rejected' ? 'Khách từ chối' : 'Đang xử lý',
+        statusBg: r.status === 'completed' ? '#f0fdf4' : r.status === 'customer_rejected' ? '#fef2f2' : '#eff6ff',
+        statusColor: r.status === 'completed' ? '#16a34a' : r.status === 'customer_rejected' ? '#dc2626' : '#2563eb',
+        beforeImgs: r.beforePhotos,
+        afterImgs: r.afterPhotos
+      });
+    });
+
+    maintenances.forEach(m => {
+      list.push({
+        id: m._id,
+        date: m.completedDate || m.scheduledDate || '2026-11-25',
+        kind: 'maintenance',
+        code: `BD-${m._id.slice(-4).toUpperCase()}`,
+        vehicleName: m.vehicle?.name || 'Xe máy',
+        licensePlate: m.vehicle?.licensePlate || '43-ĐN',
+        title: m.title,
+        actor: m.technician?.fullName || displayTechName,
+        cost: m.cost || 250000,
+        statusLabel: m.status === 'completed' ? 'Hoàn thành' : m.status === 'in_progress' ? 'Đang thực hiện' : 'Đã lên lịch',
+        statusBg: m.status === 'completed' ? '#f0fdf4' : '#fefce8',
+        statusColor: m.status === 'completed' ? '#16a34a' : '#a16207',
+        beforeImgs: [SAMPLE_PHOTOS.cleanFront],
+        afterImgs: [SAMPLE_PHOTOS.repairedPerfect]
+      });
+    });
+
+    return list.filter(item => {
+      const matchKind = historyTypeFilter === 'all' || item.kind === historyTypeFilter;
+      const matchVeh = historyVehicleFilter === 'all' || item.vehicleName === historyVehicleFilter;
+      const q = searchQuery.trim().toLowerCase();
+      const matchQ =
+        !q ||
+        item.code.toLowerCase().includes(q) ||
+        item.vehicleName.toLowerCase().includes(q) ||
+        item.licensePlate.toLowerCase().includes(q) ||
+        item.title.toLowerCase().includes(q);
+      return matchKind && matchVeh && matchQ;
+    });
+  }, [returnInspections, damageReports, repairs, maintenances, historyTypeFilter, historyVehicleFilter, searchQuery, displayTechName]);
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: 'inherit' }}>
-      
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#f8fafc', fontFamily: 'Inter, system-ui, sans-serif' }}>
       {/* ========================================================
-          1. SIDEBAR (11 DANH MỤC CHÍNH THỨC CỦA NHÂN VIÊN KỸ THUẬT)
+          1. SIDEBAR (#1E293B — CHÍNH XÁC THEO SCREENSHOT)
           ======================================================== */}
       <aside
         style={{
           width: sidebarOpen ? '260px' : '74px',
-          background: '#0f172a',
+          background: '#1E293B',
           color: '#ffffff',
           transition: 'width 0.2s ease',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'space-between',
-          borderRight: '1px solid #1e293b',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
           zIndex: 50,
           position: 'sticky',
           top: 0,
@@ -1076,371 +1262,145 @@ export default function TechnicianPortalPage() {
           flexShrink: 0
         }}
       >
-        <div style={{ overflowY: 'auto', paddingBottom: '10px' }}>
-          {/* Logo & Header */}
-          <div style={{ padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'linear-gradient(135deg, #2563eb, #1d4ed8)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', boxShadow: '0 4px 12px rgba(37,99,235,0.35)', flexShrink: 0 }}>
-              <Wrench size={20} />
+        <div style={{ overflowY: 'auto', paddingBottom: '12px' }}>
+          {/* Brand Logo */}
+          <div style={{ padding: '18px 18px 14px', borderBottom: '1px solid rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                width: '38px',
+                height: '38px',
+                borderRadius: '10px',
+                background: '#2563EB',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: '#ffffff',
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.35)',
+                flexShrink: 0
+              }}
+            >
+              <Wrench size={19} />
             </div>
             {sidebarOpen && (
               <div>
-                <div style={{ fontWeight: 900, fontSize: '15px', color: '#ffffff' }}>
-                  XTMoto<span style={{ color: '#38bdf8' }}>Tech</span>
+                <div style={{ fontWeight: 900, fontSize: '15.5px', color: '#ffffff', letterSpacing: '-0.2px' }}>
+                  MotoRent <span style={{ color: '#60a5fa' }}>Tech</span>
                 </div>
-                <div style={{ fontSize: '11px', color: '#94a3b8' }}>
-                  Hệ Thống Kỹ Thuật & Sửa Chữa
-                </div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Xưởng Kỹ Thuật Đà Nẵng</div>
               </div>
             )}
           </div>
 
-          {/* Menu 11 Chức năng chính thức */}
-          <nav style={{ padding: '12px 10px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-            
-            {/* 1. Dashboard */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('home')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'home' ? '#2563eb' : 'transparent',
-                color: activeTab === 'home' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'home' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <Gauge size={18} />
-              {sidebarOpen && <span>1. Dashboard</span>}
-            </button>
+          {/* Section Heading matching Screenshot */}
+          <div
+            style={{
+              padding: sidebarOpen ? '18px 18px 8px' : '14px 10px 6px',
+              fontSize: '11px',
+              fontWeight: 700,
+              color: '#64748b',
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              textAlign: sidebarOpen ? 'left' : 'center'
+            }}
+          >
+            {sidebarOpen ? 'PHÂN HỆ NHÂN VIÊN KỸ THUẬT' : '•••'}
+          </div>
 
-            {/* 2. Quản lý xe */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('vehicles')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'vehicles' ? '#2563eb' : 'transparent',
-                color: activeTab === 'vehicles' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'vehicles' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <Bike size={18} />
-              {sidebarOpen && <span>2. Quản lý xe ({vehicles.length})</span>}
-            </button>
+          {/* 11 Clean Official Menu Items */}
+          <nav style={{ padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {SIDEBAR_ITEMS.map(item => {
+              const IconComp = item.icon;
+              const isActive =
+                activeTab === item.id ||
+                (item.id === 'profile' && activeTab === 'user_management');
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => {
+                    if (item.id === 'repair_management') setSelectedRepairId(null);
+                    setActiveTab(item.id);
+                  }}
+                  title={!sidebarOpen ? item.label : undefined}
+                  style={{
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: sidebarOpen ? 'space-between' : 'center',
+                    padding: '10px 14px',
+                    borderRadius: '10px',
+                    border: 'none',
+                    background: isActive ? '#2563EB' : 'transparent',
+                    color: isActive ? '#ffffff' : '#cbd5e1',
+                    fontWeight: isActive ? 700 : 500,
+                    fontSize: '13.5px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    boxShadow: isActive ? '0 4px 14px rgba(37, 99, 235, 0.35)' : 'none',
+                    transition: 'all 0.15s ease'
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                    <IconComp size={18} style={{ flexShrink: 0, opacity: isActive ? 1 : 0.85 }} />
+                    {sidebarOpen && <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.label}</span>}
+                  </div>
 
-            {/* NHÓM QUY TRÌNH LIÊN KẾT 3-4-5 */}
-            <div style={{ margin: '8px 0 4px', padding: '0 8px', fontSize: '10.5px', fontWeight: 800, color: '#38bdf8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {sidebarOpen ? 'Quy trình Trả xe & Sửa chữa' : '•••'}
-            </div>
-
-            {/* 3. Kiểm tra xe khi trả */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('return_inspection')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'return_inspection' ? '#2563eb' : 'rgba(37,99,235,0.06)',
-                color: activeTab === 'return_inspection' ? '#ffffff' : '#93c5fd',
-                fontWeight: activeTab === 'return_inspection' ? 800 : 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <ClipboardCheck size={18} />
-                {sidebarOpen && <span>3. Kiểm tra xe khi trả</span>}
-              </div>
-              {sidebarOpen && (
-                <span style={{ background: '#38bdf8', color: '#0f172a', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', fontWeight: 800 }}>
-                  {returnInspections.length}
-                </span>
-              )}
-            </button>
-
-            {/* 4. Quản lý hư hỏng */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('damage_management')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'damage_management' ? '#2563eb' : 'rgba(239,68,68,0.08)',
-                color: activeTab === 'damage_management' ? '#ffffff' : '#fca5a5',
-                fontWeight: activeTab === 'damage_management' ? 800 : 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <FileWarning size={18} />
-                {sidebarOpen && <span>4. Quản lý hư hỏng</span>}
-              </div>
-              {sidebarOpen && (
-                <span style={{ background: '#ef4444', color: '#ffffff', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', fontWeight: 800 }}>
-                  {damageReports.length}
-                </span>
-              )}
-            </button>
-
-            {/* 5. Quản lý sửa chữa */}
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedRepairId(null);
-                setActiveTab('repair_management');
-              }}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'repair_management' ? '#2563eb' : 'rgba(245,158,11,0.08)',
-                color: activeTab === 'repair_management' ? '#ffffff' : '#fcd34d',
-                fontWeight: activeTab === 'repair_management' ? 800 : 600,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <AlertTriangle size={18} />
-                {sidebarOpen && <span>5. Quản lý sửa chữa</span>}
-              </div>
-              {sidebarOpen && (
-                <span style={{ background: '#f59e0b', color: '#0f172a', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', fontWeight: 800 }}>
-                  {repairs.filter(r => r.status !== 'completed' && r.status !== 'customer_rejected').length}
-                </span>
-              )}
-            </button>
-
-            {/* 6. Quản lý phụ tùng */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('parts_management')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'parts_management' ? '#2563eb' : 'transparent',
-                color: activeTab === 'parts_management' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'parts_management' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <Package size={18} />
-              {sidebarOpen && <span>6. Quản lý phụ tùng</span>}
-            </button>
-
-            {/* 7. Quản lý bảo dưỡng */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('maintenance')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'maintenance' ? '#2563eb' : 'transparent',
-                color: activeTab === 'maintenance' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'maintenance' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <Wrench size={18} />
-              {sidebarOpen && <span>7. Quản lý bảo dưỡng</span>}
-            </button>
-
-            {/* 8. Lịch sử kỹ thuật */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('history')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'history' ? '#2563eb' : 'transparent',
-                color: activeTab === 'history' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'history' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <History size={18} />
-              {sidebarOpen && <span>8. Lịch sử kỹ thuật</span>}
-            </button>
-
-            {/* 9. Báo cáo thống kê */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('reports')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'reports' ? '#2563eb' : 'transparent',
-                color: activeTab === 'reports' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'reports' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <FileText size={18} />
-              {sidebarOpen && <span>9. Báo cáo thống kê</span>}
-            </button>
-
-            {/* 10. Thông báo */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('notifications')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'notifications' ? '#2563eb' : 'transparent',
-                color: activeTab === 'notifications' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'notifications' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <Bell size={18} />
-                {sidebarOpen && <span>10. Thông báo</span>}
-              </div>
-              {sidebarOpen && (
-                <span style={{ background: '#ef4444', color: '#ffffff', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', fontWeight: 800 }}>
-                  {notifications.filter(n => n.unread).length}
-                </span>
-              )}
-            </button>
-
-            {/* 11. Tài khoản cá nhân */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('profile')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'profile' ? '#2563eb' : 'transparent',
-                color: activeTab === 'profile' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'profile' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <User size={18} />
-              {sidebarOpen && <span>11. Tài khoản cá nhân</span>}
-            </button>
-
-            {/* 12. Quản lý người dùng */}
-            <button
-              type="button"
-              onClick={() => setActiveTab('user_management')}
-              style={{
-                width: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '12px',
-                padding: '9px 12px',
-                borderRadius: '8px',
-                border: 'none',
-                background: activeTab === 'user_management' ? '#2563eb' : 'transparent',
-                color: activeTab === 'user_management' ? '#ffffff' : '#94a3b8',
-                fontWeight: activeTab === 'user_management' ? 700 : 500,
-                fontSize: '13px',
-                cursor: 'pointer',
-                textAlign: 'left'
-              }}
-            >
-              <Users size={18} />
-              {sidebarOpen && <span>12. Quản lý người dùng</span>}
-            </button>
-
+                  {sidebarOpen && typeof item.badge === 'number' && item.badge > 0 && (
+                    <span
+                      style={{
+                        background: isActive ? 'rgba(255,255,255,0.22)' : '#0f172a',
+                        color: '#e2e8f0',
+                        borderRadius: '999px',
+                        padding: '2px 8px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        minWidth: '22px',
+                        textAlign: 'center'
+                      }}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
-        {/* Footer User */}
+        {/* Sidebar Footer */}
         <div style={{ padding: '14px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#1e293b', border: '2px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: '13px' }}>
-              KT
+            <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#0f172a', border: '2px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: '12.5px', flexShrink: 0 }}>
+              MQ
             </div>
             {sidebarOpen && (
-              <div>
-                <div style={{ fontSize: '12.5px', fontWeight: 700, color: '#ffffff' }}>{user?.fullName || 'Nguyễn Văn Minh'}</div>
-                <div style={{ fontSize: '11px', color: '#60a5fa' }}>Kỹ thuật viên trưởng</div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#ffffff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayTechName}</div>
+                <div style={{ fontSize: '11px', color: '#94a3b8' }}>Nhân viên Kỹ thuật trưởng</div>
               </div>
             )}
           </div>
           <button
             type="button"
-            onClick={() => { logout(); router.push('/login'); }}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '8px', padding: '7px 10px', background: 'rgba(239,68,68,0.1)', color: '#f87171', border: '1px solid rgba(239,68,68,0.2)', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', justifyContent: sidebarOpen ? 'flex-start' : 'center' }}
+            onClick={() => {
+              logout();
+              router.push('/login');
+            }}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '8px 10px',
+              background: 'rgba(239,68,68,0.12)',
+              color: '#fca5a5',
+              border: '1px solid rgba(239,68,68,0.22)',
+              borderRadius: '8px',
+              fontSize: '12.5px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              justifyContent: sidebarOpen ? 'flex-start' : 'center'
+            }}
           >
             <LogOut size={14} />
             {sidebarOpen && <span>Đăng xuất</span>}
@@ -1449,197 +1409,419 @@ export default function TechnicianPortalPage() {
       </aside>
 
       {/* ========================================================
-          2. MAIN CONTENT AREA
+          2. MAIN WORKSPACE CONTAINER
           ======================================================== */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        
         {/* Top Header */}
-        <header style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '12px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 40 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button type="button" onClick={() => setSidebarOpen(!sidebarOpen)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#475569' }}>
-              <Menu size={20} />
+        <header
+          style={{
+            background: '#ffffff',
+            borderBottom: '1px solid #e2e8f0',
+            padding: '12px 26px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '12px',
+            position: 'sticky',
+            top: 0,
+            zIndex: 40
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '14px', flex: 1 }}>
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                borderRadius: '9px',
+                width: '36px',
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#475569'
+              }}
+            >
+              <Menu size={18} />
             </button>
-            <div style={{ position: 'relative', width: '340px' }}>
-              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+
+            <div style={{ position: 'relative', flex: '1 1 280px', maxWidth: '420px' }}>
+              <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
               <input
                 type="text"
-                placeholder="Tìm biển số, mã đơn thuê, mã sửa chữa..."
+                placeholder="Tìm biển số xe (43C1...), mã phiếu sửa, biên bản hư hỏng, phụ tùng..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px 8px 36px', borderRadius: '20px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '13px', outline: 'none' }}
+                style={{
+                  width: '100%',
+                  padding: '8px 14px 8px 36px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0',
+                  background: '#f8fafc',
+                  fontSize: '12.5px',
+                  color: '#0f172a',
+                  outline: 'none'
+                }}
               />
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button type="button" onClick={loadData} title="Tải lại dữ liệu" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              onClick={() => setActiveTab('user_management')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '7px 12px',
+                borderRadius: '9px',
+                border: activeTab === 'user_management' ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                background: activeTab === 'user_management' ? '#eff6ff' : '#ffffff',
+                color: activeTab === 'user_management' ? '#2563eb' : '#334155',
+                fontSize: '12.5px',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+              title="Quản lý người dùng & Khách hàng"
+            >
+              <Users size={15} />
+              <span>Người dùng & KH</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={loadData}
+              title="Làm mới dữ liệu"
+              style={{
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
               <RefreshCw size={15} color="#475569" className={loading ? 'animate-spin' : ''} />
             </button>
-            <button type="button" onClick={() => setActiveTab('notifications')} style={{ position: 'relative', background: '#f8fafc', border: '1px solid #e2e8f0', width: '36px', height: '36px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('notifications')}
+              style={{
+                position: 'relative',
+                background: '#f8fafc',
+                border: '1px solid #e2e8f0',
+                width: '36px',
+                height: '36px',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer'
+              }}
+            >
               <Bell size={16} color="#475569" />
-              {notifications.some(n => n.unread) && (
-                <span style={{ position: 'absolute', top: '2px', right: '2px', width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+              {unreadNotifsCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-5px',
+                    right: '-5px',
+                    minWidth: '18px',
+                    height: '18px',
+                    borderRadius: '999px',
+                    background: '#dc2626',
+                    color: '#ffffff',
+                    fontSize: '10px',
+                    fontWeight: 800,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '0 4px'
+                  }}
+                >
+                  {unreadNotifsCount}
+                </span>
               )}
             </button>
-            <div onClick={() => setActiveTab('profile')} style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', paddingLeft: '8px', borderLeft: '1px solid #e2e8f0' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#2563eb', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px' }}>
-                NV
+
+            <div
+              onClick={() => setActiveTab('profile')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '9px',
+                cursor: 'pointer',
+                paddingLeft: '10px',
+                borderLeft: '1px solid #e2e8f0'
+              }}
+            >
+              <div
+                style={{
+                  width: '34px',
+                  height: '34px',
+                  borderRadius: '50%',
+                  background: '#2563EB',
+                  color: '#ffffff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 800,
+                  fontSize: '12px'
+                }}
+              >
+                MQ
               </div>
-              <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>{user?.fullName || 'Nguyễn Văn Minh'}</div>
+              <div>
+                <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{displayTechName}</div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>Nhân viên Kỹ thuật trưởng</div>
+              </div>
             </div>
           </div>
         </header>
 
-        {/* Dashboard Main Container */}
-        <main style={{ padding: '24px 28px', maxWidth: '1440px', width: '100%', margin: '0 auto' }}>
-          
-          {/* Header Action Bar (ẩn trên các tab có Header riêng đồng bộ workspace) */}
-          {!['return_inspection', 'repair_management', 'user_management'].includes(activeTab) && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' }}>
-                  {activeTab === 'home' && '1. Dashboard Kỹ Thuật Viên'}
-                  {activeTab === 'vehicles' && '2. Quản Lý Đội Xe'}
-                  {activeTab === 'damage_management' && '4. Quản Lý Hư Hỏng & Biên Bản Kiểm Tra'}
-                  {activeTab === 'parts_management' && '6. Quản Lý Phụ Tùng Thay Thế'}
-                  {activeTab === 'maintenance' && '7. Quản Lý Lịch Bảo Dưỡng Định Kỳ'}
-                  {activeTab === 'history' && '8. Lịch Sử Kỹ Thuật (Kiểm tra, Hư hỏng, Sửa chữa)'}
-                  {activeTab === 'reports' && '9. Báo Cáo Thống Kê Hiệu Suất & Chi Phí'}
-                  {activeTab === 'notifications' && '10. Trung Tâm Thông Báo Kỹ Thuật'}
-                  {activeTab === 'profile' && '11. Quản Lý Tài Khoản Cá Nhân'}
-                </h1>
-                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-                  Quy trình thống nhất: Kiểm tra khi trả xe &rarr; Lập biên bản hư hỏng &rarr; Đề xuất báo giá sửa chữa &rarr; Khách duyệt &rarr; Thi công nghiệm thu ảnh đối chứng
-                </p>
-              </div>
-
-              {/* Quick Action Buttons */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowNewInspectionModal(true)}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#2563eb', color: '#ffffff', border: 'none', padding: '9px 15px', borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(37,99,235,0.25)' }}
-                >
-                  <ClipboardCheck size={16} />
-                  <span>+ Tiếp nhận kiểm tra trả xe</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('damage_management')}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 14px', borderRadius: '10px', fontSize: '13px', fontWeight: 800, cursor: 'pointer', boxShadow: '0 2px 8px rgba(220,38,38,0.25)' }}
-                >
-                  <FileWarning size={16} />
-                  <span>Biên bản hư hỏng ({damageReports.length})</span>
-                </button>
-              </div>
-            </div>
-          )}
-
+        {/* Main Content */}
+        <main style={{ padding: '24px 26px', maxWidth: '1460px', width: '100%', margin: '0 auto' }}>
           {/* ========================================================
-              TAB 1: DASHBOARD (THEO DÕI TỔNG QUAN)
+              TAB 1: DASHBOARD (TRANG TỔNG QUAN)
               ======================================================== */}
           {activeTab === 'home' && (
-            <>
-              {/* 5 Thống kê tổng quan */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '14px', marginBottom: '22px' }}>
-                <div onClick={() => setActiveTab('vehicles')} style={{ background: '#ffffff', borderRadius: '14px', padding: '16px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Tổng xe phân công</div>
-                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: '4px 0 2px' }}>{stats.totalVehicles}</div>
-                  <div style={{ fontSize: '11px', color: '#2563eb', fontWeight: 700 }}>🛵 Toàn bộ đội xe</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {/* Dashboard Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>
+                    Dashboard Nhân viên Kỹ thuật
+                  </h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Theo dõi tình trạng đội xe, kiểm tra trả xe, xử lý hư hỏng và tiến độ sửa chữa tại Hải Châu, Đà Nẵng
+                  </p>
                 </div>
 
-                <div onClick={() => setActiveTab('return_inspection')} style={{ background: '#ffffff', borderRadius: '14px', padding: '16px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Xe vừa trả cần kiểm tra</div>
-                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#ea580c', margin: '4px 0 2px' }}>{returnInspections.length}</div>
-                  <div style={{ fontSize: '11px', color: '#ea580c', fontWeight: 700 }}>📸 Chụp ảnh đối chứng</div>
-                </div>
+                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewInspectionModal(true)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      background: '#2563EB',
+                      color: '#ffffff',
+                      border: 'none',
+                      padding: '9px 16px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 10px rgba(37, 99, 235, 0.25)'
+                    }}
+                  >
+                    <Plus size={16} />
+                    <span>Tiếp nhận kiểm tra trả xe</span>
+                  </button>
 
-                <div onClick={() => setActiveTab('damage_management')} style={{ background: '#ffffff', borderRadius: '14px', padding: '16px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Biên bản hư hỏng</div>
-                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#dc2626', margin: '4px 0 2px' }}>{damageReports.length}</div>
-                  <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700 }}>⚠️ Chờ lên báo giá</div>
-                </div>
-
-                <div onClick={() => setActiveTab('repair_management')} style={{ background: '#ffffff', borderRadius: '14px', padding: '16px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Phiếu đang sửa chữa</div>
-                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#f59e0b', margin: '4px 0 2px' }}>{stats.activeRepairs}</div>
-                  <div style={{ fontSize: '11px', color: '#f59e0b', fontWeight: 700 }}>🛠️ Đang thi công</div>
-                </div>
-
-                <div onClick={() => setActiveTab('history')} style={{ background: '#ffffff', borderRadius: '14px', padding: '16px', border: '1px solid #e2e8f0', cursor: 'pointer' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Đã hoàn tất nghiệm thu</div>
-                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#16a34a', margin: '4px 0 2px' }}>{stats.completedRepairs}</div>
-                  <div style={{ fontSize: '11px', color: '#16a34a', fontWeight: 700 }}>✓ Sẵn sàng xuất bến</div>
-                </div>
-              </div>
-
-              {/* Sơ đồ quy trình liên kết 3 bước */}
-              <div style={{ background: 'linear-gradient(135deg, #1e293b, #0f172a)', borderRadius: '16px', padding: '20px 24px', color: '#ffffff', marginBottom: '22px', border: '1px solid #334155' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <Sparkles size={18} color="#38bdf8" />
-                    <span>Quy trình Xử lý Hư hỏng & Bồi thường Khách hàng Khép kín</span>
-                  </div>
-                  <span style={{ fontSize: '11.5px', background: 'rgba(56,189,248,0.2)', color: '#38bdf8', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                    Tiêu chuẩn XTMotoBike
-                  </span>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
-                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '11px', color: '#38bdf8', fontWeight: 800 }}>BƯỚC 1</div>
-                    <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '2px' }}>3. Tiếp nhận trả xe</div>
-                    <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '4px' }}>Đối chiếu ảnh giao xe vs ảnh trả xe, kiểm tra 5 tiêu chí kỹ thuật.</div>
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '11px', color: '#f87171', fontWeight: 800 }}>BƯỚC 2</div>
-                    <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '2px' }}>4. Ghi nhận hư hỏng</div>
-                    <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '4px' }}>Chụp ảnh cận cảnh từng vị trí hỏng, lập biên bản có khách ký xác nhận.</div>
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '11px', color: '#fbbf24', fontWeight: 800 }}>BƯỚC 3</div>
-                    <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '2px' }}>5. Báo giá & Khách duyệt</div>
-                    <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '4px' }}>Chọn phụ tùng từ kho, tính chi phí, gửi khách xác nhận đồng ý sửa.</div>
-                  </div>
-
-                  <div style={{ background: 'rgba(255,255,255,0.05)', borderRadius: '10px', padding: '12px', border: '1px solid rgba(255,255,255,0.1)' }}>
-                    <div style={{ fontSize: '11px', color: '#4ade80', fontWeight: 800 }}>BƯỚC 4</div>
-                    <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '2px' }}>6. Thi công & Nghiệm thu</div>
-                    <div style={{ fontSize: '11.5px', color: '#94a3b8', marginTop: '4px' }}>Thay phụ tùng, chụp ảnh hoàn thiện, lưu vết đối chứng lịch sử.</div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('repair_management')}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: '#ffffff',
+                      color: '#334155',
+                      border: '1px solid #cbd5e1',
+                      padding: '9px 14px',
+                      borderRadius: '10px',
+                      fontSize: '13px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Wrench size={15} color="#2563EB" />
+                    <span>Phiếu sửa chữa ({activeRepairsCount})</span>
+                  </button>
                 </div>
               </div>
 
-              {/* Bảng danh sách công việc cần xử lý ngay */}
-              <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
-                    Danh sách xe trả phát sinh hư hỏng cần xử lý gấp
+              {/* 6 KPI Stat Cards */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(195px, 1fr))', gap: '14px' }}>
+                {[
+                  { tab: 'vehicles' as TabId, title: 'Tổng xe phân công', value: stats.totalVehicles, sub: 'Đang theo dõi kỹ thuật', icon: Bike, iconBg: '#eff6ff', iconColor: '#2563eb' },
+                  { tab: 'return_inspection' as TabId, title: 'Xe cần kiểm tra', value: stats.needInspection, sub: 'Mới trả / Đang lưu nháp', icon: ClipboardCheck, iconBg: '#fff7ed', iconColor: '#d97706' },
+                  { tab: 'repair_management' as TabId, title: 'Đang sửa chữa', value: stats.repairingCount, sub: 'Phiếu PSC đang xử lý', icon: Wrench, iconBg: '#fef2f2', iconColor: '#dc2626' },
+                  { tab: 'maintenance' as TabId, title: 'Đang bảo dưỡng', value: stats.maintainingCount, sub: 'Theo lịch định kỳ', icon: CalendarClock, iconBg: '#fefce8', iconColor: '#ca8a04' },
+                  { tab: 'history' as TabId, title: 'Công việc hoàn thành', value: stats.completedTotal, sub: 'Đã nghiệm thu an toàn', icon: CheckCircle2, iconBg: '#f0fdf4', iconColor: '#16a34a' },
+                  { tab: 'notifications' as TabId, title: 'Thông báo chưa đọc', value: unreadNotifsCount, sub: 'Cập nhật mới nhất', icon: Bell, iconBg: '#f5f3ff', iconColor: '#7c3aed' }
+                ].map(card => {
+                  const Icon = card.icon;
+                  return (
+                    <div
+                      key={card.title}
+                      onClick={() => setActiveTab(card.tab)}
+                      style={{
+                        background: '#ffffff',
+                        borderRadius: '14px',
+                        border: '1px solid #e2e8f0',
+                        padding: '16px',
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 1px 3px rgba(15, 23, 42, 0.03)'
+                      }}
+                    >
+                      <div style={{ width: '42px', height: '42px', borderRadius: '11px', background: card.iconBg, color: card.iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <Icon size={20} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>{card.title}</div>
+                        <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', margin: '2px 0' }}>{card.value}</div>
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>{card.sub}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Charts Row */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        Thống kê công việc kỹ thuật
+                      </h3>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>6 tháng gần nhất (Kiểm tra, Bảo dưỡng, Sửa chữa)</div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('reports')}
+                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Xem báo cáo →
+                    </button>
                   </div>
-                  <button type="button" onClick={() => setActiveTab('return_inspection')} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
-                    Xem tất cả ({returnInspections.length}) &rarr;
+                  <MonthlyWorkBarChart data={CHART_DATA_6M} />
+                </div>
+
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <div>
+                      <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        Tình trạng xe trong kho
+                      </h3>
+                      <div style={{ fontSize: '12px', color: '#64748b' }}>Cập nhật trực tiếp theo đội xe phân công</div>
+                    </div>
+                  </div>
+                  <VehicleStatusDonutChart
+                    segments={[
+                      { label: 'Sẵn sàng cho thuê', value: vehicles.filter(v => v.status === 'available').length, color: '#16a34a' },
+                      { label: 'Đang cho thuê', value: vehicles.filter(v => v.status === 'rented').length, color: '#2563eb' },
+                      { label: 'Đang bảo dưỡng', value: vehicles.filter(v => v.status === 'maintenance').length, color: '#d97706' },
+                      { label: 'Đang hư hỏng', value: vehicles.filter(v => v.status === 'broken').length, color: '#dc2626' }
+                    ]}
+                  />
+                </div>
+              </div>
+
+              {/* Middle Row: Maintenance & Notifications */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                {/* Upcoming maintenance */}
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Lịch bảo dưỡng sắp tới</h3>
+                    <button type="button" onClick={() => setActiveTab('maintenance')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                      Xem tất cả →
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {maintenances.slice(0, 4).map(m => (
+                      <div key={m._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #f1f5f9', gap: '10px' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                            {m.vehicle?.name || 'Xe máy'} • <span style={{ color: '#2563eb' }}>{m.vehicle?.licensePlate || '43-ĐN'}</span>
+                          </div>
+                          <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>{m.title}</div>
+                        </div>
+                        <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                          <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#475569' }}>{m.scheduledDate || '2026-11-26'}</div>
+                          <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: m.status === 'completed' ? '#f0fdf4' : m.status === 'in_progress' ? '#eff6ff' : '#fefce8', color: m.status === 'completed' ? '#16a34a' : m.status === 'in_progress' ? '#2563eb' : '#a16207' }}>
+                            {m.status === 'completed' ? 'Hoàn thành' : m.status === 'in_progress' ? 'Đang làm' : 'Đã lên lịch'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Recent Notifications */}
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                    <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>Thông báo & yêu cầu mới</h3>
+                    <button type="button" onClick={() => setActiveTab('notifications')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                      Xem tất cả →
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {notifications.slice(0, 4).map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, unread: false } : x)));
+                          if (n.targetTab) setActiveTab(n.targetTab);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          background: n.unread ? '#eff6ff' : '#f8fafc',
+                          border: n.unread ? '1px solid #bfdbfe' : '1px solid #f1f5f9',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
+                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>{n.title}</span>
+                          <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>{n.time}</span>
+                        </div>
+                        {n.description && <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>{n.description}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Return Inspections Table */}
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Xe vừa trả & Công việc kỹ thuật cần xử lý
+                  </h3>
+                  <button type="button" onClick={() => setActiveTab('return_inspection')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
+                    Mở màn hình Kiểm tra xe ({returnInspections.length}) →
                   </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {returnInspections.map(ins => (
-                    <div key={ins.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                        <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: ins.status === 'damaged' ? '#fee2e2' : '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', color: ins.status === 'damaged' ? '#dc2626' : '#16a34a' }}>
-                          {ins.status === 'damaged' ? <FileWarning size={20} /> : <CheckCircle2 size={20} />}
-                        </div>
+                    <div key={ins.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#f8fafc', borderRadius: '11px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img
+                          src={ins.vehicleImage || SAMPLE_PHOTOS.cleanFront}
+                          alt={ins.vehicleName}
+                          style={{ width: '48px', height: '38px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #cbd5e1' }}
+                        />
                         <div>
-                          <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a' }}>
-                            {ins.vehicleName} • <span style={{ color: '#2563eb' }}>{ins.licensePlate}</span>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                            {ins.inspectionCode} • {ins.vehicleName} (<span style={{ color: '#2563eb' }}>{ins.licensePlate}</span>)
                           </div>
                           <div style={{ fontSize: '12px', color: '#64748b' }}>
-                            Đơn: <strong>{ins.bookingCode}</strong> • Khách: {ins.customerName} ({ins.customerPhone}) • Trả lúc: {ins.returnDate}
-                          </div>
-                          <div style={{ fontSize: '11.5px', color: ins.status === 'damaged' ? '#dc2626' : '#16a34a', fontWeight: 600, marginTop: '2px' }}>
-                            {ins.notes}
+                            Đơn: <strong>{ins.bookingCode}</strong> • KH: {ins.customerName} • Trả: {ins.returnDate}
                           </div>
                         </div>
                       </div>
@@ -1651,123 +1833,142 @@ export default function TechnicianPortalPage() {
                             setActiveInspectionId(ins.id);
                             setActiveTab('return_inspection');
                           }}
-                          style={{ padding: '6px 12px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                          style={{ padding: '6px 12px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                         >
                           Mở phiếu kiểm tra
                         </button>
                         <button
                           type="button"
                           onClick={() => setSelectedInspectionForDetail(ins)}
-                          style={{ padding: '6px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
+                          style={{ padding: '6px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '12px', fontWeight: 700, color: '#475569', cursor: 'pointer' }}
                         >
-                          Xem đối chiếu ảnh
+                          Đối chiếu ảnh
                         </button>
-                        {ins.status === 'damaged' && !ins.hasDamageReport && (
-                          <button
-                            type="button"
-                            onClick={() => handleOpenDamageReportFromInspection(ins)}
-                            style={{ padding: '6px 12px', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Lập biên bản hư hỏng
-                          </button>
-                        )}
-                        {ins.hasDamageReport && (
-                          <button
-                            type="button"
-                            onClick={() => setActiveTab('damage_management')}
-                            style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Xem biên bản
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
-            </>
+            </div>
           )}
 
           {/* ========================================================
-              TAB 2: QUẢN LÝ XE
+              TAB 2: QUẢN LÝ XE (VEHICLES)
               ======================================================== */}
           {activeTab === 'vehicles' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Danh sách xe & Tình trạng kỹ thuật
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Theo dõi số Odo, lịch bảo dưỡng và trạng thái hoạt động thực tế của từng xe
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Quản lý đội xe</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Tra cứu biển số, số kilomet (ODO), lịch sử bảo dưỡng và cập nhật tình trạng kỹ thuật
                   </p>
                 </div>
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', fontWeight: 800 }}>
-                      <th style={{ padding: '12px' }}>Mã xe</th>
-                      <th style={{ padding: '12px' }}>Tên xe & Hãng</th>
-                      <th style={{ padding: '12px' }}>Biển số</th>
-                      <th style={{ padding: '12px' }}>Loại xe</th>
-                      <th style={{ padding: '12px' }}>Số km (Odo)</th>
-                      <th style={{ padding: '12px' }}>Tình trạng kỹ thuật</th>
-                      <th style={{ padding: '12px', textAlign: 'center' }}>Thao tác</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {vehicles
-                      .filter(v => !searchQuery || v.name.toLowerCase().includes(searchQuery.toLowerCase()) || v.licensePlate.toLowerCase().includes(searchQuery.toLowerCase()))
-                      .map(veh => (
-                        <tr key={veh._id} style={{ borderBottom: '1px solid #f8fafc', fontSize: '13px' }}>
-                          <td style={{ padding: '12px', fontWeight: 700, color: '#64748b' }}>#{veh._id.slice(-6).toUpperCase()}</td>
-                          <td style={{ padding: '12px' }}>
-                            <div style={{ fontWeight: 800, color: '#0f172a' }}>{veh.name}</div>
-                            <div style={{ fontSize: '11px', color: '#64748b' }}>{veh.brand} ({veh.year || 2024})</div>
-                          </td>
-                          <td style={{ padding: '12px', fontWeight: 800, color: '#2563eb' }}>{veh.licensePlate}</td>
-                          <td style={{ padding: '12px', color: '#475569' }}>{veh.type}</td>
-                          <td style={{ padding: '12px', fontWeight: 700, color: '#0f172a' }}>{(veh.odometer || 12000).toLocaleString()} km</td>
-                          <td style={{ padding: '12px' }}>
-                            <span style={{
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              fontSize: '11px',
-                              fontWeight: 800,
-                              background: veh.status === 'available' ? '#f0fdf4' : veh.status === 'rented' ? '#eff6ff' : veh.status === 'broken' ? '#fee2e2' : '#fef3c7',
-                              color: veh.status === 'available' ? '#16a34a' : veh.status === 'rented' ? '#2563eb' : veh.status === 'broken' ? '#dc2626' : '#b45309'
-                            }}>
-                              {veh.status === 'available' && '✓ Sẵn sàng'}
-                              {veh.status === 'rented' && '🛵 Đang cho thuê'}
-                              {veh.status === 'broken' && '⚠️ Đang hư hỏng'}
-                              {veh.status === 'maintenance' && '🔧 Đang bảo dưỡng'}
-                              {veh.status === 'reserved' && '⏳ Đã đặt trước'}
-                            </span>
-                          </td>
-                          <td style={{ padding: '12px', textAlign: 'center' }}>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setNewInsVehicleId(veh._id);
-                                setShowNewInspectionModal(true);
-                              }}
-                              style={{ padding: '5px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                            >
-                              Tiếp nhận kiểm tra
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                  </tbody>
-                </table>
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                <select value={vehStatusFilter} onChange={e => setVehStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: 600 }}>
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="available">Sẵn sàng</option>
+                  <option value="rented">Đang cho thuê</option>
+                  <option value="maintenance">Đang bảo dưỡng</option>
+                  <option value="broken">Đang hư hỏng</option>
+                </select>
+
+                <select value={vehTypeFilter} onChange={e => setVehTypeFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: 600 }}>
+                  <option value="all">Tất cả loại xe</option>
+                  {[...new Set(vehicles.map(v => v.type))].map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                        <th style={{ padding: '12px 16px' }}>Phương tiện</th>
+                        <th style={{ padding: '12px 16px' }}>Biển số</th>
+                        <th style={{ padding: '12px 16px' }}>Loại xe</th>
+                        <th style={{ padding: '12px 16px' }}>Số km (ODO)</th>
+                        <th style={{ padding: '12px 16px' }}>Tình trạng kỹ thuật</th>
+                        <th style={{ padding: '12px 16px' }}>Bảo dưỡng gần nhất</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vehicles
+                        .filter(v => {
+                          const q = searchQuery.trim().toLowerCase();
+                          const matchQ = !q || v.name.toLowerCase().includes(q) || v.licensePlate.toLowerCase().includes(q) || v._id.toLowerCase().includes(q);
+                          const matchS = vehStatusFilter === 'all' || v.status === vehStatusFilter;
+                          const matchT = vehTypeFilter === 'all' || v.type === vehTypeFilter;
+                          return matchQ && matchS && matchT;
+                        })
+                        .map(veh => (
+                          <tr key={veh._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                <img src={veh.image || SAMPLE_PHOTOS.cleanFront} alt={veh.name} style={{ width: '50px', height: '38px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+                                <div>
+                                  <div style={{ fontWeight: 800, color: '#0f172a' }}>{veh.name}</div>
+                                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>#{veh._id.slice(-6).toUpperCase()} • {veh.brand}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{ fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '12px' }}>
+                                {veh.licensePlate}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#475569' }}>{veh.type}</td>
+                            <td style={{ padding: '12px 16px', fontWeight: 700, color: '#0f172a' }}>{(veh.odometer || 12000).toLocaleString('vi-VN')} km</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 700, background: veh.status === 'available' ? '#f0fdf4' : veh.status === 'rented' ? '#eff6ff' : veh.status === 'broken' ? '#fef2f2' : '#fefce8', color: veh.status === 'available' ? '#16a34a' : veh.status === 'rented' ? '#2563eb' : veh.status === 'broken' ? '#dc2626' : '#a16207' }}>
+                                {veh.status === 'available' && 'Sẵn sàng'}
+                                {veh.status === 'rented' && 'Đang cho thuê'}
+                                {veh.status === 'broken' && 'Đang hư hỏng'}
+                                {veh.status === 'maintenance' && 'Đang bảo dưỡng'}
+                                {veh.status === 'reserved' && 'Đã đặt trước'}
+                                {veh.status === 'retired' && 'Ngừng khai thác'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px', fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>
+                              {veh.lastMaintenanceDate || '2026-11-10'}
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedVehicleDetail(veh)}
+                                  style={{ padding: '5px 10px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                >
+                                  Chi tiết
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setNewInsVehicleId(veh._id);
+                                    setShowNewInspectionModal(true);
+                                  }}
+                                  style={{ padding: '5px 10px', background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                >
+                                  Kiểm tra trả
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
           {/* ========================================================
-              TAB 3: KIỂM TRA XE KHI TRẢ (RETURN INSPECTION)
+              TAB 3: KIỂM TRA XE KHI TRẢ
               ======================================================== */}
           {activeTab === 'return_inspection' && (
             <ReturnInspectionWorkspace
@@ -1784,109 +1985,167 @@ export default function TechnicianPortalPage() {
           )}
 
           {/* ========================================================
-              TAB 4: QUẢN LÝ HƯ HỎNG (DAMAGE MANAGEMENT)
+              TAB 4: QUẢN LÝ HƯ HỎNG
               ======================================================== */}
           {activeTab === 'damage_management' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Quản lý biên bản hư hỏng & Vị trí thiệt hại chi tiết
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Ghi nhận từng bộ phận hư hại, mức độ, ảnh chi tiết và xác định phụ tùng cần thay thế
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Quản lý hư hỏng & Biên bản</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Ghi nhận vị trí hư hại, mức độ ảnh hưởng và chuyển lập đề xuất báo giá sửa chữa
                   </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const fallbackIns = returnInspections.find(i => i.id === activeInspectionId) || returnInspections[0];
+                    if (fallbackIns) handleOpenDamageReportFromInspection(fallbackIns);
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <Plus size={15} />
+                  <span>Lập biên bản từ phiếu kiểm tra</span>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { key: 'all', label: `Tất cả (${damageReports.length})` },
+                  { key: 'confirmed', label: `Chờ lập báo giá (${damageReports.filter(d => d.status === 'confirmed').length})` },
+                  { key: 'repair_proposed', label: `Đã tạo phiếu sửa (${damageReports.filter(d => d.status === 'repair_proposed').length})` }
+                ].map(t => (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setDmgFilter(t.key as any)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      border: dmgFilter === t.key ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      background: dmgFilter === t.key ? '#2563eb' : '#ffffff',
+                      color: dmgFilter === t.key ? '#ffffff' : '#334155',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                {damageReports.map(dmg => (
-                  <div key={dmg.id} style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', background: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 900, color: '#dc2626' }}>{dmg.code}</span>
-                          <span style={{ fontSize: '12px', background: '#fee2e2', color: '#dc2626', padding: '2px 8px', borderRadius: '4px', fontWeight: 800 }}>
-                            Mức độ: {dmg.overallSeverity.toUpperCase()}
-                          </span>
-                          <span style={{ fontSize: '12px', color: '#64748b' }}>
-                            Đơn thuê: <strong>{dmg.bookingCode}</strong>
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
-                          Xe: {dmg.vehicleName} • Biển số: <span style={{ color: '#2563eb' }}>{dmg.licensePlate}</span>
-                        </div>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          Khách hàng: <strong>{dmg.customerName}</strong> ({dmg.customerPhone}) • Kỹ thuật viên lập: {dmg.inspectorName} ({dmg.reportedAt})
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {dmg.status === 'confirmed' && (
-                          <button
-                            type="button"
-                            onClick={() => setShowCreateRepairModal(dmg)}
-                            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}
-                          >
-                            <Wrench size={15} />
-                            <span>Lập đề xuất sửa chữa & Báo giá</span>
-                          </button>
-                        )}
-                        {dmg.status === 'repair_proposed' && (
-                          <span style={{ padding: '6px 12px', background: '#dcfce7', color: '#16a34a', borderRadius: '8px', fontSize: '12px', fontWeight: 800 }}>
-                            ✓ Đã tạo phiếu sửa chữa
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Chi tiết từng vị trí hư hỏng */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '12px', marginBottom: '14px' }}>
-                      {dmg.positions.map((pos, pIdx) => (
-                        <div key={pos.id || pIdx} style={{ background: '#ffffff', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px' }}>
-                          {pos.photo && (
-                            <img src={pos.photo} alt={pos.position} style={{ width: '80px', height: '80px', borderRadius: '8px', objectFit: 'cover' }} />
-                          )}
-                          <div style={{ flex: 1 }}>
-                            <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{pos.position}</div>
-                            <div style={{ fontSize: '11px', color: '#dc2626', fontWeight: 700, margin: '2px 0' }}>
-                              Mức độ: {pos.severity} • {pos.suggestedAction === 'replace' ? 'Đề xuất thay mới' : 'Sửa chữa phục hồi'}
-                            </div>
-                            <div style={{ fontSize: '11.5px', color: '#64748b', lineHeight: 1.4 }}>{pos.description}</div>
-                            {pos.suggestedPartName && (
-                              <div style={{ fontSize: '11px', color: '#2563eb', fontWeight: 700, marginTop: '4px' }}>
-                                Linh kiện: {pos.suggestedPartName}
-                              </div>
-                            )}
+                {damageReports
+                  .filter(d => dmgFilter === 'all' || d.status === dmgFilter)
+                  .map(dmg => (
+                    <div key={dmg.id} style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', background: '#ffffff' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '14.5px', fontWeight: 900, color: '#dc2626', fontFamily: 'monospace' }}>{dmg.code}</span>
+                            <span style={{ fontSize: '11.5px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
+                              Mức độ: {dmg.overallSeverity === 'high' ? 'Nặng' : dmg.overallSeverity === 'low' ? 'Nhẹ' : 'Trung bình'}
+                            </span>
+                            <span style={{ fontSize: '12px', color: '#64748b' }}>
+                              Đơn thuê: <strong style={{ color: '#2563eb' }}>{dmg.bookingCode}</strong>
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '15.5px', fontWeight: 800, color: '#0f172a', marginTop: '4px' }}>
+                            {dmg.vehicleName} • <span style={{ color: '#2563eb', fontFamily: 'monospace' }}>{dmg.licensePlate}</span>
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                            Khách hàng: <strong>{dmg.customerName}</strong> ({dmg.customerPhone}) • KTV: {dmg.inspectorName} ({dmg.reportedAt})
                           </div>
                         </div>
-                      ))}
-                    </div>
 
-                    <div style={{ fontSize: '12px', color: '#475569', fontStyle: 'italic', background: '#ffffff', padding: '10px 14px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <strong>Ghi chú biên bản:</strong> "{dmg.notes}"
+                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setShowPhotoCompareModal({
+                                title: `Ảnh hiện trạng hư hỏng ${dmg.code}`,
+                                subtitle: `${dmg.vehicleName} (${dmg.licensePlate}) • KH: ${dmg.customerName}`,
+                                beforeImgs: [SAMPLE_PHOTOS.cleanFront],
+                                afterImgs: dmg.positions.map(p => p.photo || SAMPLE_PHOTOS.damageScratched),
+                                notes: dmg.notes
+                              })
+                            }
+                            style={{ padding: '7px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '12px', fontWeight: 700, color: '#334155', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            <Camera size={13} />
+                            <span>Xem ảnh đối chứng</span>
+                          </button>
+
+                          {dmg.status === 'confirmed' ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRepSolutionText(dmg.positions.map(p => p.description).join('; '));
+                                setShowCreateRepairModal(dmg);
+                              }}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              <Wrench size={14} />
+                              <span>Lập đề xuất sửa chữa & Báo giá</span>
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (dmg.repairId) setSelectedRepairId(dmg.repairId);
+                                setActiveTab('repair_management');
+                              }}
+                              style={{ padding: '7px 14px', background: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              ✓ Xem phiếu sửa chữa →
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px', marginBottom: '12px' }}>
+                        {dmg.positions.map((pos, idx) => (
+                          <div key={pos.id || idx} style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px' }}>
+                            {pos.photo && <img src={pos.photo} alt={pos.position} style={{ width: '76px', height: '76px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
+                            <div>
+                              <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{pos.position}</div>
+                              <div style={{ fontSize: '11.5px', color: '#dc2626', fontWeight: 700, margin: '2px 0' }}>
+                                Mức độ: {pos.severity === 'high' ? 'Nặng' : pos.severity === 'low' ? 'Nhẹ' : 'Trung bình'} • {pos.suggestedAction === 'replace' ? 'Đề xuất thay mới' : 'Sửa chữa phục hồi'}
+                              </div>
+                              <div style={{ fontSize: '12px', color: '#475569' }}>{pos.description}</div>
+                              {pos.suggestedPartName && (
+                                <div style={{ fontSize: '11.5px', color: '#2563eb', fontWeight: 700, marginTop: '4px' }}>
+                                  Đề xuất: {pos.suggestedPartName}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <div style={{ fontSize: '12px', color: '#475569', background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #f1f5f9' }}>
+                        <strong>Ghi chú biên bản:</strong> {dmg.notes}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}
 
           {/* ========================================================
-              TAB 5: QUẢN LÝ SỬA CHỮA (REPAIR MANAGEMENT)
+              TAB 5: QUẢN LÝ SỬA CHỮA
               ======================================================== */}
           {activeTab === 'repair_management' && (
             <RepairManagementWorkspace
               repairs={repairs}
               selectedRepairId={selectedRepairId}
               onSelectRepairId={setSelectedRepairId}
-              onUpdateRepair={updated =>
-                setRepairs(prev => prev.map(r => (r.id === updated.id ? updated : r)))
-              }
+              onUpdateRepair={updated => setRepairs(prev => prev.map(r => (r.id === updated.id ? updated : r)))}
               onCreateRepair={created => setRepairs(prev => [created, ...prev])}
               vehicles={vehicles}
-              partsCatalog={PARTS_CATALOG}
-              inspectorName={user?.fullName || 'Nguyễn Văn Minh'}
+              partsCatalog={partsCatalog}
+              inspectorName={displayTechName}
               onCompleteVehicleAvailable={vehId =>
                 setVehicles(prev => prev.map(v => (v._id === vehId ? { ...v, status: 'available' } : v)))
               }
@@ -1895,310 +2154,610 @@ export default function TechnicianPortalPage() {
           )}
 
           {/* ========================================================
-              TAB 6: QUẢN LÝ PHỤ TÙNG (PARTS MANAGEMENT)
+              TAB 6: QUẢN LÝ PHỤ TÙNG
               ======================================================== */}
           {activeTab === 'parts_management' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
                 <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Kho phụ tùng chính hãng & Đơn giá thay thế niêm yết
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Tra cứu giá linh kiện, tiền công thợ, thời hạn bảo hành và số lượng tồn kho phục vụ báo giá
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', fontWeight: 800 }}>
-                      <th style={{ padding: '12px' }}>Mã phụ tùng</th>
-                      <th style={{ padding: '12px' }}>Tên linh kiện</th>
-                      <th style={{ padding: '12px' }}>Nhóm</th>
-                      <th style={{ padding: '12px' }}>Giá phụ tùng</th>
-                      <th style={{ padding: '12px' }}>Tiền công lắp</th>
-                      <th style={{ padding: '12px' }}>Bảo hành</th>
-                      <th style={{ padding: '12px' }}>Tồn kho</th>
-                      <th style={{ padding: '12px' }}>Tương thích</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {PARTS_CATALOG.map(pt => (
-                      <tr key={pt.id} style={{ borderBottom: '1px solid #f8fafc', fontSize: '13px' }}>
-                        <td style={{ padding: '12px', fontWeight: 800, color: '#2563eb' }}>{pt.code}</td>
-                        <td style={{ padding: '12px', fontWeight: 800, color: '#0f172a' }}>{pt.name}</td>
-                        <td style={{ padding: '12px', color: '#475569' }}>{pt.category}</td>
-                        <td style={{ padding: '12px', fontWeight: 800, color: '#0f172a' }}>{pt.unitPrice.toLocaleString()}đ</td>
-                        <td style={{ padding: '12px', color: '#64748b' }}>{pt.laborFee.toLocaleString()}đ</td>
-                        <td style={{ padding: '12px' }}>
-                          <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: '4px', fontSize: '11px', fontWeight: 700 }}>
-                            {pt.warranty}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px', fontWeight: 800, color: pt.stock < 15 ? '#ea580c' : '#16a34a' }}>
-                          {pt.stock} cái
-                        </td>
-                        <td style={{ padding: '12px', fontSize: '11.5px', color: '#64748b' }}>{pt.compatible}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              TAB 7: QUẢN LÝ BẢO DƯỠNG (MAINTENANCE)
-              ======================================================== */}
-          {activeTab === 'maintenance' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Theo dõi & Thực hiện bảo dưỡng định kỳ
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Quản lý lịch thay nhớt, bảo dưỡng nồi, phanh và kiểm tra xe định kỳ 1.500km - 5.000km
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', fontWeight: 800 }}>
-                      <th style={{ padding: '12px' }}>Mã phiếu</th>
-                      <th style={{ padding: '12px' }}>Xe bảo dưỡng</th>
-                      <th style={{ padding: '12px' }}>Hạng mục</th>
-                      <th style={{ padding: '12px' }}>Kỹ thuật viên</th>
-                      <th style={{ padding: '12px' }}>Chi phí</th>
-                      <th style={{ padding: '12px' }}>Trạng thái</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {maintenances.map(m => (
-                      <tr key={m._id} style={{ borderBottom: '1px solid #f8fafc', fontSize: '13px' }}>
-                        <td style={{ padding: '12px', fontWeight: 800, color: '#2563eb' }}>BD#{m._id.slice(-6).toUpperCase()}</td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: 800, color: '#0f172a' }}>{m.vehicle?.name || 'Xe Máy'}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>{m.vehicle?.licensePlate || '43-ĐN'}</div>
-                        </td>
-                        <td style={{ padding: '12px', color: '#334155', fontWeight: 600 }}>{m.title}</td>
-                        <td style={{ padding: '12px', color: '#475569' }}>{m.technician?.fullName || user?.fullName || 'Nguyễn Văn Minh'}</td>
-                        <td style={{ padding: '12px', fontWeight: 800, color: '#0f172a' }}>{(m.cost || 150000).toLocaleString()}đ</td>
-                        <td style={{ padding: '12px' }}>
-                          <span style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '11px', fontWeight: 800, background: m.status === 'completed' ? '#dcfce7' : '#eff6ff', color: m.status === 'completed' ? '#16a34a' : '#2563eb' }}>
-                            {m.status === 'completed' ? '✓ Hoàn thành' : 'Đang xử lý'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              TAB 8: LỊCH SỬ KỸ THUẬT (HISTORY)
-              ======================================================== */}
-          {activeTab === 'history' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Tra cứu toàn bộ hồ sơ lịch sử kiểm tra, hư hỏng & sửa chữa
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Lưu vết đồng bộ từ đơn thuê &rarr; ảnh chụp đối chứng &rarr; phụ tùng thay thế &rarr; chi phí
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', fontWeight: 800 }}>
-                      <th style={{ padding: '12px' }}>Thời gian</th>
-                      <th style={{ padding: '12px' }}>Đơn thuê & Xe</th>
-                      <th style={{ padding: '12px' }}>Hạng mục thực hiện</th>
-                      <th style={{ padding: '12px' }}>Kỹ thuật viên</th>
-                      <th style={{ padding: '12px' }}>Chi phí</th>
-                      <th style={{ padding: '12px' }}>Ảnh đối chứng</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {repairs.map(r => (
-                      <tr key={r.id} style={{ borderBottom: '1px solid #f8fafc', fontSize: '13px' }}>
-                        <td style={{ padding: '12px', color: '#64748b', fontSize: '12px' }}>{r.completedAt || r.createdAt}</td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: 800, color: '#0f172a' }}>{r.vehicleName} ({r.licensePlate})</div>
-                          <div style={{ fontSize: '11px', color: '#2563eb' }}>Đơn: {r.bookingCode} • Khách: {r.customerName}</div>
-                        </td>
-                        <td style={{ padding: '12px' }}>
-                          <div style={{ fontWeight: 700, color: '#0f172a' }}>{r.issueSummary}</div>
-                          <div style={{ fontSize: '11px', color: '#64748b' }}>Phụ tùng: {r.parts.map(p => p.name).join(', ')}</div>
-                        </td>
-                        <td style={{ padding: '12px', color: '#475569' }}>{r.technicianName}</td>
-                        <td style={{ padding: '12px', fontWeight: 800, color: '#0f172a' }}>{(r.actualCost || r.totalEstimatedCost).toLocaleString()}đ</td>
-                        <td style={{ padding: '12px' }}>
-                          <button
-                            type="button"
-                            onClick={() => setShowPhotoCompareModal({
-                              title: `Đối chứng sửa chữa: ${r.code}`,
-                              subtitle: `Xe ${r.vehicleName} (${r.licensePlate}) • Đơn: ${r.bookingCode}`,
-                              beforeImgs: r.beforePhotos,
-                              afterImgs: r.afterPhotos.length > 0 ? r.afterPhotos : [SAMPLE_PHOTOS.repairedPerfect],
-                              notes: r.completionNotes || r.proposedSolution
-                            })}
-                            style={{ padding: '4px 8px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
-                          >
-                            Xem ảnh đối chứng
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================
-              TAB 9: BÁO CÁO THỐNG KÊ (REPORTS)
-              ======================================================== */}
-          {activeTab === 'reports' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '10px' }}>
-                <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Báo cáo thống kê hiệu suất kỹ thuật & chi phí bồi thường
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Tổng hợp số lượt kiểm tra, số vụ hư hỏng phát sinh và doanh thu phụ tùng thay thế
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Quản lý phụ tùng thay thế</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Tra cứu tồn kho linh kiện chính hãng, đơn giá niêm yết, tiền công lắp đặt và bảo hành
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <button type="button" onClick={() => toast.success('Đang xuất file Excel...')} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
-                    <Download size={15} />
-                    <span>Xuất báo cáo Excel</span>
+                  <button
+                    type="button"
+                    onClick={() => setPartViewMode(m => (m === 'table' ? 'grid' : 'table'))}
+                    style={{ padding: '8px 14px', borderRadius: '9px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#334155', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {partViewMode === 'table' ? 'Xem dạng lưới' : 'Xem dạng bảng'}
                   </button>
-                  <button type="button" onClick={() => window.print()} style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
-                    <Printer size={15} />
+                  <button
+                    type="button"
+                    onClick={() => setShowAddPartModal(true)}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '9px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    <Plus size={15} />
+                    <span>Thêm phụ tùng</span>
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b' }}>Tổng mã linh kiện</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>{partsCatalog.length}</div>
+                </div>
+                <div style={{ background: '#f0fdf4', borderRadius: '14px', border: '1px solid #bbf7d0', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '12px', color: '#15803d' }}>Đủ tồn kho</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#16a34a', marginTop: '2px' }}>{partsCatalog.filter(p => p.stock >= 10).length}</div>
+                </div>
+                <div style={{ background: '#fff7ed', borderRadius: '14px', border: '1px solid #fed7aa', padding: '14px 16px' }}>
+                  <div style={{ fontSize: '12px', color: '#c2410c' }}>Sắp hết (dưới 10 cái)</div>
+                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#ea580c', marginTop: '2px' }}>{partsCatalog.filter(p => p.stock < 10).length}</div>
+                </div>
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '14px 16px', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                <select value={partCatFilter} onChange={e => setPartCatFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: 600 }}>
+                  <option value="all">Tất cả nhóm phụ tùng</option>
+                  {[...new Set(partsCatalog.map(p => p.category))].map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {partViewMode === 'table' ? (
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                          <th style={{ padding: '12px 16px' }}>Mã PT</th>
+                          <th style={{ padding: '12px 16px' }}>Tên linh kiện</th>
+                          <th style={{ padding: '12px 16px' }}>Nhóm</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'right' }}>Giá phụ tùng</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'right' }}>Công lắp</th>
+                          <th style={{ padding: '12px 16px' }}>Bảo hành</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'center' }}>Tồn kho</th>
+                          <th style={{ padding: '12px 16px' }}>Tương thích</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {partsCatalog
+                          .filter(p => {
+                            const q = searchQuery.trim().toLowerCase();
+                            const matchQ = !q || p.name.toLowerCase().includes(q) || p.code.toLowerCase().includes(q);
+                            const matchC = partCatFilter === 'all' || p.category === partCatFilter;
+                            return matchQ && matchC;
+                          })
+                          .map(pt => (
+                            <tr key={pt.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                              <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{pt.code}</td>
+                              <td style={{ padding: '12px 16px', fontWeight: 700, color: '#0f172a' }}>{pt.name}</td>
+                              <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px' }}>{pt.category}</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{pt.unitPrice.toLocaleString('vi-VN')} đ</td>
+                              <td style={{ padding: '12px 16px', textAlign: 'right', color: '#64748b' }}>{pt.laborFee.toLocaleString('vi-VN')} đ</td>
+                              <td style={{ padding: '12px 16px' }}>
+                                <span style={{ background: '#f0fdf4', color: '#16a34a', padding: '2px 8px', borderRadius: '999px', fontSize: '11px', fontWeight: 700 }}>{pt.warranty}</span>
+                              </td>
+                              <td style={{ padding: '12px 16px', textAlign: 'center', fontWeight: 800, color: pt.stock < 10 ? '#ea580c' : '#16a34a' }}>{pt.stock} cái</td>
+                              <td style={{ padding: '12px 16px', fontSize: '12px', color: '#64748b' }}>{pt.compatible}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+                  {partsCatalog
+                    .filter(p => partCatFilter === 'all' || p.category === partCatFilter)
+                    .map(pt => (
+                      <div key={pt.id} style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                        <div style={{ fontSize: '11.5px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{pt.code} • {pt.category}</div>
+                        <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '4px 0 8px' }}>{pt.name}</div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
+                          <strong style={{ color: '#2563eb' }}>{pt.unitPrice.toLocaleString('vi-VN')} đ</strong>
+                          <span style={{ fontWeight: 700, color: pt.stock < 10 ? '#ea580c' : '#16a34a' }}>Tồn: {pt.stock}</span>
+                        </div>
+                        <div style={{ fontSize: '11.5px', color: '#64748b' }}>Tương thích: {pt.compatible}</div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ========================================================
+              TAB 7: QUẢN LÝ BẢO DƯỠNG
+              ======================================================== */}
+          {activeTab === 'maintenance' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Quản lý bảo dưỡng định kỳ</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Theo dõi lịch bảo dưỡng, tiếp nhận công việc và cập nhật hoàn thành</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newMaintVehId && vehicles[0]) setNewMaintVehId(vehicles[0]._id);
+                    setShowNewMaintModal(true);
+                  }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#2563eb', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <Plus size={15} />
+                  <span>Tạo lịch bảo dưỡng</span>
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { key: 'all', label: 'Tất cả' },
+                  { key: 'scheduled', label: 'Đã lên lịch' },
+                  { key: 'in_progress', label: 'Đang thực hiện' },
+                  { key: 'completed', label: 'Hoàn thành' }
+                ].map(opt => (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setMaintStatusFilter(opt.key)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      border: maintStatusFilter === opt.key ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      background: maintStatusFilter === opt.key ? '#2563eb' : '#ffffff',
+                      color: maintStatusFilter === opt.key ? '#ffffff' : '#334155',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                        <th style={{ padding: '12px 16px' }}>Mã phiếu</th>
+                        <th style={{ padding: '12px 16px' }}>Xe bảo dưỡng</th>
+                        <th style={{ padding: '12px 16px' }}>Hạng mục</th>
+                        <th style={{ padding: '12px 16px' }}>Ngày thực hiện</th>
+                        <th style={{ padding: '12px 16px' }}>Kỹ thuật viên</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Chi phí</th>
+                        <th style={{ padding: '12px 16px' }}>Trạng thái</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Thao tác</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {maintenances
+                        .filter(m => maintStatusFilter === 'all' || m.status === maintStatusFilter)
+                        .map(m => (
+                          <tr key={m._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                            <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>BD#{m._id.slice(-4).toUpperCase()}</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <div style={{ fontWeight: 800, color: '#0f172a' }}>{m.vehicle?.name || 'Xe máy'}</div>
+                              <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace' }}>{m.vehicle?.licensePlate || '43-ĐN'}</div>
+                            </td>
+                            <td style={{ padding: '12px 16px', color: '#334155', fontWeight: 600 }}>{m.title}</td>
+                            <td style={{ padding: '12px 16px', color: '#64748b', fontFamily: 'monospace', fontSize: '12px' }}>{m.scheduledDate || '2026-11-25'}</td>
+                            <td style={{ padding: '12px 16px', color: '#475569' }}>{m.technician?.fullName || displayTechName}</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{(m.cost || 200000).toLocaleString('vi-VN')} đ</td>
+                            <td style={{ padding: '12px 16px' }}>
+                              <span style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 700, background: m.status === 'completed' ? '#f0fdf4' : m.status === 'in_progress' ? '#eff6ff' : '#fefce8', color: m.status === 'completed' ? '#16a34a' : m.status === 'in_progress' ? '#2563eb' : '#a16207' }}>
+                                {m.status === 'completed' ? 'Hoàn thành' : m.status === 'in_progress' ? 'Đang thực hiện' : 'Đã lên lịch'}
+                              </span>
+                            </td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                              <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                <button type="button" onClick={() => setSelectedMaintDetail(m)} style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                                  Chi tiết
+                                </button>
+                                {m.status === 'scheduled' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMaintenances(prev => prev.map(x => (x._id === m._id ? { ...x, status: 'in_progress' } : x)));
+                                      toast.success('Đã tiếp nhận bảo dưỡng!');
+                                    }}
+                                    style={{ padding: '5px 10px', borderRadius: '7px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    Tiếp nhận
+                                  </button>
+                                )}
+                                {m.status === 'in_progress' && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setMaintenances(prev => prev.map(x => (x._id === m._id ? { ...x, status: 'completed', completedDate: '2026-11-25' } : x)));
+                                      toast.success('Đã hoàn thành bảo dưỡng!');
+                                    }}
+                                    style={{ padding: '5px 10px', borderRadius: '7px', border: 'none', background: '#16a34a', color: '#ffffff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                                  >
+                                    Hoàn thành
+                                  </button>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              TAB 8: LỊCH SỬ KỸ THUẬT
+              ======================================================== */}
+          {activeTab === 'history' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Lịch sử kỹ thuật tổng hợp</h1>
+                <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                  Tra cứu toàn bộ hồ sơ kiểm tra trả xe, biên bản hư hỏng, sửa chữa và bảo dưỡng kèm ảnh đối chứng
+                </p>
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                  {[
+                    { key: 'all', label: 'Tất cả' },
+                    { key: 'inspection', label: 'Kiểm tra trả xe' },
+                    { key: 'damage', label: 'Hư hỏng' },
+                    { key: 'repair', label: 'Sửa chữa' },
+                    { key: 'maintenance', label: 'Bảo dưỡng' }
+                  ].map(opt => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => setHistoryTypeFilter(opt.key as any)}
+                      style={{
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        border: historyTypeFilter === opt.key ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                        background: historyTypeFilter === opt.key ? '#2563eb' : '#ffffff',
+                        color: historyTypeFilter === opt.key ? '#ffffff' : '#334155',
+                        fontSize: '12.5px',
+                        fontWeight: 700,
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <select value={historyVehicleFilter} onChange={e => setHistoryVehicleFilter(e.target.value)} style={{ marginLeft: 'auto', padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff' }}>
+                  <option value="all">Tất cả phương tiện</option>
+                  {vehicles.map(v => (
+                    <option key={v._id} value={v.name}>{v.name} ({v.licensePlate})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                        <th style={{ padding: '12px 16px' }}>Mã / Thời gian</th>
+                        <th style={{ padding: '12px 16px' }}>Phương tiện</th>
+                        <th style={{ padding: '12px 16px' }}>Nội dung công việc</th>
+                        <th style={{ padding: '12px 16px' }}>Phụ trách</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Chi phí</th>
+                        <th style={{ padding: '12px 16px' }}>Kết quả</th>
+                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Đối chứng</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {unifiedHistory.map(h => (
+                        <tr key={h.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{h.code}</div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace' }}>{h.date}</div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{h.vehicleName}</div>
+                            <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace' }}>{h.licensePlate}</div>
+                          </td>
+                          <td style={{ padding: '12px 16px', color: '#334155', maxWidth: '320px' }}>{h.title}</td>
+                          <td style={{ padding: '12px 16px', color: '#475569' }}>{h.actor}</td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>
+                            {h.cost ? `${h.cost.toLocaleString('vi-VN')} đ` : '—'}
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 700, background: h.statusBg, color: h.statusColor }}>
+                              {h.statusLabel}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setShowPhotoCompareModal({
+                                  title: `Ảnh đối chứng ${h.code} — ${h.vehicleName}`,
+                                  subtitle: `Biển số: ${h.licensePlate} • ${h.title}`,
+                                  beforeImgs: h.beforeImgs.length > 0 ? h.beforeImgs : [SAMPLE_PHOTOS.cleanFront],
+                                  afterImgs: h.afterImgs.length > 0 ? h.afterImgs : [SAMPLE_PHOTOS.repairedPerfect],
+                                  notes: h.title
+                                })
+                              }
+                              style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Xem ảnh
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================
+              TAB 9: BÁO CÁO THỐNG KÊ
+              ======================================================== */}
+          {activeTab === 'reports' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Báo cáo thống kê kỹ thuật</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
+                    Thống kê số lượt kiểm tra, chi phí bảo dưỡng & sửa chữa, tỷ lệ xử lý hư hỏng
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleExportCsvReport}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '9px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    <Download size={14} />
+                    <span>Xuất Excel (.csv)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 14px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '9px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    <Printer size={14} />
                     <span>In báo cáo</span>
                   </button>
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', marginBottom: '24px' }}>
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Lượt kiểm tra xe trả</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>{returnInspections.length} lượt</div>
-                  <div style={{ fontSize: '11px', color: '#16a34a', marginTop: '2px' }}>100% có ảnh đối chứng</div>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                {[
+                  { key: '1m', label: 'Tháng này' },
+                  { key: '3m', label: '3 tháng gần nhất' },
+                  { key: '6m', label: '6 tháng gần nhất' },
+                  { key: '12m', label: 'Cả năm' }
+                ].map(p => (
+                  <button
+                    key={p.key}
+                    type="button"
+                    onClick={() => setReportPeriod(p.key as any)}
+                    style={{
+                      padding: '7px 14px',
+                      borderRadius: '8px',
+                      border: reportPeriod === p.key ? '1px solid #2563eb' : '1px solid #e2e8f0',
+                      background: reportPeriod === p.key ? '#2563eb' : '#ffffff',
+                      color: reportPeriod === p.key ? '#ffffff' : '#334155',
+                      fontSize: '12.5px',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: '14px' }}>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Tổng lượt kiểm tra (6T)</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
+                    {CHART_DATA_6M.reduce((s, d) => s + d.inspections, 0)} lượt
+                  </div>
+                </div>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Biên bản hư hỏng hiện tại</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#dc2626', marginTop: '4px' }}>{damageReports.length} vụ</div>
+                </div>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Phiếu sửa chữa hoàn thành</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#16a34a', marginTop: '4px' }}>
+                    {repairs.filter(r => r.status === 'completed').length} / {repairs.length}
+                  </div>
+                </div>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
+                  <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Tổng giá trị sửa chữa tháng</div>
+                  <div style={{ fontSize: '24px', fontWeight: 900, color: '#2563eb', marginTop: '4px' }}>
+                    {stats.totalDamageCost.toLocaleString('vi-VN')} đ
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Số lượng công việc theo tháng</h3>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>Kiểm tra trả xe, Bảo dưỡng, Sửa chữa</p>
+                  <MonthlyWorkBarChart data={reportPeriod === '3m' ? CHART_DATA_6M.slice(-3) : CHART_DATA_6M} />
                 </div>
 
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Vụ hư hỏng phát sinh</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#dc2626', marginTop: '4px' }}>{damageReports.length} vụ</div>
-                  <div style={{ fontSize: '11px', color: '#dc2626', marginTop: '2px' }}>Đã lập biên bản</div>
-                </div>
-
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Sửa chữa hoàn thành</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#16a34a', marginTop: '4px' }}>{stats.completedRepairs} phiếu</div>
-                  <div style={{ fontSize: '11px', color: '#16a34a', marginTop: '2px' }}>Khách hàng đồng ý 100%</div>
-                </div>
-
-                <div style={{ background: '#f8fafc', padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>Tổng chi phí bồi thường</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color: '#2563eb', marginTop: '4px' }}>{stats.totalDamageCost.toLocaleString()}đ</div>
-                  <div style={{ fontSize: '11px', color: '#2563eb', marginTop: '2px' }}>Đã thu & cấn trừ cọc</div>
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Biến động chi phí sửa chữa & phụ tùng</h3>
+                  <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>Đơn vị tính: Triệu VNĐ</p>
+                  <CostTrendLineChart data={reportPeriod === '3m' ? CHART_DATA_6M.slice(-3) : CHART_DATA_6M} />
                 </div>
               </div>
             </div>
           )}
 
           {/* ========================================================
-              TAB 10: THÔNG BÁO (NOTIFICATIONS)
+              TAB 10: THÔNG BÁO
               ======================================================== */}
           {activeTab === 'notifications' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-                <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Trung tâm thông báo kỹ thuật</h2>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-                    toast.success('Đã đánh dấu tất cả là đã đọc');
-                  }}
-                  style={{ padding: '6px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  Đánh dấu tất cả đã đọc
-                </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Thông báo kỹ thuật</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Bạn có {unreadNotifsCount} thông báo chưa đọc</p>
+                </div>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setNotifFilter(f => (f === 'all' ? 'unread' : 'all'))}
+                    style={{ padding: '7px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    {notifFilter === 'all' ? 'Chỉ hiện chưa đọc' : 'Hiện tất cả'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+                      toast.success('Đã đánh dấu tất cả thông báo là đã đọc!');
+                    }}
+                    style={{ padding: '7px 14px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    Đánh dấu tất cả đã đọc
+                  </button>
+                </div>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {notifications.map(n => (
-                  <div key={n.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px', borderRadius: '10px', background: n.unread ? '#eff6ff' : '#f8fafc', border: n.unread ? '1px solid #bfdbfe' : '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: n.unread ? '#2563eb' : '#94a3b8', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Bell size={16} />
+                {notifications
+                  .filter(n => notifFilter === 'all' || n.unread)
+                  .map(n => (
+                    <div
+                      key={n.id}
+                      onClick={() => {
+                        setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, unread: false } : x)));
+                        if (n.targetTab) setActiveTab(n.targetTab);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '14px 18px',
+                        borderRadius: '12px',
+                        background: n.unread ? '#eff6ff' : '#ffffff',
+                        border: n.unread ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: n.unread ? '#2563eb' : '#f1f5f9', color: n.unread ? '#ffffff' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Bell size={17} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: n.unread ? 800 : 600, color: '#0f172a' }}>{n.title}</div>
+                          {n.description && <div style={{ fontSize: '12px', color: '#475569', marginTop: '2px' }}>{n.description}</div>}
+                          <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>{n.time}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: n.unread ? 800 : 600, color: '#0f172a' }}>{n.title}</div>
-                        <div style={{ fontSize: '11px', color: '#64748b' }}>{n.time}</div>
-                      </div>
+                      {n.unread && <span style={{ width: '9px', height: '9px', borderRadius: '50%', background: '#2563eb', flexShrink: 0 }} />}
                     </div>
-                    {n.unread && <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#2563eb' }} />}
-                  </div>
-                ))}
+                  ))}
               </div>
             </div>
           )}
 
           {/* ========================================================
-              TAB 11: TÀI KHOẢN CÁ NHÂN (PROFILE)
+              TAB 11: TÀI KHOẢN CÁ NHÂN
               ======================================================== */}
           {activeTab === 'profile' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', marginBottom: '16px' }}>Hồ sơ tài khoản Kỹ thuật viên</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                <form onSubmit={e => { e.preventDefault(); toast.success('Đã lưu thông tin tài khoản!'); }} style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>Thông tin liên hệ</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                <div>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Tài khoản cá nhân</h1>
+                  <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>Quản lý thông tin kỹ thuật viên, mật khẩu và hiệu suất công việc</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('user_management')}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '9px 16px', borderRadius: '10px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  <Users size={15} />
+                  <span>Mở Quản lý người dùng & Khách hàng →</span>
+                </button>
+              </div>
+
+              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <div style={{ height: '74px', background: 'linear-gradient(135deg, #2563eb, #1e293b)' }} />
+                <div style={{ padding: '0 24px 20px', display: 'flex', alignItems: 'center', gap: '16px', marginTop: '-28px', flexWrap: 'wrap' }}>
+                  <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: '#2563eb', color: '#ffffff', border: '4px solid #ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
+                    MQ
+                  </div>
+                  <div style={{ paddingTop: '28px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>{displayTechName}</div>
+                    <div style={{ fontSize: '12.5px', color: '#64748b' }}>Nhân viên Kỹ thuật trưởng • Chi nhánh Hải Châu, Đà Nẵng</div>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '16px' }}>
+                <form
+                  onSubmit={async e => {
+                    e.preventDefault();
+                    try {
+                      await api.put('/users/profile', { fullName: profName, phone: profPhone });
+                    } catch {}
+                    toast.success('Đã cập nhật thông tin cá nhân!');
+                  }}
+                  style={{ background: '#ffffff', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}
+                >
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 14px' }}>Thông tin liên hệ</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Họ và tên</label>
-                      <input type="text" value={profName} onChange={e => setProfName(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      <input type="text" value={profName} onChange={e => setProfName(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Số điện thoại</label>
-                      <input type="text" value={profPhone} onChange={e => setProfPhone(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      <input type="text" value={profPhone} onChange={e => setProfPhone(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Email</label>
-                      <input type="email" value={profEmail} onChange={e => setProfEmail(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      <input type="email" value={profEmail} onChange={e => setProfEmail(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                     </div>
-                    <button type="submit" style={{ padding: '9px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
+                    <button type="submit" style={{ padding: '9px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
                       Lưu thông tin cá nhân
                     </button>
                   </div>
                 </form>
 
-                <form onSubmit={e => { e.preventDefault(); toast.success('Đã đổi mật khẩu thành công!'); setProfOldPass(''); setProfNewPass(''); }} style={{ background: '#f8fafc', padding: '20px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <h3 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '12px' }}>Đổi mật khẩu</h3>
+                <form
+                  onSubmit={e => {
+                    e.preventDefault();
+                    toast.success('Đã cập nhật mật khẩu mới!');
+                    setProfOldPass('');
+                    setProfNewPass('');
+                  }}
+                  style={{ background: '#ffffff', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}
+                >
+                  <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 14px' }}>Đổi mật khẩu</h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mật khẩu hiện tại</label>
-                      <input type="password" value={profOldPass} onChange={e => setProfOldPass(e.target.value)} placeholder="••••••••" required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      <input type="password" value={profOldPass} onChange={e => setProfOldPass(e.target.value)} placeholder="••••••••" required style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                     </div>
                     <div>
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mật khẩu mới</label>
-                      <input type="password" value={profNewPass} onChange={e => setProfNewPass(e.target.value)} placeholder="Tối thiểu 6 ký tự" required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      <input type="password" value={profNewPass} onChange={e => setProfNewPass(e.target.value)} placeholder="Tối thiểu 6 ký tự" required style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                     </div>
-                    <button type="submit" style={{ padding: '9px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
-                      Cập nhật mật khẩu mới
+                    <button type="submit" style={{ padding: '9px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer', marginTop: '4px' }}>
+                      Cập nhật mật khẩu
                     </button>
                   </div>
                 </form>
@@ -2207,13 +2766,13 @@ export default function TechnicianPortalPage() {
           )}
 
           {/* ========================================================
-              TAB 12: QUẢN LÝ NGƯỜI DÙNG & KHÁCH HÀNG
+              QUẢN LÝ NGƯỜI DÙNG & KHÁCH HÀNG (HEADER / PROFILE ACCESSIBLE)
               ======================================================== */}
           {activeTab === 'user_management' && (
             <UserManagementWorkspace
               inspections={returnInspections}
               repairs={repairs}
-              inspectorName={user?.fullName || 'Nguyễn Văn Minh'}
+              inspectorName={displayTechName}
               inspectorEmail={user?.email}
               searchQuery={searchQuery}
               onJumpToInspection={insId => {
@@ -2226,33 +2785,24 @@ export default function TechnicianPortalPage() {
               }}
             />
           )}
-
         </main>
       </div>
 
       {/* ========================================================
-          MODAL 1: TIẾP NHẬN & KIỂM TRA XE KHI KHÁCH TRẢ
+          MODAL 1: TIẾP NHẬN KIỂM TRA TRẢ XE MỚI
           ======================================================== */}
       {showNewInspectionModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: '16px' }} onClick={() => setShowNewInspectionModal(false)}>
-          <form onSubmit={handleSaveInspection} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ClipboardCheck size={20} color="#2563eb" />
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                  1. Tiếp nhận và kiểm tra xe sau khi khách trả
-                </h3>
-              </div>
+        <div onClick={() => setShowNewInspectionModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <form onSubmit={handleSaveInspection} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Tiếp nhận xe trả mới</h3>
               <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
-              {/* Chọn nhanh từ đơn thuê thật trong hệ thống */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {realBookings.length > 0 && (
                 <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 12px' }}>
-                  <label style={{ fontSize: '11.5px', fontWeight: 800, color: '#1d4ed8', display: 'block', marginBottom: '5px' }}>
-                    Chọn nhanh đơn thuê từ hệ thống (tự động điền thông tin):
-                  </label>
+                  <label style={{ fontSize: '11.5px', fontWeight: 800, color: '#1d4ed8', display: 'block', marginBottom: '5px' }}>Chọn nhanh đơn thuê từ hệ thống:</label>
                   <select
                     value={selectedRealBookingId}
                     onChange={e => {
@@ -2266,15 +2816,15 @@ export default function TechnicianPortalPage() {
                         if (bk.vehicle?._id) setNewInsVehicleId(bk.vehicle._id);
                         const startOdo = Number(bk.checkInOdometer || bk.vehicle?.odometer || 12000);
                         setNewInsDeliveryOdo(startOdo);
-                        setNewInsOdo(startOdo + 85);
+                        setNewInsOdo(startOdo + 95);
                       }
                     }}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: '6px', border: '1px solid #93c5fd', fontSize: '12.5px', background: '#ffffff' }}
+                    style={{ width: '100%', padding: '7px 10px', borderRadius: '7px', border: '1px solid #93c5fd', fontSize: '12.5px', background: '#ffffff' }}
                   >
-                    <option value="">-- Nhập thủ công / Tạo phiếu mẫu --</option>
+                    <option value="">-- Nhập thủ công --</option>
                     {realBookings.map(b => (
                       <option key={b._id} value={b._id}>
-                        {b.bookingCode} • {b.vehicle?.name || 'Xe máy'} ({b.vehicle?.licensePlate || '43-ĐN'}) • KH: {b.customer?.fullName || 'Khách'} [{b.status}]
+                        {b.bookingCode} • {b.vehicle?.name || 'Xe máy'} ({b.vehicle?.licensePlate || '43-ĐN'}) • KH: {b.customer?.fullName || 'Khách'}
                       </option>
                     ))}
                   </select>
@@ -2283,543 +2833,435 @@ export default function TechnicianPortalPage() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mã đơn thuê</label>
-                  <input type="text" value={newInsBookingCode} onChange={e => setNewInsBookingCode(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mã đơn thuê *</label>
+                  <input type="text" required value={newInsBookingCode} onChange={e => setNewInsBookingCode(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Họ tên khách hàng</label>
-                  <input type="text" value={newInsCustName} onChange={e => setNewInsCustName(e.target.value)} required style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Họ tên khách hàng *</label>
+                  <input type="text" required value={newInsCustName} onChange={e => setNewInsCustName(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Chọn xe trả</label>
-                  <select value={newInsVehicleId} onChange={e => setNewInsVehicleId(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}>
-                    {vehicles.length === 0 && <option value="v-gen">Honda Vision (43C1-999.99)</option>}
-                    {vehicles.map(v => (
-                      <option key={v._id} value={v._id}>{v.name} ({v.licensePlate})</option>
-                    ))}
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Chọn xe</label>
+                  <select value={newInsVehicleId || vehicles[0]?._id} onChange={e => setNewInsVehicleId(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#ffffff' }}>
+                    {vehicles.map(v => <option key={v._id} value={v._id}>{v.name} ({v.licensePlate})</option>)}
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Số điện thoại KH</label>
-                  <input type="text" value={newInsCustPhone} onChange={e => setNewInsCustPhone(e.target.value)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Số điện thoại</label>
+                  <input type="text" value={newInsCustPhone} onChange={e => setNewInsCustPhone(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                 </div>
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo lúc giao (km)</label>
-                  <input type="number" value={newInsDeliveryOdo} onChange={e => setNewInsDeliveryOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo lúc giao</label>
+                  <input type="number" value={newInsDeliveryOdo} onChange={e => setNewInsDeliveryOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                 </div>
                 <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo khi trả (km)</label>
-                  <input type="number" value={newInsOdo} onChange={e => setNewInsOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo khi trả</label>
+                  <input type="number" value={newInsOdo} onChange={e => setNewInsOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                 </div>
                 <div>
                   <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Nhiên liệu (%)</label>
-                  <input type="number" min={0} max={100} value={newInsFuelLevel} onChange={e => setNewInsFuelLevel(Math.min(100, Math.max(0, Number(e.target.value))))} style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                  <input type="number" min={0} max={100} value={newInsFuelLevel} onChange={e => setNewInsFuelLevel(Math.min(100, Math.max(0, Number(e.target.value))))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                 </div>
-              </div>
-
-              {/* 5 Hạng mục kiểm tra an toàn */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '6px' }}>Kiểm tra tổng thể tình trạng xe:</label>
-                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={newInsBrakes} onChange={e => setNewInsBrakes(e.target.checked)} />
-                    <span>Hệ thống phanh trước và sau (độ bám, má phanh không kẹt)</span>
-                  </label>
-                  <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={newInsTires} onChange={e => setNewInsTires(e.target.checked)} />
-                    <span>Lốp xe & áp suất bánh (không thủng đinh, gai lốp tốt)</span>
-                  </label>
-                  <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={newInsLights} onChange={e => setNewInsLights(e.target.checked)} />
-                    <span>Đèn pha LED, xi nhan và còi xe hoạt động bình thường</span>
-                  </label>
-                  <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={newInsEngine} onChange={e => setNewInsEngine(e.target.checked)} />
-                    <span>Động cơ nổ êm, không gõ máy, không chảy nhớt</span>
-                  </label>
-                  <label style={{ fontSize: '12.5px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                    <input type="checkbox" checked={newInsBody} onChange={e => setNewInsBody(e.target.checked)} />
-                    <span>Gương chiếu hậu, yên xe, dàn áo nguyên vẹn không trầy móp</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Ảnh đối chiếu Trước vs Sau */}
-              <div style={{ background: '#f0f9ff', padding: '12px', borderRadius: '8px', border: '1px solid #bae6fd' }}>
-                <div style={{ fontSize: '12px', fontWeight: 800, color: '#0369a1', marginBottom: '6px' }}>
-                  📸 Ảnh đối chiếu: Lúc bàn giao vs Lúc nhận xe trả
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '2px' }}>Ảnh lúc giao:</span>
-                    <img src={newInsBeforeImg} alt="Before" style={{ width: '100%', height: '70px', borderRadius: '6px', objectFit: 'cover' }} />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '2px' }}>Ảnh khi trả xe:</span>
-                    <img src={newInsAfterImg} alt="After" style={{ width: '100%', height: '70px', borderRadius: '6px', objectFit: 'cover' }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Kết quả kiểm tra */}
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '4px' }}>Kết luận sau khi kiểm tra:</label>
-                <select value={newInsStatus} onChange={e => setNewInsStatus(e.target.value as any)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800, color: newInsStatus === 'passed' ? '#16a34a' : '#dc2626' }}>
-                  <option value="passed">✓ Xe đạt yêu cầu (Hoàn tất trả xe, xe sẵn sàng)</option>
-                  <option value="damaged">⚠️ Xe có hư hỏng / trầy xước (Cần lập biên bản hư hỏng)</option>
-                </select>
               </div>
 
               <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mô tả chi tiết / Ghi chú</label>
-                <textarea rows={2} value={newInsNotes} onChange={e => setNewInsNotes(e.target.value)} placeholder="Nhập ghi chú hiện trạng xe..." style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Ghi chú nhận xe</label>
+                <textarea rows={2} value={newInsNotes} onChange={e => setNewInsNotes(e.target.value)} placeholder="Tình trạng ban đầu khi nhận xe từ khách..." style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ padding: '8px 14px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
-              <button type="submit" style={{ padding: '8px 18px', background: newInsStatus === 'damaged' ? '#dc2626' : '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}>
-                {newInsStatus === 'damaged' ? 'Lưu & Lập biên bản hư hỏng &rarr;' : 'Hoàn tất tiếp nhận xe'}
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+              <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+              <button type="submit" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Tạo phiếu kiểm tra 8 hạng mục</button>
             </div>
           </form>
         </div>
       )}
 
       {/* ========================================================
-          MODAL 2: LẬP BIÊN BẢN HƯ HỎNG (TỪ KIỂM TRA TRẢ XE)
+          MODAL 2: LẬP BIÊN BẢN HƯ HỎNG
           ======================================================== */}
       {showCreateDamageReportModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 110, padding: '16px' }} onClick={() => setShowCreateDamageReportModal(null)}>
-          <form onSubmit={handleSaveDamageReport} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', maxWidth: '680px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div onClick={() => setShowCreateDamageReportModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <form onSubmit={handleSaveDamageReport} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '660px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileWarning size={22} color="#dc2626" />
-                <div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                    2. Lập biên bản kiểm tra & ghi nhận hư hỏng
-                  </h3>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    Đơn: {showCreateDamageReportModal.bookingCode} • Xe: {showCreateDamageReportModal.vehicleName} ({showCreateDamageReportModal.licensePlate})
-                  </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Lập biên bản kiểm tra & ghi nhận hư hỏng</h3>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  Đơn: {showCreateDamageReportModal.bookingCode} • {showCreateDamageReportModal.vehicleName} ({showCreateDamageReportModal.licensePlate})
                 </div>
               </div>
               <button type="button" onClick={() => setShowCreateDamageReportModal(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '16px' }}>
-              {/* Danh sách từng vị trí hư hỏng */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>Danh sách vị trí hư hỏng chi tiết:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setDmgPositionsList([
-                        ...dmgPositionsList,
-                        {
-                          id: `p-${Date.now()}`,
-                          position: 'Cụm đèn pha trước',
-                          severity: 'medium',
-                          description: 'Nứt chân đế bắt ốc',
-                          photo: SAMPLE_PHOTOS.damageBrokenLight,
-                          suggestedAction: 'replace',
-                          suggestedPartName: 'Cụm đèn pha LED'
-                        }
-                      ]);
-                    }}
-                    style={{ padding: '4px 8px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    + Thêm vị trí hư hỏng
-                  </button>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>Vị trí hư hỏng ({dmgPositionsList.length})</span>
+                <button
+                  type="button"
+                  onClick={() => setDmgPositionsList([...dmgPositionsList, { id: `pos-${Date.now()}`, position: 'Cụm đèn pha trước', severity: 'medium', description: 'Nứt nhẹ viền mica', photo: SAMPLE_PHOTOS.damageBrokenLight, suggestedAction: 'replace', suggestedPartName: 'Cụm đèn pha LED' }])}
+                  style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                >
+                  + Thêm vị trí
+                </button>
+              </div>
+
+              {dmgPositionsList.map((pos, idx) => (
+                <div key={pos.id} style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626' }}>Vị trí #{idx + 1}</span>
+                    {dmgPositionsList.length > 1 && (
+                      <button type="button" onClick={() => setDmgPositionsList(dmgPositionsList.filter(p => p.id !== pos.id))} style={{ border: 'none', background: 'none', color: '#dc2626', fontSize: '12px', cursor: 'pointer' }}>Xóa</button>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', marginBottom: '6px' }}>
+                    <input type="text" value={pos.position} onChange={e => setDmgPositionsList(dmgPositionsList.map(p => (p.id === pos.id ? { ...p, position: e.target.value } : p)))} style={{ width: '100%', padding: '7px 9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }} />
+                    <select value={pos.severity} onChange={e => setDmgPositionsList(dmgPositionsList.map(p => (p.id === pos.id ? { ...p, severity: e.target.value as any } : p)))} style={{ width: '100%', padding: '7px 9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff' }}>
+                      <option value="low">Nhẹ</option>
+                      <option value="medium">Trung bình</option>
+                      <option value="high">Nặng</option>
+                    </select>
+                  </div>
+                  <input type="text" value={pos.description} onChange={e => setDmgPositionsList(dmgPositionsList.map(p => (p.id === pos.id ? { ...p, description: e.target.value } : p)))} style={{ width: '100%', padding: '7px 9px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px' }} />
                 </div>
+              ))}
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {dmgPositionsList.map((pos, idx) => (
-                    <div key={pos.id} style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#dc2626' }}>Vị trí #{idx + 1}</span>
-                        {dmgPositionsList.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => setDmgPositionsList(dmgPositionsList.filter(p => p.id !== pos.id))}
-                            style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '11px' }}
-                          >
-                            Xóa
-                          </button>
-                        )}
-                      </div>
-
-                      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '8px', marginBottom: '6px' }}>
-                        <div>
-                          <label style={{ fontSize: '11px', color: '#475569', display: 'block' }}>Vị trí hư hỏng</label>
-                          <select
-                            value={pos.position}
-                            onChange={e => {
-                              const val = e.target.value;
-                              setDmgPositionsList(dmgPositionsList.map(p => p.id === pos.id ? { ...p, position: val } : p));
-                            }}
-                            style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                          >
-                            <option value="Dàn áo yếm trước bên phải">Dàn áo yếm trước bên phải</option>
-                            <option value="Dàn áo yếm trước bên trái">Dàn áo yếm trước bên trái</option>
-                            <option value="Cụm đèn pha LED trước">Cụm đèn pha LED trước</option>
-                            <option value="Gương chiếu hậu phải">Gương chiếu hậu phải</option>
-                            <option value="Ống xả bô & ốp bô">Ống xả bô & ốp bô</option>
-                            <option value="Tay thắng / tay côn">Tay thắng / tay côn</option>
-                            <option value="Mâm vành xe trước">Mâm vành xe trước</option>
-                            <option value="Dè chắn bùn sau">Dè chắn bùn sau</option>
-                          </select>
-                        </div>
-
-                        <div>
-                          <label style={{ fontSize: '11px', color: '#475569', display: 'block' }}>Mức độ hư hại</label>
-                          <select
-                            value={pos.severity}
-                            onChange={e => {
-                              const val = e.target.value as any;
-                              setDmgPositionsList(dmgPositionsList.map(p => p.id === pos.id ? { ...p, severity: val } : p));
-                            }}
-                            style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                          >
-                            <option value="low">Nhẹ (Trầy xước bề mặt)</option>
-                            <option value="medium">Trung bình (Vỡ nứt nhẹ/móp)</option>
-                            <option value="high">Nặng (Hỏng cụm linh kiện)</option>
-                            <option value="critical">Nghiêm trọng (Mất an toàn)</option>
-                          </select>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '11px', color: '#475569', display: 'block' }}>Mô tả chi tiết vết hư hỏng</label>
-                        <input
-                          type="text"
-                          value={pos.description}
-                          onChange={e => {
-                            const val = e.target.value;
-                            setDmgPositionsList(dmgPositionsList.map(p => p.id === pos.id ? { ...p, description: val } : p));
-                          }}
-                          style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #cbd5e1', fontSize: '12px' }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mức độ thiệt hại tổng thể</label>
-                <select value={dmgOverallSeverity} onChange={e => setDmgOverallSeverity(e.target.value as any)} style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', fontWeight: 800 }}>
-                  <option value="low">Mức độ Thấp (Có thể khắc phục nhanh)</option>
-                  <option value="medium">Mức độ Trung bình (Cần sơn/thay 1 linh kiện nhỏ)</option>
-                  <option value="high">Mức độ Nặng (Cần thay thế cụm linh kiện chính hãng)</option>
-                </select>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Ý kiến khách hàng & Ghi chú</label>
-                <textarea rows={2} value={dmgNotes} onChange={e => setDmgNotes(e.target.value)} placeholder="Khách hàng xác nhận va chạm, đồng ý xem xét chi phí sửa chữa..." style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-              </div>
+              <textarea rows={2} value={dmgNotes} onChange={e => setDmgNotes(e.target.value)} placeholder="Ý kiến khách hàng và ghi chú biên bản..." style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowCreateDamageReportModal(null)} style={{ padding: '8px 14px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
-              <button type="submit" style={{ padding: '8px 18px', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}>
-                Xác nhận & Lưu biên bản hư hỏng
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+              <button type="button" onClick={() => setShowCreateDamageReportModal(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+              <button type="submit" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#dc2626', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Lưu biên bản hư hỏng</button>
             </div>
           </form>
         </div>
       )}
 
       {/* ========================================================
-          MODAL 3: ĐỀ XUẤT SỬA CHỮA & LẬP BÁO GIÁ CHO KHÁCH DUYỆT
+          MODAL 3: LẬP PHIẾU SỬA CHỮA TỪ BIÊN BẢN HƯ HỎNG
           ======================================================== */}
       {showCreateRepairModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }} onClick={() => setShowCreateRepairModal(null)}>
-          <form onSubmit={handleSaveRepairOrder} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', maxWidth: '720px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div onClick={() => setShowCreateRepairModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <form onSubmit={handleSaveRepairOrder} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '680px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <DollarSign size={22} color="#2563eb" />
-                <div>
-                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                    3. Đề xuất sửa chữa & Lập báo giá phụ tùng
-                  </h3>
-                  <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    Theo Biên bản: {showCreateRepairModal.code} • Xe: {showCreateRepairModal.vehicleName} ({showCreateRepairModal.licensePlate})
-                  </div>
-                </div>
+              <div>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Lập đề xuất sửa chữa & báo giá</h3>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>Từ {showCreateRepairModal.code} • {showCreateRepairModal.vehicleName} ({showCreateRepairModal.licensePlate})</div>
               </div>
               <button type="button" onClick={() => setShowCreateRepairModal(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '16px' }}>
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Phương án sửa chữa đề xuất</label>
-                <input
-                  type="text"
-                  placeholder="Ví dụ: Thay cụm đèn pha LED chính hãng, hàn pát nhựa và sơn sấy yếm trước..."
-                  value={repSolutionText}
-                  onChange={e => setRepSolutionText(e.target.value)}
-                  required
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <input type="text" required value={repSolutionText} onChange={e => setRepSolutionText(e.target.value)} placeholder="Phương án sửa chữa đề xuất..." style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+
+              <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '8px' }}>
+                {partsCatalog.map(p => {
+                  const isSel = repSelectedParts.some(x => x.partId === p.id);
+                  return (
+                    <label key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', borderRadius: '7px', background: isSel ? '#eff6ff' : 'transparent', cursor: 'pointer', fontSize: '12.5px' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <input
+                          type="checkbox"
+                          checked={isSel}
+                          onChange={() =>
+                            setRepSelectedParts(isSel ? repSelectedParts.filter(x => x.partId !== p.id) : [...repSelectedParts, { partId: p.id, quantity: 1 }])
+                          }
+                        />
+                        <strong>{p.name}</strong>
+                      </span>
+                      <span style={{ fontWeight: 700, color: '#2563eb' }}>{p.unitPrice.toLocaleString('vi-VN')} đ</span>
+                    </label>
+                  );
+                })}
               </div>
 
-              {/* Tích chọn phụ tùng từ kho */}
-              <div>
-                <label style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                  Lựa chọn phụ tùng thay thế từ kho chính hãng:
-                </label>
-                <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '6px' }}>
-                  {PARTS_CATALOG.map(p => {
-                    const isSelected = repSelectedParts.some(x => x.partId === p.id);
-                    return (
-                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 10px', borderRadius: '6px', background: isSelected ? '#eff6ff' : 'transparent', borderBottom: '1px solid #f1f5f9' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12.5px', cursor: 'pointer', flex: 1 }}>
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => {
-                              if (isSelected) {
-                                setRepSelectedParts(repSelectedParts.filter(x => x.partId !== p.id));
-                              } else {
-                                setRepSelectedParts([...repSelectedParts, { partId: p.id, quantity: 1 }]);
-                              }
-                            }}
-                          />
-                          <div>
-                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{p.name}</span>
-                            <span style={{ fontSize: '11px', color: '#64748b', marginLeft: '6px' }}>({p.code})</span>
-                          </div>
-                        </label>
-                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>
-                          {p.unitPrice.toLocaleString()}đ <span style={{ fontSize: '10.5px', color: '#64748b' }}>(+công {p.laborFee.toLocaleString()}đ)</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Bảng tính tổng tiền báo giá */}
-              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b', marginBottom: '4px' }}>
-                  <span>Tiền phụ tùng:</span>
-                  <span style={{ fontWeight: 700 }}>{modalQuoteCalc.partsPrice.toLocaleString()}đ</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12.5px', color: '#64748b', marginBottom: '6px' }}>
-                  <span>Tiền công kỹ thuật:</span>
-                  <span style={{ fontWeight: 700 }}>{modalQuoteCalc.laborPrice.toLocaleString()}đ</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '16px', fontWeight: 900, color: '#0f172a', borderTop: '1px solid #e2e8f0', paddingTop: '8px' }}>
-                  <span>TỔNG CHI PHÍ BÁO GIÁ:</span>
-                  <span style={{ color: '#2563eb' }}>{modalQuoteCalc.grandTotal.toLocaleString()}đ</span>
-                </div>
+              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '13px', fontWeight: 700 }}>Tổng báo giá dự kiến (kèm công thợ):</span>
+                <strong style={{ fontSize: '17px', color: '#2563eb' }}>
+                  {(modalQuoteCalc.partsPrice + (modalQuoteCalc.laborPrice || 150000)).toLocaleString('vi-VN')} đ
+                </strong>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowCreateRepairModal(null)} style={{ padding: '8px 14px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
-              <button type="submit" style={{ padding: '8px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}>
-                Lập báo giá & Gửi khách hàng xác nhận &rarr;
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+              <button type="button" onClick={() => setShowCreateRepairModal(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+              <button type="submit" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Tạo phiếu sửa chữa →</button>
             </div>
           </form>
         </div>
       )}
 
       {/* ========================================================
-          MODAL 4: NGHIỆM THU & CẬP NHẬT KẾT QUẢ SỬA CHỮA (BƯỚC 6)
-          ======================================================== */}
-      {showCompleteRepairModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }} onClick={() => setShowCompleteRepairModal(null)}>
-          <form onSubmit={handleCompleteRepairOrder} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle2 size={22} color="#16a34a" />
-                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                  6. Cập nhật kết quả sửa chữa & Nghiệm thu xe
-                </h3>
-              </div>
-              <button type="button" onClick={() => setShowCompleteRepairModal(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', marginBottom: '16px' }}>
-              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '12.5px' }}>
-                <div><strong>Mã phiếu:</strong> {showCompleteRepairModal.code} • <strong>Xe:</strong> {showCompleteRepairModal.vehicleName} ({showCompleteRepairModal.licensePlate})</div>
-                <div><strong>Khách hàng:</strong> {showCompleteRepairModal.customerName} ({showCompleteRepairModal.customerPhone})</div>
-              </div>
-
-              {/* Chụp ảnh phụ tùng mới & Ảnh vị trí xe sau khi sửa */}
-              <div>
-                <label style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', display: 'block', marginBottom: '6px' }}>
-                  Ảnh minh chứng sau khi hoàn thành sửa chữa (Bắt buộc đối chứng):
-                </label>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#475569', display: 'block', marginBottom: '2px' }}>1. Ảnh phụ tùng mới đã lắp:</span>
-                    <img src={compPartPhoto} alt="New Part" style={{ width: '100%', height: '110px', borderRadius: '6px', objectFit: 'cover' }} />
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#475569', display: 'block', marginBottom: '2px' }}>2. Ảnh vị trí xe sau khi hoàn tất:</span>
-                    <img src={compAfterPhoto} alt="After Repaired" style={{ width: '100%', height: '110px', borderRadius: '6px', objectFit: 'cover' }} />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Chi phí thực tế phát sinh (đ)</label>
-                <input
-                  type="number"
-                  value={compActualCost}
-                  onChange={e => setCompActualCost(Number(e.target.value))}
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Ghi chú nghiệm thu & Đánh giá an toàn</label>
-                <textarea
-                  rows={2}
-                  value={compNotes}
-                  onChange={e => setCompNotes(e.target.value)}
-                  placeholder="Xe đã nổ máy êm, phanh nhạy, không rò rỉ, sẵn sàng tiếp tục cho thuê..."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowCompleteRepairModal(null)} style={{ padding: '8px 14px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
-              <button type="submit" style={{ padding: '8px 20px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 800, cursor: 'pointer' }}>
-                Xác nhận hoàn thành & Nghiệm thu
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* ========================================================
-          MODAL 5: PHÓNG TO SO SÁNH ĐỐI CHỨNG ẢNH TRƯỚC & SAU
+          MODAL 4: SO SÁNH ẢNH ĐỐI CHỨNG
           ======================================================== */}
       {showPhotoCompareModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 130, padding: '20px' }} onClick={() => setShowPhotoCompareModal(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', maxWidth: '860px', width: '100%', maxHeight: '92vh', overflowY: 'auto' }}>
+        <div onClick={() => setShowPhotoCompareModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.85)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 130, padding: '20px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '860px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <div>
-                <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>{showPhotoCompareModal.title}</h3>
+                <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>{showPhotoCompareModal.title}</h3>
                 <div style={{ fontSize: '12.5px', color: '#64748b' }}>{showPhotoCompareModal.subtitle}</div>
               </div>
               <button type="button" onClick={() => setShowPhotoCompareModal(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              {/* TRƯỚC */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '14px' }}>
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: '2px solid #cbd5e1', background: '#f8fafc' }}>
                 <div style={{ background: '#1e293b', color: '#ffffff', padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-                  📸 ẢNH TRƯỚC ({showPhotoCompareModal.beforeImgs.length || 1} ảnh lúc bàn giao)
+                  ẢNH TRƯỚC ({showPhotoCompareModal.beforeImgs.length || 1} ảnh)
                 </div>
                 <div style={{ padding: '10px', display: 'grid', gridTemplateColumns: showPhotoCompareModal.beforeImgs.length > 1 ? '1fr 1fr' : '1fr', gap: '8px' }}>
                   {(showPhotoCompareModal.beforeImgs.length > 0 ? showPhotoCompareModal.beforeImgs : [SAMPLE_PHOTOS.cleanFront]).map((src, i) => (
-                    <img key={i} src={src} alt={`Before ${i + 1}`} style={{ width: '100%', height: showPhotoCompareModal.beforeImgs.length > 1 ? '150px' : '260px', objectFit: 'cover', borderRadius: '8px' }} />
+                    <img key={i} src={src} alt="Before" style={{ width: '100%', height: showPhotoCompareModal.beforeImgs.length > 1 ? '145px' : '250px', objectFit: 'cover', borderRadius: '8px' }} />
                   ))}
                 </div>
               </div>
 
-              {/* SAU */}
               <div style={{ borderRadius: '12px', overflow: 'hidden', border: '2px solid #86efac', background: '#f0fdf4' }}>
                 <div style={{ background: '#16a34a', color: '#ffffff', padding: '8px', fontSize: '12px', fontWeight: 800, textAlign: 'center' }}>
-                  ✓ ẢNH SAU ({showPhotoCompareModal.afterImgs.length || 1} ảnh khi trả / kiểm tra)
+                  ẢNH SAU ({showPhotoCompareModal.afterImgs.length || 1} ảnh)
                 </div>
                 <div style={{ padding: '10px', display: 'grid', gridTemplateColumns: showPhotoCompareModal.afterImgs.length > 1 ? '1fr 1fr' : '1fr', gap: '8px' }}>
                   {(showPhotoCompareModal.afterImgs.length > 0 ? showPhotoCompareModal.afterImgs : [SAMPLE_PHOTOS.repairedPerfect]).map((src, i) => (
-                    <img key={i} src={src} alt={`After ${i + 1}`} style={{ width: '100%', height: showPhotoCompareModal.afterImgs.length > 1 ? '150px' : '260px', objectFit: 'cover', borderRadius: '8px' }} />
+                    <img key={i} src={src} alt="After" style={{ width: '100%', height: showPhotoCompareModal.afterImgs.length > 1 ? '145px' : '250px', objectFit: 'cover', borderRadius: '8px' }} />
                   ))}
                 </div>
               </div>
             </div>
 
             {showPhotoCompareModal.notes && (
-              <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '12.5px', color: '#334155', fontStyle: 'italic', marginBottom: '16px' }}>
-                <strong>Ghi chú đối chứng:</strong> "{showPhotoCompareModal.notes}"
+              <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '8px', fontSize: '12.5px', color: '#334155', marginBottom: '12px' }}>
+                <strong>Ghi chú:</strong> {showPhotoCompareModal.notes}
               </div>
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button type="button" onClick={() => setShowPhotoCompareModal(null)} style={{ padding: '8px 20px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>
-                Đóng đối chứng
-              </button>
+              <button type="button" onClick={() => setShowPhotoCompareModal(null)} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}>Đóng</button>
             </div>
           </div>
         </div>
       )}
 
       {/* ========================================================
-          MODAL 6: CHI TIẾT KIỂM TRA XE KHI TRẢ
+          MODAL 5: CHI TIẾT PHIẾU KIỂM TRA
           ======================================================== */}
       {selectedInspectionForDetail && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.8)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }} onClick={() => setSelectedInspectionForDetail(null)}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '20px', padding: '24px', maxWidth: '640px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div onClick={() => setSelectedInspectionForDetail(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
               <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                Chi tiết phiếu kiểm tra đơn #{selectedInspectionForDetail.bookingCode}
+                Chi tiết phiếu {selectedInspectionForDetail.inspectionCode} ({selectedInspectionForDetail.bookingCode})
               </h3>
               <button type="button" onClick={() => setSelectedInspectionForDetail(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
             </div>
 
-            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '8px', fontSize: '12.5px', marginBottom: '14px' }}>
+            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', fontSize: '12.5px', marginBottom: '14px' }}>
               <div><strong>Xe:</strong> {selectedInspectionForDetail.vehicleName} (<span style={{ color: '#2563eb' }}>{selectedInspectionForDetail.licensePlate}</span>)</div>
               <div><strong>Khách hàng:</strong> {selectedInspectionForDetail.customerName} ({selectedInspectionForDetail.customerPhone})</div>
-              <div><strong>Số km Odo:</strong> Giao {selectedInspectionForDetail.deliveryOdometer.toLocaleString()} km &rarr; Trả {selectedInspectionForDetail.returnOdometer.toLocaleString()} km</div>
+              <div><strong>ODO:</strong> {selectedInspectionForDetail.deliveryOdometer.toLocaleString('vi-VN')} → {selectedInspectionForDetail.returnOdometer.toLocaleString('vi-VN')} km</div>
             </div>
 
-            {/* Ảnh đối chiếu */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-              <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                <img src={selectedInspectionForDetail.deliveryImages[0] || SAMPLE_PHOTOS.cleanFront} alt="Delivery" style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
-                <div style={{ padding: '4px', background: '#1e293b', color: '#fff', fontSize: '11px', textAlign: 'center', fontWeight: 700 }}>Ảnh lúc giao xe</div>
-              </div>
-              <div style={{ borderRadius: '8px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                <img src={selectedInspectionForDetail.returnImages[0] || SAMPLE_PHOTOS.damageScratched} alt="Return" style={{ width: '100%', height: '140px', objectFit: 'cover' }} />
-                <div style={{ padding: '4px', background: selectedInspectionForDetail.status === 'damaged' ? '#dc2626' : '#16a34a', color: '#fff', fontSize: '11px', textAlign: 'center', fontWeight: 700 }}>
-                  {selectedInspectionForDetail.status === 'damaged' ? 'Ảnh lúc nhận xe trả (Hư hại)' : 'Ảnh lúc nhận xe trả (Đạt)'}
-                </div>
-              </div>
+              <img src={selectedInspectionForDetail.deliveryImages[0] || SAMPLE_PHOTOS.cleanFront} alt="Before" style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} />
+              <img src={selectedInspectionForDetail.returnImages[0] || SAMPLE_PHOTOS.cleanRear} alt="After" style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} />
             </div>
 
-            <div style={{ fontSize: '12.5px', color: '#475569', marginBottom: '16px' }}>
-              <strong>Ghi chú kiểm tra:</strong> "{selectedInspectionForDetail.notes}"
+            <div style={{ fontSize: '12.5px', color: '#475569', marginBottom: '14px' }}>
+              <strong>Ghi chú:</strong> {selectedInspectionForDetail.notes}
             </div>
 
-            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-              {selectedInspectionForDetail.status === 'damaged' && !selectedInspectionForDetail.hasDamageReport && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const ins = selectedInspectionForDetail;
-                    setSelectedInspectionForDetail(null);
-                    setShowCreateDamageReportModal(ins);
-                  }}
-                  style={{ padding: '8px 16px', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
-                >
-                  + Lập biên bản hư hỏng
-                </button>
-              )}
-              <button type="button" onClick={() => setSelectedInspectionForDetail(null)} style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
-                Đóng
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  const id = selectedInspectionForDetail.id;
+                  setSelectedInspectionForDetail(null);
+                  setActiveInspectionId(id);
+                  setActiveTab('return_inspection');
+                }}
+                style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Mở trong workspace 8 hạng mục
               </button>
+              <button type="button" onClick={() => setSelectedInspectionForDetail(null)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Đóng</button>
             </div>
           </div>
         </div>
       )}
 
+      {/* ========================================================
+          MODAL 6: CHI TIẾT XE & CẬP NHẬT TRẠNG THÁI
+          ======================================================== */}
+      {selectedVehicleDetail && (
+        <div onClick={() => setSelectedVehicleDetail(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                {selectedVehicleDetail.name} ({selectedVehicleDetail.licensePlate})
+              </h3>
+              <button type="button" onClick={() => setSelectedVehicleDetail(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+
+            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '14px' }}>
+              <img src={selectedVehicleDetail.image || SAMPLE_PHOTOS.cleanFront} alt={selectedVehicleDetail.name} style={{ width: '96px', height: '72px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '13px', color: '#475569' }}>Hãng: <strong>{selectedVehicleDetail.brand}</strong> • Loại: <strong>{selectedVehicleDetail.type}</strong></div>
+                <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>ODO hiện tại: <strong>{(selectedVehicleDetail.odometer || 12000).toLocaleString('vi-VN')} km</strong></div>
+                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Cập nhật trạng thái:</span>
+                  <select
+                    value={selectedVehicleDetail.status}
+                    onChange={e => handleUpdateVehicleStatus(selectedVehicleDetail, e.target.value as any)}
+                    style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700, background: '#ffffff' }}
+                  >
+                    <option value="available">Sẵn sàng</option>
+                    <option value="rented">Đang cho thuê</option>
+                    <option value="maintenance">Đang bảo dưỡng</option>
+                    <option value="broken">Đang hư hỏng</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button type="button" onClick={() => setSelectedVehicleDetail(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 7: THÊM PHỤ TÙNG MỚI
+          ======================================================== */}
+      {showAddPartModal && (
+        <div onClick={() => setShowAddPartModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              const newItem: PartItem = {
+                id: `p-${Date.now()}`,
+                code: newPartCode.trim() || `PT-NEW-${partsCatalog.length + 1}`,
+                name: newPartName.trim(),
+                category: newPartCategory,
+                unitPrice: newPartPrice,
+                laborFee: newPartLabor,
+                warranty: '6 tháng',
+                stock: newPartStock,
+                compatible: 'Đa dòng xe'
+              };
+              setPartsCatalog(prev => [newItem, ...prev]);
+              setShowAddPartModal(false);
+              setNewPartCode('');
+              setNewPartName('');
+              toast.success('Đã thêm phụ tùng mới vào kho!');
+            }}
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '500px', width: '100%' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Thêm phụ tùng vào kho</h3>
+              <button type="button" onClick={() => setShowAddPartModal(false)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <input type="text" value={newPartCode} onChange={e => setNewPartCode(e.target.value)} placeholder="Mã PT (VD: PT-ELC-01)" style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+              <input type="text" required value={newPartName} onChange={e => setNewPartName(e.target.value)} placeholder="Tên linh kiện *" style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+              <select value={newPartCategory} onChange={e => setNewPartCategory(e.target.value)} style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#ffffff' }}>
+                <option value="Động cơ & Đánh lửa">Động cơ & Đánh lửa</option>
+                <option value="Hệ thống phanh">Hệ thống phanh</option>
+                <option value="Dàn áo & Nhựa">Dàn áo & Nhựa</option>
+                <option value="Hệ thống đèn">Hệ thống đèn</option>
+                <option value="Lốp & Bánh xe">Lốp & Bánh xe</option>
+              </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <input type="number" value={newPartPrice} onChange={e => setNewPartPrice(Number(e.target.value))} placeholder="Giá bán" style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }} />
+                <input type="number" value={newPartLabor} onChange={e => setNewPartLabor(Number(e.target.value))} placeholder="Công lắp" style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }} />
+                <input type="number" value={newPartStock} onChange={e => setNewPartStock(Number(e.target.value))} placeholder="Số lượng" style={{ padding: '8px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px' }} />
+              </div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
+              <button type="button" onClick={() => setShowAddPartModal(false)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+              <button type="submit" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Lưu phụ tùng</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL 8: TẠO & XEM CHI TIẾT BẢO DƯỠNG
+          ======================================================== */}
+      {showNewMaintModal && (
+        <div onClick={() => setShowNewMaintModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              const veh = vehicles.find(v => v._id === newMaintVehId) || vehicles[0];
+              const created: MaintenanceRecord = {
+                _id: `m-${Date.now()}`,
+                vehicle: { _id: veh._id, name: veh.name, licensePlate: veh.licensePlate },
+                technician: { fullName: displayTechName },
+                type: 'Định kỳ',
+                title: newMaintTitle,
+                status: 'scheduled',
+                scheduledDate: newMaintDate,
+                cost: newMaintCost,
+                notes: newMaintNotes
+              };
+              setMaintenances(prev => [created, ...prev]);
+              setShowNewMaintModal(false);
+              toast.success('Đã tạo lịch bảo dưỡng mới!');
+            }}
+            onClick={e => e.stopPropagation()}
+            style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '500px', width: '100%' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Tạo lịch bảo dưỡng mới</h3>
+              <button type="button" onClick={() => setShowNewMaintModal(false)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <select value={newMaintVehId || vehicles[0]?._id} onChange={e => setNewMaintVehId(e.target.value)} style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#ffffff' }}>
+                {vehicles.map(v => <option key={v._id} value={v._id}>{v.name} ({v.licensePlate})</option>)}
+              </select>
+              <input type="text" required value={newMaintTitle} onChange={e => setNewMaintTitle(e.target.value)} placeholder="Hạng mục bảo dưỡng" style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                <input type="date" value={newMaintDate} onChange={e => setNewMaintDate(e.target.value)} style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                <input type="number" value={newMaintCost} onChange={e => setNewMaintCost(Number(e.target.value))} placeholder="Chi phí dự kiến" style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+              </div>
+              <textarea rows={2} value={newMaintNotes} onChange={e => setNewMaintNotes(e.target.value)} placeholder="Ghi chú..." style={{ padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '14px' }}>
+              <button type="button" onClick={() => setShowNewMaintModal(false)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+              <button type="submit" style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Lưu lịch bảo dưỡng</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {selectedMaintDetail && (
+        <div onClick={() => setSelectedMaintDetail(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '500px', width: '100%' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Phiếu bảo dưỡng BD#{selectedMaintDetail._id.slice(-4).toUpperCase()}</h3>
+              <button type="button" onClick={() => setSelectedMaintDetail(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
+            </div>
+            <div style={{ background: '#f8fafc', padding: '12px', borderRadius: '10px', fontSize: '13px', display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '14px' }}>
+              <div><strong>Xe:</strong> {selectedMaintDetail.vehicle?.name} ({selectedMaintDetail.vehicle?.licensePlate})</div>
+              <div><strong>Hạng mục:</strong> {selectedMaintDetail.title}</div>
+              <div><strong>Ngày thực hiện:</strong> {selectedMaintDetail.scheduledDate}</div>
+              <div><strong>Chi phí:</strong> {(selectedMaintDetail.cost || 0).toLocaleString('vi-VN')} đ</div>
+              <div><strong>Ghi chú:</strong> {selectedMaintDetail.notes || 'Không có'}</div>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button type="button" onClick={() => setSelectedMaintDetail(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Đóng</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
