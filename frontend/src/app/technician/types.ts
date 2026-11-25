@@ -15,17 +15,17 @@ export interface InspectionChecklistItem {
 
 export interface DamagePin {
   id: string;
-  x: number; // percentage 0..100
-  y: number; // percentage 0..100
+  x: number;
+  y: number;
   label: string;
   severity: 'low' | 'medium' | 'high';
 }
 
 export interface ReturnInspectionItem {
   id: string;
-  inspectionCode: string; // VD: KT-2026-042
+  inspectionCode: string;
   bookingId: string;
-  bookingCode: string; // VD: HD-DN-2026-318
+  bookingCode: string;
   isRealBooking?: boolean;
   customerName: string;
   customerPhone: string;
@@ -39,14 +39,11 @@ export interface ReturnInspectionItem {
   returnDate: string;
   deliveryOdometer: number;
   returnOdometer: number;
-  fuelLevel: number; // 0 - 100
-  // Đối chiếu ảnh trước và sau khi thuê
+  fuelLevel: number;
   deliveryImages: string[];
   returnImages: string[];
-  // 8 hạng mục kiểm tra chi tiết & ghim vị trí hư hỏng trên xe
   checklist: InspectionChecklistItem[];
   pins: DamagePin[];
-  // Tiêu chí kiểm tra an toàn (đồng bộ với Dashboard & Modal chi tiết)
   brakes: boolean;
   tires: boolean;
   lightsAndHorn: boolean;
@@ -89,6 +86,134 @@ export interface DamageReportItem {
   customerAgreedSignature?: boolean;
 }
 
+export type RepairStatus =
+  | 'waiting_quote'
+  | 'waiting_approval'
+  | 'customer_approved'
+  | 'in_progress'
+  | 'waiting_acceptance'
+  | 'completed'
+  | 'customer_rejected';
+
+export interface RepairPartLine {
+  partId: string;
+  partCode: string;
+  name: string;
+  actionMethod?: string;
+  quantity: number;
+  unitPrice: number;
+  laborFee: number;
+  total: number;
+  isActualUsed?: boolean;
+}
+
+export interface RepairDamageEvidenceItem {
+  id: string;
+  title: string;
+  severity: SeverityLevel;
+  actionLabel: string;
+  location: string;
+  description: string;
+  beforePhotos: string[];
+  newPartPhotos: string[];
+  afterPhotos: string[];
+}
+
+export interface RepairLogEntry {
+  id: string;
+  title: string;
+  note?: string;
+  actor: string;
+  timestamp: string;
+}
+
+export interface RepairItem {
+  id: string;
+  code: string;
+  damageReportId?: string;
+  damageReportCode?: string;
+  bookingCode: string;
+  vehicleId: string;
+  vehicleCode?: string;
+  vehicleName: string;
+  licensePlate: string;
+  vehicleOdo?: number;
+  vehicleType?: string;
+  vehicleColor?: string;
+  vehicleImage?: string;
+  customerName: string;
+  customerPhone: string;
+  issueSummary: string;
+  proposedSolution: string;
+  parts: RepairPartLine[];
+  totalPartsPrice: number;
+  totalLaborFee: number;
+  totalEstimatedCost: number;
+  actualCost?: number;
+  status: RepairStatus;
+  progressPercent: number;
+  customerFeedbackDate?: string;
+  customerFeedbackNote?: string;
+  technicianName: string;
+  technicianNotes?: string;
+  damageItems?: RepairDamageEvidenceItem[];
+  beforePhotos: string[];
+  afterPhotos: string[];
+  replacementPhotos: string[];
+  completionNotes?: string;
+  logs?: RepairLogEntry[];
+  createdAt: string;
+  updatedAt?: string;
+  completedAt?: string;
+}
+
+export interface PartItem {
+  id: string;
+  code: string;
+  name: string;
+  category: string;
+  unitPrice: number;
+  laborFee: number;
+  warranty: string;
+  stock: number;
+  compatible: string;
+}
+
+export interface CustomerUserItem {
+  _id: string;
+  customerCode: string;
+  fullName: string;
+  phone: string;
+  email?: string;
+  cccd?: string;
+  drivingLicense?: string;
+  drivingLicenseClass?: string;
+  customerType: 'standard' | 'walk_in' | 'high_risk';
+  customerTier: string;
+  address?: string;
+  isBlacklisted?: boolean;
+  riskReason?: string;
+  notes?: string;
+  debtAmount?: number;
+  totalRentals?: number;
+  isRealRecord?: boolean;
+  createdAt?: string;
+}
+
+export interface TechnicianStaffItem {
+  id: string;
+  code: string;
+  fullName: string;
+  roleTitle: string;
+  phone: string;
+  email: string;
+  specialty: string;
+  shift: string;
+  activeJobs: number;
+  completedJobs: number;
+  status: 'online' | 'busy' | 'off_duty';
+}
+
 export const SAMPLE_PHOTOS = {
   cleanFront: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=900&q=80',
   cleanRear: 'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?auto=format&fit=crop&w=900&q=80',
@@ -99,7 +224,9 @@ export const SAMPLE_PHOTOS = {
   newPartInstalled: 'https://images.unsplash.com/photo-1558981806-ec527fa84c39?auto=format&fit=crop&w=900&q=80'
 };
 
-export function createDefaultChecklist(overrides?: Partial<Record<InspectionChecklistItem['key'], Partial<InspectionChecklistItem>>>): InspectionChecklistItem[] {
+export function createDefaultChecklist(
+  overrides?: Partial<Record<InspectionChecklistItem['key'], Partial<InspectionChecklistItem>>>
+): InspectionChecklistItem[] {
   const base: Array<Omit<InspectionChecklistItem, 'status' | 'damageLocation' | 'damageSeverity' | 'photos'> & { defaultNote: string }> = [
     { id: 'chk-1', order: 1, key: 'overall', title: 'Kiểm tra tổng thể xe', note: '', defaultNote: 'Xe sạch sẽ, không va đập.' },
     { id: 'chk-2', order: 2, key: 'engine', title: 'Kiểm tra động cơ', note: '', defaultNote: 'Động cơ êm, sang số mượt.' },

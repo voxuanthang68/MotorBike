@@ -43,13 +43,19 @@ import {
   ThumbsDown,
   ArrowRight,
   Sparkles,
-  Layers
+  Layers,
+  Users
 } from 'lucide-react';
 import ReturnInspectionWorkspace from './ReturnInspectionWorkspace';
+import RepairManagementWorkspace from './RepairManagementWorkspace';
+import UserManagementWorkspace from './UserManagementWorkspace';
 import {
   ReturnInspectionItem,
   DamagePosition,
   DamageReportItem,
+  RepairPartLine,
+  RepairItem,
+  PartItem,
   SAMPLE_PHOTOS,
   createDefaultChecklist
 } from './types';
@@ -94,65 +100,6 @@ export interface MaintenanceRecord {
   beforeImage?: string;
   afterImage?: string;
   nextMaintenanceDate?: string;
-}
-
-// 3. Phiếu sửa chữa & Báo giá
-export interface RepairPartLine {
-  partId: string;
-  partCode: string;
-  name: string;
-  quantity: number;
-  unitPrice: number;
-  laborFee: number;
-  total: number;
-  isActualUsed?: boolean;
-}
-
-export interface RepairItem {
-  id: string;
-  code: string; // VD: SC-2611-001
-  damageReportId?: string;
-  damageReportCode?: string;
-  bookingCode: string;
-  vehicleId: string;
-  vehicleName: string;
-  licensePlate: string;
-  customerName: string;
-  customerPhone: string;
-  issueSummary: string;
-  proposedSolution: string;
-  parts: RepairPartLine[];
-  totalPartsPrice: number;
-  totalLaborFee: number;
-  totalEstimatedCost: number;
-  actualCost?: number;
-  // Quy trình trạng thái:
-  // 1. Chờ duyệt báo giá -> 2. Khách duyệt/từ chối -> 3. Đang sửa -> 4. Hoàn thành
-  status: 'waiting_approval' | 'customer_approved' | 'customer_rejected' | 'in_progress' | 'completed';
-  progressPercent: number;
-  customerFeedbackDate?: string;
-  customerFeedbackNote?: string;
-  technicianName: string;
-  // Ảnh minh chứng trước và sau
-  beforePhotos: string[];
-  afterPhotos: string[];
-  replacementPhotos: string[];
-  completionNotes?: string;
-  createdAt: string;
-  completedAt?: string;
-}
-
-// 4. Phụ tùng chính hãng
-export interface PartItem {
-  id: string;
-  code: string;
-  name: string;
-  category: string;
-  unitPrice: number;
-  laborFee: number;
-  warranty: string;
-  stock: number;
-  compatible: string;
 }
 
 export interface AppNotification {
@@ -201,6 +148,7 @@ export default function TechnicianPortalPage() {
     | 'reports'             // 9. Báo cáo thống kê
     | 'notifications'       // 10. Thông báo
     | 'profile'             // 11. Tài khoản cá nhân
+    | 'user_management'     // 12. Quản lý người dùng
   >('home');
 
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -213,6 +161,7 @@ export default function TechnicianPortalPage() {
   const [realBookings, setRealBookings] = useState<any[]>([]);
   const [selectedRealBookingId, setSelectedRealBookingId] = useState<string>('');
   const [activeInspectionId, setActiveInspectionId] = useState<string>('ins-042');
+  const [selectedRepairId, setSelectedRepairId] = useState<string | null>(null);
 
   // 1. Dữ liệu Kiểm tra xe khi trả (đồng bộ 8 hạng mục + ghim vị trí hư hỏng)
   const [returnInspections, setReturnInspections] = useState<ReturnInspectionItem[]>([
@@ -399,102 +348,212 @@ export default function TechnicianPortalPage() {
   // 3. Dữ liệu Quản lý sửa chữa
   const [repairs, setRepairs] = useState<RepairItem[]>([
     {
-      id: 'rep-01',
-      code: 'SC-2611-001',
+      id: 'rep-020',
+      code: 'PSC-2026-020',
       damageReportId: 'dmg-01',
-      damageReportCode: 'BBHD-2611-001',
-      bookingCode: 'DH-202611-028',
-      vehicleId: 'v-1',
-      vehicleName: 'Honda Vision 2026',
-      licensePlate: '43E1-737.37',
-      customerName: 'Trần Văn Hoàng',
-      customerPhone: '0912 345 678',
-      issueSummary: 'Nứt chóa đèn pha LED & trầy xước dàn áo yếm phải',
-      proposedSolution: 'Thay cụm đèn pha LED chính hãng mới, hàn chốt nhựa và sơn phục hồi yếm trước',
+      damageReportCode: 'BBHH-2026-023',
+      bookingCode: 'HD-DN-2026-318',
+      vehicleId: 'v-3',
+      vehicleCode: 'MR-DN-002',
+      vehicleName: 'Honda CB150X Adventure',
+      licensePlate: '43A1-118.62',
+      vehicleOdo: 16210,
+      vehicleType: 'Xe côn tay',
+      vehicleColor: 'Đen nhám',
+      vehicleImage: SAMPLE_PHOTOS.adventureSide,
+      customerName: 'Lê Thảo Nguyên',
+      customerPhone: '0983 511 042',
+      issueSummary: 'Kiểm tra lốp xe hơi non và chân gương phải lỏng ốc',
+      proposedSolution: 'Khắc phục các hạng mục theo BBHH-2026-023: Kiểm tra lốp xe, Kiểm tra đèn & gương',
       parts: [
         {
-          partId: 'p13',
-          partCode: 'PT-LGT-01',
-          name: 'Cụm chóa đèn pha LED 2 tầng siêu sáng',
+          partId: 'p11',
+          partCode: 'PT-MIR-01',
+          name: 'Gương chiếu hậu nguyên bản Honda (Cặp)',
+          actionMethod: 'Thay mới chính hãng',
           quantity: 1,
-          unitPrice: 550000,
-          laborFee: 50000,
-          total: 600000,
-          isActualUsed: true
-        },
-        {
-          partId: 'p12',
-          partCode: 'PT-BDY-01',
-          name: 'Công hàn pát nhựa và sơn sấy phục hồi yếm trước',
-          quantity: 1,
-          unitPrice: 180000,
-          laborFee: 50000,
-          total: 230000,
-          isActualUsed: true
+          unitPrice: 780000,
+          laborFee: 150000,
+          total: 780000,
+          isActualUsed: false
         }
       ],
-      totalPartsPrice: 730000,
-      totalLaborFee: 100000,
-      totalEstimatedCost: 830000,
-      actualCost: 830000,
-      status: 'in_progress', // Đang sửa chữa sau khi khách đồng ý
+      totalPartsPrice: 780000,
+      totalLaborFee: 150000,
+      totalEstimatedCost: 930000,
+      status: 'customer_approved',
+      progressPercent: 40,
+      customerFeedbackDate: '2026-11-25 17:02',
+      customerFeedbackNote: 'Khách hàng đã xác nhận đồng ý phương án và chi phí báo giá.',
+      technicianName: 'Nguyễn Minh Quân',
+      damageItems: [
+        {
+          id: 'di-020-1',
+          title: 'Kiểm tra lốp & chân gương',
+          severity: 'medium',
+          actionLabel: 'Sửa chữa / thay thế',
+          location: 'Lốp sau & Chân gương phải',
+          description: 'Khắc phục các hạng mục theo BBHH-2026-023: vá/bơm lốp chuẩn áp suất và thay chân gương.',
+          beforePhotos: [SAMPLE_PHOTOS.adventureSide],
+          newPartPhotos: [],
+          afterPhotos: []
+        }
+      ],
+      beforePhotos: [SAMPLE_PHOTOS.adventureSide],
+      afterPhotos: [],
+      replacementPhotos: [],
+      createdAt: '2026-11-25 16:59',
+      updatedAt: '2026-11-25 17:02'
+    },
+    {
+      id: 'rep-014',
+      code: 'PSC-2026-014',
+      bookingCode: 'HD-DN-2026-278',
+      vehicleId: 'v-2',
+      vehicleCode: 'MR-DN-003',
+      vehicleName: 'Honda Winner X 150 ABS',
+      licensePlate: '43D1-654.12',
+      vehicleOdo: 18400,
+      vehicleType: 'Xe côn tay',
+      vehicleColor: 'Đỏ đen',
+      vehicleImage: SAMPLE_PHOTOS.cleanRear,
+      customerName: 'Đặng Tuấn Anh',
+      customerPhone: '0935 777 666',
+      issueSummary: 'Vỡ cánh yếm trước phải, cong tay phanh và mòn má phanh',
+      proposedSolution: 'Thay mới cánh yếm trước phải chính hãng, thay tay phanh nhôm và cặp má phanh đĩa',
+      parts: [
+        { partId: 'p12', partCode: 'PT-BDY-01', name: 'Cánh yếm trước phải chính hãng', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 780000, laborFee: 80000, total: 780000, isActualUsed: true },
+        { partId: 'p3', partCode: 'PT-BRK-01', name: 'Má phanh đĩa trước Nissin', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 320000, laborFee: 50000, total: 320000, isActualUsed: true },
+        { partId: 'p11', partCode: 'PT-LV-01', name: 'Tay phanh nhôm CNC', actionMethod: 'Thay mới', quantity: 1, unitPrice: 180000, laborFee: 20000, total: 180000, isActualUsed: true }
+      ],
+      totalPartsPrice: 1280000,
+      totalLaborFee: 150000,
+      totalEstimatedCost: 1430000,
+      actualCost: 1430000,
+      status: 'in_progress',
       progressPercent: 70,
-      customerFeedbackDate: '25/11/2026 12:15',
-      customerFeedbackNote: 'Khách đã duyệt báo giá qua điện thoại và đồng ý cấn trừ tiền cọc.',
-      technicianName: 'Nguyễn Văn Minh',
+      customerFeedbackDate: '2026-11-22 16:30',
+      customerFeedbackNote: 'Khách đã duyệt báo giá qua điện thoại và đồng ý cấn trừ cọc.',
+      technicianName: 'Nguyễn Minh Quân',
+      damageItems: [
+        {
+          id: 'di-014-1',
+          title: 'Dàn áo trước phải & Tay phanh',
+          severity: 'high',
+          actionLabel: 'Thay mới chính hãng',
+          location: 'Yếm phải & cụm phanh trước',
+          description: 'Thay mới cánh yếm trước phải chính hãng, thay tay phanh nhôm và cặp má phanh đĩa.',
+          beforePhotos: [SAMPLE_PHOTOS.damageScratched],
+          newPartPhotos: [SAMPLE_PHOTOS.newPartInstalled],
+          afterPhotos: []
+        }
+      ],
+      beforePhotos: [SAMPLE_PHOTOS.damageScratched],
+      afterPhotos: [],
+      replacementPhotos: [SAMPLE_PHOTOS.newPartInstalled],
+      createdAt: '2026-11-22 16:00'
+    },
+    {
+      id: 'rep-015',
+      code: 'PSC-2026-015',
+      bookingCode: 'HD-DN-2026-295',
+      vehicleId: 'v-1',
+      vehicleCode: 'MR-DN-004',
+      vehicleName: 'Honda ADV 160 ABS Touring',
+      licensePlate: '43A1-045.88',
+      vehicleOdo: 11200,
+      vehicleType: 'Xe tay ga Touring',
+      vehicleColor: 'Đen nhám',
+      vehicleImage: SAMPLE_PHOTOS.adventureSide,
+      customerName: 'Phạm Hoàng Minh',
+      customerPhone: '0905 334 221',
+      issueSummary: 'Trầy xước ốp cánh yếm trước trái, gãy tay phanh và vỡ gương',
+      proposedSolution: 'Thay mới ốp cánh yếm trước trái chính hãng, thay tay phanh trái và gương chiếu hậu',
+      parts: [
+        { partId: 'p12', partCode: 'PT-BDY-02', name: 'Ốp cánh yếm trước trái ADV 160', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 1250000, laborFee: 100000, total: 1250000, isActualUsed: true },
+        { partId: 'p11', partCode: 'PT-MIR-01', name: 'Gương chiếu hậu ADV Touring', actionMethod: 'Thay mới', quantity: 1, unitPrice: 480000, laborFee: 50000, total: 480000, isActualUsed: true },
+        { partId: 'p3', partCode: 'PT-LV-02', name: 'Tay phanh trái chính hãng', actionMethod: 'Thay mới', quantity: 1, unitPrice: 250000, laborFee: 50000, total: 250000, isActualUsed: true }
+      ],
+      totalPartsPrice: 1980000,
+      totalLaborFee: 200000,
+      totalEstimatedCost: 2180000,
+      actualCost: 2180000,
+      status: 'completed',
+      progressPercent: 100,
+      customerFeedbackDate: '2026-11-24 17:30',
+      customerFeedbackNote: 'Khách đồng ý bồi thường đầy đủ.',
+      technicianName: 'Nguyễn Minh Quân',
       beforePhotos: [SAMPLE_PHOTOS.damageScratched, SAMPLE_PHOTOS.damageBrokenLight],
       afterPhotos: [SAMPLE_PHOTOS.repairedPerfect],
       replacementPhotos: [SAMPLE_PHOTOS.newPartInstalled],
-      createdAt: '25/11/2026 12:00'
+      completionNotes: 'Đã thay hoàn thiện 3 phụ tùng chính hãng và test chạy thử ổn định.',
+      createdAt: '2026-11-24 17:10',
+      completedAt: '2026-11-25 10:15'
     },
     {
-      id: 'rep-02',
-      code: 'SC-2611-002',
-      bookingCode: 'DH-202611-019',
+      id: 'rep-011',
+      code: 'PSC-2026-011',
+      bookingCode: 'HD-DN-2026-240',
       vehicleId: 'v-3',
-      vehicleName: 'Yamaha Exciter 155',
-      licensePlate: '43B2-234.56',
-      customerName: 'Võ Minh Quân',
+      vehicleCode: 'MR-DN-005',
+      vehicleName: 'Yamaha Exciter 155 VVA',
+      licensePlate: '43C1-530.77',
+      vehicleOdo: 19600,
+      vehicleType: 'Xe côn tay',
+      vehicleColor: 'Xanh GP',
+      vehicleImage: SAMPLE_PHOTOS.cleanRear,
+      customerName: 'Võ Thị Thanh Hà',
       customerPhone: '0935 123 456',
-      issueSummary: 'Mòn má phanh đĩa sau và dão xích truyền động',
-      proposedSolution: 'Thay bộ nhông sên dĩa phốt DID và thay má phanh Nissin',
+      issueSummary: 'Gãy gương chiếu hậu phải và lệch cần số',
+      proposedSolution: 'Thay mới gương chiếu hậu phải chính hãng và căn chỉnh cần số.',
       parts: [
-        {
-          partId: 'p10',
-          partCode: 'PT-CHN-01',
-          name: 'Nhông sên dĩa phốt cao su O-Ring DID 428HD',
-          quantity: 1,
-          unitPrice: 380000,
-          laborFee: 45000,
-          total: 425000,
-          isActualUsed: true
-        },
-        {
-          partId: 'p3',
-          partCode: 'PT-BRK-01',
-          name: 'Má phanh đĩa trước Nissin chính hãng Honda',
-          quantity: 1,
-          unitPrice: 180000,
-          laborFee: 30000,
-          total: 210000,
-          isActualUsed: true
-        }
+        { partId: 'p11', partCode: 'PT-MIR-02', name: 'Gương chiếu hậu Yamaha chính hãng', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 240000, laborFee: 80000, total: 240000, isActualUsed: true }
       ],
-      totalPartsPrice: 560000,
-      totalLaborFee: 75000,
-      totalEstimatedCost: 635000,
-      actualCost: 635000,
+      totalPartsPrice: 240000,
+      totalLaborFee: 80000,
+      totalEstimatedCost: 320000,
+      actualCost: 320000,
       status: 'completed',
       progressPercent: 100,
-      customerFeedbackDate: '24/11/2026 15:30',
+      customerFeedbackDate: '2026-11-14 15:20',
       customerFeedbackNote: 'Đồng ý sửa chữa bảo dưỡng.',
-      technicianName: 'Nguyễn Văn Minh',
+      technicianName: 'Nguyễn Minh Quân',
       beforePhotos: [SAMPLE_PHOTOS.damageScratched],
       afterPhotos: [SAMPLE_PHOTOS.repairedPerfect],
       replacementPhotos: [SAMPLE_PHOTOS.newPartInstalled],
-      completionNotes: 'Đã thay xích sên DID căng chuẩn 20mm, đĩa phanh mượt, đã chạy thử êm ái.',
-      createdAt: '24/11/2026 15:00',
-      completedAt: '25/11/2026 09:30'
+      completionNotes: 'Đã lắp gương mới và cân chỉnh cần số mượt mà.',
+      createdAt: '2026-11-14 15:00',
+      completedAt: '2026-11-14 17:00'
+    },
+    {
+      id: 'rep-013',
+      code: 'PSC-2026-013',
+      bookingCode: 'HD-DN-2026-261',
+      vehicleId: 'v-4',
+      vehicleCode: 'MR-DN-006',
+      vehicleName: 'Honda Wave RSX 110 FI',
+      licensePlate: '43D1-409.33',
+      vehicleOdo: 27400,
+      vehicleType: 'Xe số',
+      vehicleColor: 'Đỏ đen',
+      vehicleImage: SAMPLE_PHOTOS.cleanFront,
+      customerName: 'Bùi Văn Hải',
+      customerPhone: '0914 667 889',
+      issueSummary: 'Trầy xước nhẹ chắn bùn trước',
+      proposedSolution: 'Đề xuất sơn dặm lại mảng trầy nhỏ ở chắn bùn trước.',
+      parts: [],
+      totalPartsPrice: 0,
+      totalLaborFee: 150000,
+      totalEstimatedCost: 150000,
+      status: 'customer_rejected',
+      progressPercent: 0,
+      customerFeedbackDate: '2026-11-20 11:45',
+      customerFeedbackNote: 'Khách chọn cấn trừ trực tiếp tiền sơn 150.000đ vào cọc, không cần sửa ngay.',
+      technicianName: 'Nguyễn Minh Quân',
+      beforePhotos: [SAMPLE_PHOTOS.damageScratched],
+      afterPhotos: [],
+      replacementPhotos: [],
+      createdAt: '2026-11-20 11:20'
     }
   ]);
 
@@ -912,17 +971,29 @@ export default function TechnicianPortalPage() {
       totalLaborFee: modalQuoteCalc.laborPrice,
       totalEstimatedCost: modalQuoteCalc.grandTotal,
       status: 'waiting_approval',
-      progressPercent: 0,
+      progressPercent: 25,
       technicianName: user?.fullName || 'Nguyễn Văn Minh',
+      damageItems: dmg.positions.map(p => ({
+        id: p.id,
+        title: p.position,
+        severity: p.severity,
+        actionLabel: p.suggestedAction === 'replace' ? 'Thay mới chính hãng' : 'Sửa chữa / phục hồi',
+        location: p.position,
+        description: p.description,
+        beforePhotos: p.photo ? [p.photo] : [],
+        newPartPhotos: [],
+        afterPhotos: []
+      })),
       beforePhotos: dmg.positions.map(p => p.photo || SAMPLE_PHOTOS.damageScratched),
       afterPhotos: [],
       replacementPhotos: [],
-      createdAt: new Date().toLocaleString('vi-VN')
+      createdAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
     };
 
     // Cập nhật trạng thái biên bản hư hỏng
     setDamageReports(prev => prev.map(d => d.id === dmg.id ? { ...d, status: 'repair_proposed', repairId: newRepId } : d));
     setRepairs([newRepair, ...repairs]);
+    setSelectedRepairId(newRepId);
     setShowCreateRepairModal(null);
     setRepSelectedParts([]);
     setRepSolutionText('');
@@ -1144,7 +1215,10 @@ export default function TechnicianPortalPage() {
             {/* 5. Quản lý sửa chữa */}
             <button
               type="button"
-              onClick={() => setActiveTab('repair_management')}
+              onClick={() => {
+                setSelectedRepairId(null);
+                setActiveTab('repair_management');
+              }}
               style={{
                 width: '100%',
                 display: 'flex',
@@ -1167,7 +1241,7 @@ export default function TechnicianPortalPage() {
               </div>
               {sidebarOpen && (
                 <span style={{ background: '#f59e0b', color: '#0f172a', borderRadius: '10px', padding: '1px 6px', fontSize: '10px', fontWeight: 800 }}>
-                  {repairs.filter(r => r.status !== 'completed').length}
+                  {repairs.filter(r => r.status !== 'completed' && r.status !== 'customer_rejected').length}
                 </span>
               )}
             </button>
@@ -1323,6 +1397,30 @@ export default function TechnicianPortalPage() {
               {sidebarOpen && <span>11. Tài khoản cá nhân</span>}
             </button>
 
+            {/* 12. Quản lý người dùng */}
+            <button
+              type="button"
+              onClick={() => setActiveTab('user_management')}
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '9px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: activeTab === 'user_management' ? '#2563eb' : 'transparent',
+                color: activeTab === 'user_management' ? '#ffffff' : '#94a3b8',
+                fontWeight: activeTab === 'user_management' ? 700 : 500,
+                fontSize: '13px',
+                cursor: 'pointer',
+                textAlign: 'left'
+              }}
+            >
+              <Users size={18} />
+              {sidebarOpen && <span>12. Quản lý người dùng</span>}
+            </button>
+
           </nav>
         </div>
 
@@ -1395,15 +1493,14 @@ export default function TechnicianPortalPage() {
         {/* Dashboard Main Container */}
         <main style={{ padding: '24px 28px', maxWidth: '1440px', width: '100%', margin: '0 auto' }}>
           
-          {/* Header Action Bar (ẩn trên Tab 3 vì Tab 3 có Header riêng đồng bộ workspace) */}
-          {activeTab !== 'return_inspection' && (
+          {/* Header Action Bar (ẩn trên các tab có Header riêng đồng bộ workspace) */}
+          {!['return_inspection', 'repair_management', 'user_management'].includes(activeTab) && (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '22px', flexWrap: 'wrap', gap: '12px' }}>
               <div>
                 <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px', letterSpacing: '-0.3px' }}>
                   {activeTab === 'home' && '1. Dashboard Kỹ Thuật Viên'}
                   {activeTab === 'vehicles' && '2. Quản Lý Đội Xe'}
                   {activeTab === 'damage_management' && '4. Quản Lý Hư Hỏng & Biên Bản Kiểm Tra'}
-                  {activeTab === 'repair_management' && '5. Quản Lý Sửa Chữa (Báo giá, Xác nhận & Nghiệm thu)'}
                   {activeTab === 'parts_management' && '6. Quản Lý Phụ Tùng Thay Thế'}
                   {activeTab === 'maintenance' && '7. Quản Lý Lịch Bảo Dưỡng Định Kỳ'}
                   {activeTab === 'history' && '8. Lịch Sử Kỹ Thuật (Kiểm tra, Hư hỏng, Sửa chữa)'}
@@ -1779,217 +1876,22 @@ export default function TechnicianPortalPage() {
               TAB 5: QUẢN LÝ SỬA CHỮA (REPAIR MANAGEMENT)
               ======================================================== */}
           {activeTab === 'repair_management' && (
-            <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <div>
-                  <h2 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: '0 0 2px' }}>
-                    Quy trình sửa chữa: Báo giá &rarr; Khách duyệt &rarr; Thực hiện &rarr; Nghiệm thu
-                  </h2>
-                  <p style={{ fontSize: '12.5px', color: '#64748b', margin: 0 }}>
-                    Theo dõi trạng thái duyệt của khách hàng, cập nhật phụ tùng sử dụng và lưu hình ảnh hoàn tất
-                  </p>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
-                {repairs.map(rep => (
-                  <div key={rep.id} style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', background: '#f8fafc' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '14px', fontWeight: 900, color: '#2563eb' }}>{rep.code}</span>
-                          {rep.damageReportCode && (
-                            <span style={{ fontSize: '11px', background: '#fee2e2', color: '#dc2626', padding: '2px 8px', borderRadius: '4px', fontWeight: 700 }}>
-                              Từ BB: {rep.damageReportCode}
-                            </span>
-                          )}
-                          <span style={{
-                            padding: '3px 8px',
-                            borderRadius: '6px',
-                            fontSize: '11px',
-                            fontWeight: 800,
-                            background: rep.status === 'completed' ? '#dcfce7' : rep.status === 'in_progress' ? '#eff6ff' : rep.status === 'customer_approved' ? '#fef3c7' : rep.status === 'customer_rejected' ? '#fee2e2' : '#f1f5f9',
-                            color: rep.status === 'completed' ? '#16a34a' : rep.status === 'in_progress' ? '#2563eb' : rep.status === 'customer_approved' ? '#b45309' : rep.status === 'customer_rejected' ? '#dc2626' : '#64748b'
-                          }}>
-                            {rep.status === 'waiting_approval' && '1. Chờ khách duyệt báo giá'}
-                            {rep.status === 'customer_approved' && '2. Khách ĐÃ ĐỒNG Ý sửa'}
-                            {rep.status === 'customer_rejected' && '2. Khách TỪ CHỐI sửa'}
-                            {rep.status === 'in_progress' && '3. Đang tiến hành sửa chữa'}
-                            {rep.status === 'completed' && '4. Đã hoàn thành nghiệm thu'}
-                          </span>
-                        </div>
-
-                        <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', margin: '4px 0 2px' }}>
-                          {rep.vehicleName} • Biển số: <span style={{ color: '#2563eb' }}>{rep.licensePlate}</span>
-                        </h3>
-                        <div style={{ fontSize: '12px', color: '#64748b' }}>
-                          Khách hàng: <strong>{rep.customerName}</strong> ({rep.customerPhone}) • Thợ phụ trách: {rep.technicianName}
-                        </div>
-                      </div>
-
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>
-                          {(rep.actualCost || rep.totalEstimatedCost).toLocaleString('vi-VN')}đ
-                        </div>
-                        <div style={{ fontSize: '11.5px', color: '#16a34a' }}>
-                          Linh kiện: {rep.totalPartsPrice.toLocaleString()}đ + Công: {rep.totalLaborFee.toLocaleString()}đ
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style={{ fontSize: '13px', color: '#334155', marginBottom: '8px' }}>
-                      <strong>Vấn đề hư hỏng:</strong> {rep.issueSummary}
-                    </div>
-                    <div style={{ fontSize: '12.5px', color: '#0284c7', marginBottom: '12px' }}>
-                      <strong>Phương án xử lý:</strong> {rep.proposedSolution}
-                    </div>
-
-                    {/* Danh sách linh kiện đã chọn */}
-                    <div style={{ background: '#ffffff', padding: '12px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-                      <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
-                        Phụ tùng thay thế đã bóc tách:
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                        {rep.parts.map((p, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', color: '#475569' }}>
-                            <span>• {p.name} (x{p.quantity})</span>
-                            <span style={{ fontWeight: 700, color: '#0f172a' }}>{p.total.toLocaleString()}đ</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    {/* Tiến độ và hình ảnh đối chứng */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                      {/* Cột tiến độ */}
-                      <div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
-                          <span>Tiến độ thực hiện:</span>
-                          <span>{rep.progressPercent}%</span>
-                        </div>
-                        <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '4px', overflow: 'hidden' }}>
-                          <div style={{ width: `${rep.progressPercent}%`, height: '100%', background: rep.status === 'completed' ? '#16a34a' : '#2563eb' }} />
-                        </div>
-                        {rep.customerFeedbackNote && (
-                          <div style={{ fontSize: '11.5px', color: '#0f172a', background: '#eff6ff', padding: '6px 10px', borderRadius: '6px', marginTop: '8px' }}>
-                            💬 {rep.customerFeedbackNote} ({rep.customerFeedbackDate})
-                          </div>
-                        )}
-                        {rep.completionNotes && (
-                          <div style={{ fontSize: '11.5px', color: '#16a34a', background: '#f0fdf4', padding: '6px 10px', borderRadius: '6px', marginTop: '6px' }}>
-                            ✓ {rep.completionNotes}
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Cột ảnh đối chứng Trước vs Sau */}
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        {rep.beforePhotos.length > 0 && (
-                          <div style={{ flex: 1, position: 'relative', borderRadius: '6px', overflow: 'hidden', height: '85px' }}>
-                            <img src={rep.beforePhotos[0]} alt="Trước sửa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            <span style={{ position: 'absolute', bottom: 0, insetInline: 0, background: 'rgba(0,0,0,0.6)', color: '#fff', fontSize: '9px', textAlign: 'center', padding: '2px' }}>
-                              Trước khi sửa
-                            </span>
-                          </div>
-                        )}
-                        {rep.afterPhotos.length > 0 ? (
-                          <div style={{ flex: 1, position: 'relative', borderRadius: '6px', overflow: 'hidden', height: '85px' }}>
-                            <img src={rep.afterPhotos[0]} alt="Sau sửa" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            <span style={{ position: 'absolute', bottom: 0, insetInline: 0, background: 'rgba(22,163,74,0.8)', color: '#fff', fontSize: '9px', textAlign: 'center', padding: '2px' }}>
-                              Sau khi xong
-                            </span>
-                          </div>
-                        ) : (
-                          <div style={{ flex: 1, height: '85px', border: '1px dashed #cbd5e1', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', color: '#94a3b8' }}>
-                            Chờ ảnh sau sửa
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Bộ nút hành động theo từng bước */}
-                    <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid #e2e8f0', paddingTop: '12px', flexWrap: 'wrap' }}>
-                      {/* Nút gửi báo giá / in báo giá */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          toast.success('Đã gửi báo giá qua Zalo/SMS cho khách hàng!');
-                          window.print();
-                        }}
-                        style={{ padding: '7px 12px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Printer size={14} />
-                        <span>In / Gửi báo giá</span>
-                      </button>
-
-                      {/* Bước 4: Khách duyệt hoặc từ chối */}
-                      {rep.status === 'waiting_approval' && (
-                        <>
-                          <button
-                            type="button"
-                            onClick={() => handleCustomerConfirmRepair(rep.id, true)}
-                            style={{ padding: '7px 14px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <ThumbsUp size={14} />
-                            <span>Khách đồng ý sửa chữa</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleCustomerConfirmRepair(rep.id, false)}
-                            style={{ padding: '7px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                          >
-                            <ThumbsDown size={14} />
-                            <span>Khách từ chối</span>
-                          </button>
-                        </>
-                      )}
-
-                      {/* Bước 5: Bắt đầu thực hiện sửa chữa */}
-                      {rep.status === 'customer_approved' && (
-                        <button
-                          type="button"
-                          onClick={() => handleStartRepairing(rep.id)}
-                          style={{ padding: '7px 16px', background: '#2563eb', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Wrench size={14} />
-                          <span>Bắt đầu tiến hành sửa chữa</span>
-                        </button>
-                      )}
-
-                      {/* Bước 6: Nghiệm thu & Chụp ảnh sau khi xong */}
-                      {rep.status === 'in_progress' && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCompActualCost(rep.totalEstimatedCost);
-                            setShowCompleteRepairModal(rep);
-                          }}
-                          style={{ padding: '7px 16px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: 800, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Camera size={14} />
-                          <span>Cập nhật kết quả & Nghiệm thu xe</span>
-                        </button>
-                      )}
-
-                      {/* Phóng to so sánh ảnh đối chứng */}
-                      <button
-                        type="button"
-                        onClick={() => setShowPhotoCompareModal({
-                          title: `Đối chứng sửa chữa: ${rep.code} - ${rep.vehicleName}`,
-                          subtitle: `Khách hàng: ${rep.customerName} • Chi phí: ${(rep.actualCost || rep.totalEstimatedCost).toLocaleString()}đ`,
-                          beforeImgs: rep.beforePhotos,
-                          afterImgs: rep.afterPhotos.length > 0 ? rep.afterPhotos : [SAMPLE_PHOTOS.repairedPerfect],
-                          notes: rep.completionNotes || rep.proposedSolution
-                        })}
-                        style={{ marginLeft: 'auto', padding: '7px 12px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '6px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                      >
-                        Xem ảnh đối chứng Trước & Sau
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <RepairManagementWorkspace
+              repairs={repairs}
+              selectedRepairId={selectedRepairId}
+              onSelectRepairId={setSelectedRepairId}
+              onUpdateRepair={updated =>
+                setRepairs(prev => prev.map(r => (r.id === updated.id ? updated : r)))
+              }
+              onCreateRepair={created => setRepairs(prev => [created, ...prev])}
+              vehicles={vehicles}
+              partsCatalog={PARTS_CATALOG}
+              inspectorName={user?.fullName || 'Nguyễn Văn Minh'}
+              onCompleteVehicleAvailable={vehId =>
+                setVehicles(prev => prev.map(v => (v._id === vehId ? { ...v, status: 'available' } : v)))
+              }
+              searchQuery={searchQuery}
+            />
           )}
 
           {/* ========================================================
@@ -2302,6 +2204,27 @@ export default function TechnicianPortalPage() {
                 </form>
               </div>
             </div>
+          )}
+
+          {/* ========================================================
+              TAB 12: QUẢN LÝ NGƯỜI DÙNG & KHÁCH HÀNG
+              ======================================================== */}
+          {activeTab === 'user_management' && (
+            <UserManagementWorkspace
+              inspections={returnInspections}
+              repairs={repairs}
+              inspectorName={user?.fullName || 'Nguyễn Văn Minh'}
+              inspectorEmail={user?.email}
+              searchQuery={searchQuery}
+              onJumpToInspection={insId => {
+                setActiveInspectionId(insId);
+                setActiveTab('return_inspection');
+              }}
+              onJumpToRepair={repId => {
+                setSelectedRepairId(repId);
+                setActiveTab('repair_management');
+              }}
+            />
           )}
 
         </main>
