@@ -155,18 +155,18 @@ export default function RepairManagementWorkspace({
   // Create Modal States
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newVehicleKey, setNewVehicleKey] = useState('');
-  const [newBookingCode, setNewBookingCode] = useState('HD-DN-2026-320');
+  const [newBookingCode, setNewBookingCode] = useState('');
   const [newCustName, setNewCustName] = useState('');
   const [newCustPhone, setNewCustPhone] = useState('');
   const [newSolution, setNewSolution] = useState('');
-  const [newPickPartId, setNewPickPartId] = useState(partsCatalog[0]?.id || '');
+  const [newPickPartId, setNewPickPartId] = useState('');
   const [newPickQty, setNewPickQty] = useState(1);
   const [newModalParts, setNewModalParts] = useState<RepairPartLine[]>([]);
   const [newLaborFee, setNewLaborFee] = useState(150000);
   const [newTechNotes, setNewTechNotes] = useState('');
 
   // Detail View Local States
-  const [detailPickPartId, setDetailPickPartId] = useState(partsCatalog[0]?.id || '');
+  const [detailPickPartId, setDetailPickPartId] = useState('');
   const [detailPickMethod, setDetailPickMethod] = useState('Thay mới chính hãng');
   const [detailPickQty, setDetailPickQty] = useState(1);
   const [editingLaborFee, setEditingLaborFee] = useState<number | null>(null);
@@ -182,27 +182,22 @@ export default function RepairManagementWorkspace({
 
   const combinedQuery = (localSearch || searchQuery).trim().toLowerCase();
 
-  // Available fleet list (real vehicles + fallback MotoRent vehicles)
+  // Real vehicles from MongoDB fleet
   const fleetOptions = useMemo(() => {
-    const defaults = [
-      { _id: 'mr-1', code: 'MR-DN-001', name: 'Honda Air Blade 160 ABS', licensePlate: '43C1-892.45', type: 'Xe tay ga', odo: 14820, color: 'Xám đen nhám', image: SAMPLE_PHOTOS.cleanFront },
-      { _id: 'mr-2', code: 'MR-DN-002', name: 'Honda CB150X Adventure', licensePlate: '43A1-118.62', type: 'Xe côn tay', odo: 16210, color: 'Đen nhám', image: SAMPLE_PHOTOS.adventureSide },
-      { _id: 'mr-3', code: 'mr-3', name: 'Honda Winner X 150 ABS', licensePlate: '43D1-654.12', type: 'Xe côn tay', odo: 18400, color: 'Đỏ đen', image: SAMPLE_PHOTOS.cleanRear }
-    ];
-    if (vehicles.length > 0) {
-      return vehicles.map((v, i) => ({
-        _id: v._id,
-        code: `MR-DN-${String(i + 1).padStart(3, '0')}`,
-        name: v.name,
-        licensePlate: v.licensePlate,
-        type: v.type || 'Xe tay ga',
-        odo: v.odometer || 12500,
-        color: 'Tiêu chuẩn',
-        image: v.image || SAMPLE_PHOTOS.cleanFront
-      }));
-    }
-    return defaults;
+    return vehicles.map((v, i) => ({
+      _id: v._id,
+      code: `MR-DN-${String(i + 1).padStart(3, '0')}`,
+      name: v.name,
+      licensePlate: v.licensePlate,
+      type: v.type || 'Xe tay ga',
+      odo: v.odometer || 0,
+      color: 'Tiêu chuẩn',
+      image: v.image || SAMPLE_PHOTOS.cleanFront
+    }));
   }, [vehicles]);
+
+  const activeNewPickPartId = newPickPartId || partsCatalog[0]?.id || '';
+  const activeDetailPickPartId = detailPickPartId || partsCatalog[0]?.id || '';
 
   const selectedRepair = repairs.find(r => r.id === selectedRepairId) || null;
 
@@ -229,7 +224,7 @@ export default function RepairManagementWorkspace({
   // MODAL HANDLERS (CREATE NEW REPAIR)
   // ==========================================
   const handleAddPartToNewModal = () => {
-    const pt = partsCatalog.find(p => p.id === newPickPartId);
+    const pt = partsCatalog.find(p => p.id === activeNewPickPartId);
     if (!pt || newPickQty <= 0) return;
     const existingIdx = newModalParts.findIndex(x => x.partId === pt.id);
     if (existingIdx >= 0) {
@@ -268,6 +263,10 @@ export default function RepairManagementWorkspace({
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const veh = fleetOptions.find(v => v._id === newVehicleKey) || fleetOptions[0];
+    if (!veh) {
+      toast.error('Chưa có xe hợp lệ trong hệ thống');
+      return;
+    }
     const nextNum = repairs.length + 21;
     const newCode = `PSC-2026-0${nextNum}`;
     const ts = nowStamp();
@@ -481,7 +480,7 @@ export default function RepairManagementWorkspace({
   };
 
   const handleAddPartToDetail = (rep: RepairItem) => {
-    const pt = partsCatalog.find(p => p.id === detailPickPartId);
+    const pt = partsCatalog.find(p => p.id === activeDetailPickPartId);
     if (!pt || detailPickQty <= 0) return;
 
     const newLine: RepairPartLine = {
@@ -1433,7 +1432,7 @@ export default function RepairManagementWorkspace({
               </div>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
                 <select
-                  value={detailPickPartId}
+                  value={activeDetailPickPartId}
                   onChange={e => setDetailPickPartId(e.target.value)}
                   style={{ flex: '1 1 200px', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', fontSize: '12px' }}
                 >
@@ -2127,7 +2126,7 @@ export default function RepairManagementWorkspace({
                 </label>
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                   <select
-                    value={newPickPartId}
+                    value={activeNewPickPartId}
                     onChange={e => setNewPickPartId(e.target.value)}
                     style={{ flex: 1, padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff' }}
                   >

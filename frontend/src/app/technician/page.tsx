@@ -126,185 +126,6 @@ type TabId =
   | 'profile'
   | 'user_management';
 
-const INITIAL_PARTS_CATALOG: PartItem[] = [
-  { id: 'p1', code: 'PT-OIL-01', name: 'Dầu nhớt Motul Scooter Expert LE 10W40 (0.8L)', category: 'Dầu nhớt', unitPrice: 120000, laborFee: 20000, warranty: '1.500 km', stock: 45, compatible: 'Xe ga (Vision, AirBlade, SH, Lead)' },
-  { id: 'p2', code: 'PT-OIL-02', name: 'Dầu nhớt Castrol Power1 4T 10W40 (1.0L)', category: 'Dầu nhớt', unitPrice: 135000, laborFee: 20000, warranty: '1.500 km', stock: 32, compatible: 'Xe số & Côn tay (Wave, Exciter, Winner)' },
-  { id: 'p3', code: 'PT-BRK-01', name: 'Má phanh đĩa trước Nissin chính hãng Honda', category: 'Hệ thống phanh', unitPrice: 180000, laborFee: 30000, warranty: '6 tháng', stock: 24, compatible: 'AirBlade, Vision, Lead, SH' },
-  { id: 'p4', code: 'PT-BRK-02', name: 'Bộ má phanh đùm/cơ sau Honda OEM', category: 'Hệ thống phanh', unitPrice: 110000, laborFee: 30000, warranty: '6 tháng', stock: 28, compatible: 'Wave Alpha, Future, Blade, Vision' },
-  { id: 'p5', code: 'PT-TIR-01', name: 'Lốp không săm Michelin City Extra (Trước 80/90-14)', category: 'Lốp & Bánh xe', unitPrice: 460000, laborFee: 40000, warranty: '12 tháng', stock: 15, compatible: 'Vision, Air Blade, Vario' },
-  { id: 'p6', code: 'PT-TIR-02', name: 'Lốp không săm Michelin City Extra (Sau 90/90-14)', category: 'Lốp & Bánh xe', unitPrice: 520000, laborFee: 40000, warranty: '12 tháng', stock: 6, compatible: 'Vision, Air Blade, Vario' },
-  { id: 'p7', code: 'PT-BAT-01', name: 'Bình ắc quy khô GS GTZ5S (12V-3.5Ah)', category: 'Hệ thống điện', unitPrice: 380000, laborFee: 20000, warranty: '9 tháng', stock: 20, compatible: 'Xe ga & Xe số phổ thông' },
-  { id: 'p8', code: 'PT-SPK-01', name: 'Bugi chân dài NGK Iridium CPR8EAIX-9', category: 'Động cơ & Đánh lửa', unitPrice: 95000, laborFee: 15000, warranty: '15.000 km', stock: 35, compatible: 'PGM-FI Fi Phun xăng điện tử' },
-  { id: 'p9', code: 'PT-BEL-01', name: 'Dây Curoa truyền động Bando Honda chính hãng', category: 'Truyền động', unitPrice: 280000, laborFee: 50000, warranty: '12 tháng (15.000 km)', stock: 14, compatible: 'Air Blade 125/160, Lead 125, SH' },
-  { id: 'p10', code: 'PT-CHN-01', name: 'Nhông sên dĩa phốt cao su O-Ring DID 428HD', category: 'Truyền động', unitPrice: 380000, laborFee: 45000, warranty: '12 tháng', stock: 9, compatible: 'Exciter 155, Winner X, Raider 150' },
-  { id: 'p11', code: 'PT-MIR-01', name: 'Gương chiếu hậu nguyên bản Honda (Cặp)', category: 'Dàn ngoài', unitPrice: 150000, laborFee: 15000, warranty: '6 tháng', stock: 25, compatible: 'Các dòng xe Honda' },
-  { id: 'p12', code: 'PT-BDY-01', name: 'Ốp yếm trước dàn áo chính hãng Honda', category: 'Dàn áo & Nhựa', unitPrice: 780000, laborFee: 80000, warranty: '12 tháng', stock: 4, compatible: 'Air Blade, Vision, Winner X' },
-  { id: 'p13', code: 'PT-LGT-01', name: 'Cụm chóa đèn pha LED 2 tầng siêu sáng', category: 'Hệ thống đèn', unitPrice: 550000, laborFee: 50000, warranty: '12 tháng', stock: 7, compatible: 'Exciter, Winner X, Air Blade' }
-];
-
-const FALLBACK_VEHICLES: VehicleItem[] = [
-  {
-    _id: 'v-1',
-    code: 'MR-DN-001',
-    name: 'Honda Air Blade 160 ABS',
-    brand: 'Honda',
-    color: 'Xám đen nhám',
-    licensePlate: '43C1-892.45',
-    type: 'Xe tay ga',
-    year: 2024,
-    engineCC: 160,
-    odometer: 14820,
-    nextMaintenanceOdo: 16820,
-    status: 'broken',
-    lastMaintenanceDate: '2026-11-25',
-    techNote: 'Khách vừa trả tại quầy Bạch Đằng, phản ánh phanh trước hơi kêu.',
-    image: SAMPLE_PHOTOS.cleanFront,
-    gallery: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.newPartInstalled]
-  },
-  {
-    _id: 'v-2',
-    code: 'MR-DN-002',
-    name: 'Honda Winner X 150 ABS',
-    brand: 'Honda',
-    color: 'Đỏ đen thể thao',
-    licensePlate: '43D1-654.12',
-    type: 'Xe côn tay',
-    year: 2024,
-    engineCC: 150,
-    odometer: 19340,
-    nextMaintenanceOdo: 21000,
-    status: 'repairing',
-    lastMaintenanceDate: '2026-10-05',
-    techNote: 'Đang thay cánh yếm trước phải và má phanh đĩa theo phiếu PSC-2026-014.',
-    image: SAMPLE_PHOTOS.cleanRear,
-    gallery: [SAMPLE_PHOTOS.cleanRear, SAMPLE_PHOTOS.damageScratched]
-  },
-  {
-    _id: 'v-3',
-    code: 'MR-DN-003',
-    name: 'Honda ADV 160 ABS Touring',
-    brand: 'Honda',
-    color: 'Xanh đậm nhám',
-    licensePlate: '43A1-045.88',
-    type: 'Xe tay ga',
-    year: 2025,
-    engineCC: 160,
-    odometer: 9650,
-    nextMaintenanceOdo: 12000,
-    status: 'available',
-    lastMaintenanceDate: '2026-10-28',
-    techNote: 'Đã nghiệm thu hoàn tất, xe sạch đẹp đạt chuẩn giao khách.',
-    image: SAMPLE_PHOTOS.adventureSide,
-    gallery: [SAMPLE_PHOTOS.adventureSide, SAMPLE_PHOTOS.repairedPerfect]
-  },
-  {
-    _id: 'v-4',
-    code: 'MR-DN-004',
-    name: 'Yamaha NVX 155 VVA',
-    brand: 'Yamaha',
-    color: 'Xám titan',
-    licensePlate: '43E1-712.09',
-    type: 'Xe tay ga',
-    year: 2024,
-    engineCC: 155,
-    odometer: 21800,
-    nextMaintenanceOdo: 23500,
-    status: 'available',
-    lastMaintenanceDate: '2026-11-25',
-    techNote: 'Vừa thay nhớt Motul và kiểm tra áp suất lốp đạt chuẩn.',
-    image: SAMPLE_PHOTOS.cleanFront,
-    gallery: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.cleanRear]
-  },
-  {
-    _id: 'v-5',
-    code: 'MR-DN-005',
-    name: 'Yamaha Exciter 155 VVA',
-    brand: 'Yamaha',
-    color: 'Đỏ đen GP',
-    licensePlate: '43C1-530.77',
-    type: 'Xe côn tay',
-    year: 2024,
-    engineCC: 155,
-    odometer: 11420,
-    nextMaintenanceOdo: 13500,
-    status: 'available',
-    lastMaintenanceDate: '2026-11-15',
-    techNote: 'Nhông sên dĩa vừa cân chỉnh êm ái.',
-    image: SAMPLE_PHOTOS.cleanRear,
-    gallery: [SAMPLE_PHOTOS.cleanRear, SAMPLE_PHOTOS.newPartInstalled]
-  },
-  {
-    _id: 'v-6',
-    code: 'MR-DN-006',
-    name: 'Honda CB150X Adventure',
-    brand: 'Honda',
-    color: 'Xanh quân đội',
-    licensePlate: '43A1-118.62',
-    type: 'Moto PKL',
-    year: 2024,
-    engineCC: 150,
-    odometer: 16210,
-    nextMaintenanceOdo: 18000,
-    status: 'broken',
-    lastMaintenanceDate: '2026-11-25',
-    techNote: 'Khách vừa trả xe (KT-2026-042), cần kiểm tra lốp sau non hơi và lỏng chân gương phải.',
-    image: SAMPLE_PHOTOS.adventureSide,
-    gallery: [SAMPLE_PHOTOS.adventureSide, SAMPLE_PHOTOS.cleanFront]
-  },
-  {
-    _id: 'v-7',
-    code: 'MR-DN-007',
-    name: 'Honda Vision 2026 Smartkey',
-    brand: 'Honda',
-    color: 'Trắng ngọc trai',
-    licensePlate: '43E1-737.37',
-    type: 'Xe tay ga',
-    year: 2026,
-    engineCC: 110,
-    odometer: 12540,
-    nextMaintenanceOdo: 14500,
-    status: 'rented',
-    lastMaintenanceDate: '2026-11-05',
-    techNote: 'Xe đang được kiểm tra tổng thể sau khi hoàn tất bảo dưỡng.',
-    image: SAMPLE_PHOTOS.cleanFront,
-    gallery: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.repairedPerfect]
-  },
-  {
-    _id: 'v-8',
-    code: 'MR-DN-008',
-    name: 'Honda Wave RSX 110 FI',
-    brand: 'Honda',
-    color: 'Đỏ đen',
-    licensePlate: '43D1-409.33',
-    type: 'Xe số',
-    year: 2024,
-    engineCC: 110,
-    odometer: 27400,
-    nextMaintenanceOdo: 29000,
-    status: 'maintenance',
-    lastMaintenanceDate: '2026-11-20',
-    techNote: 'Chờ thay nhớt định kỳ và kiểm tra thắng đùm.',
-    image: SAMPLE_PHOTOS.cleanRear,
-    gallery: [SAMPLE_PHOTOS.cleanRear, SAMPLE_PHOTOS.cleanFront]
-  }
-];
-
-const FALLBACK_MAINTENANCES: MaintenanceRecord[] = [
-  { _id: 'm-1', vehicle: { _id: 'v-2', name: 'Honda CB150X Adventure', licensePlate: '43A1-118.62' }, technician: { fullName: 'Nguyễn Minh Quân' }, type: 'Định kỳ 5.000 km', title: 'Bảo dưỡng định kỳ 5.000 km (Thay nhớt + Lọc gió)', status: 'in_progress', scheduledDate: '2026-11-25', odometerAtMaintenance: 16210, cost: 350000, notes: 'Kiểm tra thêm xích tải và áp suất lốp.' },
-  { _id: 'm-2', vehicle: { _id: 'v-1', name: 'Honda Air Blade 160 ABS', licensePlate: '43C1-892.45' }, technician: { fullName: 'Trần Đình Huy' }, type: 'Thay nhớt & Kiểm tra phanh', title: 'Kiểm tra tổng quát trước cao điểm cuối tuần', status: 'scheduled', scheduledDate: '2026-11-26', odometerAtMaintenance: 14820, cost: 220000, notes: 'Kiểm tra má phanh ABS trước sau.' },
-  { _id: 'm-3', vehicle: { _id: 'v-4', name: 'Honda Vision 2026 Smartkey', licensePlate: '43E1-737.37' }, technician: { fullName: 'Lê Minh Tuấn' }, type: 'Bảo dưỡng định kỳ 3.000 km', title: 'Vệ sinh nồi côn & Thay dầu hộp số', status: 'scheduled', scheduledDate: '2026-11-27', odometerAtMaintenance: 12540, cost: 280000, notes: 'Xe đang chuẩn bị cho đơn thuê dài ngày.' },
-  { _id: 'm-4', vehicle: { _id: 'v-5', name: 'Honda ADV 160 ABS Touring', licensePlate: '43A1-045.88' }, technician: { fullName: 'Nguyễn Minh Quân' }, type: 'Kiểm tra sau sửa chữa', title: 'Bảo dưỡng tổng thể & Thay nhớt Motul', status: 'completed', scheduledDate: '2026-11-24', completedDate: '2026-11-24', odometerAtMaintenance: 11200, cost: 320000, notes: 'Xe vận hành mượt mà, đạt chuẩn bàn giao.' }
-];
-
-const CHART_DATA_6M: MonthlyChartDatum[] = [
-  { label: '06/26', inspections: 18, maintenance: 9, repairs: 4, cost: 4200000 },
-  { label: '07/26', inspections: 22, maintenance: 11, repairs: 6, cost: 5800000 },
-  { label: '08/26', inspections: 26, maintenance: 12, repairs: 5, cost: 5100000 },
-  { label: '09/26', inspections: 20, maintenance: 10, repairs: 4, cost: 4600000 },
-  { label: '10/26', inspections: 29, maintenance: 14, repairs: 7, cost: 7200000 },
-  { label: '11/26', inspections: 24, maintenance: 12, repairs: 5, cost: 5010000 }
-];
-
 // ==========================================
 // 2. MAIN TECHNICIAN PORTAL PAGE
 // ==========================================
@@ -317,13 +138,13 @@ export default function TechnicianPortalPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  // Core States
-  const [vehicles, setVehicles] = useState<VehicleItem[]>(FALLBACK_VEHICLES);
-  const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>(FALLBACK_MAINTENANCES);
-  const [partsCatalog, setPartsCatalog] = useState<PartItem[]>(INITIAL_PARTS_CATALOG);
-  const [realBookings, setRealBookings] = useState<any[]>([]);
-  const [selectedRealBookingId, setSelectedRealBookingId] = useState('');
-  const [activeInspectionId, setActiveInspectionId] = useState('ins-042');
+  // Core Real States (loaded 100% from MongoDB Backend)
+  const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
+  const [maintenances, setMaintenances] = useState<MaintenanceRecord[]>([]);
+  const [partsCatalog, setPartsCatalog] = useState<PartItem[]>([]);
+  const [returnedBookings, setReturnedBookings] = useState<any[]>([]);
+  const [selectedReturnedBookingId, setSelectedReturnedBookingId] = useState('');
+  const [activeInspectionId, setActiveInspectionId] = useState('');
   const [selectedRepairId, setSelectedRepairId] = useState<string | null>(null);
 
   // Filter States for various tabs
@@ -359,453 +180,22 @@ export default function TechnicianPortalPage() {
   const [reportPeriod, setReportPeriod] = useState<'1m' | '3m' | '6m' | '12m'>('6m');
   const [notifFilter, setNotifFilter] = useState<'all' | 'unread'>('all');
 
-  // Return Inspections
-  const [returnInspections, setReturnInspections] = useState<ReturnInspectionItem[]>([
-    {
-      id: 'ins-041',
-      inspectionCode: 'KT-2026-041',
-      bookingId: 'bk-315',
-      bookingCode: 'HD-DN-2026-315',
-      customerName: 'Trần Quốc Khánh',
-      customerPhone: '0905 412 889',
-      customerIdCard: '048096005678',
-      vehicleId: 'v-1',
-      vehicleName: 'Honda Air Blade 160 ABS',
-      licensePlate: '43C1-892.45',
-      vehicleImage: SAMPLE_PHOTOS.cleanFront,
-      rentalStartDate: '2026-11-22 09:00',
-      rentalEndDate: '2026-11-25 09:00',
-      returnDate: '2026-11-25 08:50',
-      deliveryOdometer: 14680,
-      returnOdometer: 14820,
-      fuelLevel: 95,
-      deliveryImages: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.cleanRear],
-      returnImages: [SAMPLE_PHOTOS.cleanRear],
-      checklist: createDefaultChecklist(),
-      pins: [],
-      brakes: true,
-      tires: true,
-      lightsAndHorn: true,
-      engine: true,
-      mirrorsAndBody: true,
-      status: 'passed',
-      notes: 'Xe nguyên vẹn, đầy đủ xăng, không trầy xước, bàn giao hoàn tất.',
-      inspectorName: 'Nguyễn Minh Quân',
-      hasDamageReport: false
-    },
-    {
-      id: 'ins-042',
-      inspectionCode: 'KT-2026-042',
-      bookingId: 'bk-318',
-      bookingCode: 'HD-DN-2026-318',
-      customerName: 'Lê Thảo Nguyên',
-      customerPhone: '0983 511 042',
-      customerIdCard: '048198004321',
-      vehicleId: 'v-2',
-      vehicleName: 'Honda CB150X Adventure',
-      licensePlate: '43A1-118.62',
-      vehicleImage: SAMPLE_PHOTOS.adventureSide,
-      rentalStartDate: '2026-11-23 08:00',
-      rentalEndDate: '2026-11-25 12:00',
-      returnDate: '2026-11-25 11:05',
-      deliveryOdometer: 15890,
-      returnOdometer: 16210,
-      fuelLevel: 90,
-      deliveryImages: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.cleanRear],
-      returnImages: [SAMPLE_PHOTOS.adventureSide],
-      checklist: createDefaultChecklist({
-        tires: {
-          status: 'check',
-          damageLocation: 'Lốp sau hơi non',
-          damageSeverity: 'medium',
-          note: 'Lốp sau hơi non, cần kiểm tra có dính đinh không.'
-        },
-        mirrors: {
-          status: 'check',
-          damageLocation: 'Chân gương chiếu hậu phải',
-          damageSeverity: 'medium',
-          note: 'Chân gương phải lỏng ốc, cần siết lại hoặc thay gioăng.'
-        }
-      }),
-      pins: [
-        {
-          id: 'pin-init-1',
-          x: 52,
-          y: 66,
-          label: 'Lốp hơi non, vết trầy yếm phải',
-          severity: 'medium'
-        }
-      ],
-      brakes: true,
-      tires: false,
-      lightsAndHorn: true,
-      engine: true,
-      mirrorsAndBody: false,
-      status: 'draft',
-      notes: 'Khách báo xe chạy đèo Hải Vân ổn, lốp sau hơi non và chân gương phải lỏng nhẹ.',
-      inspectorName: 'Nguyễn Minh Quân',
-      hasDamageReport: false
-    },
-    {
-      id: 'ins-01',
-      inspectionCode: 'KT-2026-040',
-      bookingId: 'bk-101',
-      bookingCode: 'DH-202611-028',
-      customerName: 'Trần Văn Hoàng',
-      customerPhone: '0912 345 678',
-      customerIdCard: '048096001234',
-      vehicleId: 'v-4',
-      vehicleName: 'Honda Vision 2026 Smartkey',
-      licensePlate: '43E1-737.37',
-      vehicleImage: SAMPLE_PHOTOS.cleanFront,
-      rentalStartDate: '2026-11-22 09:00',
-      rentalEndDate: '2026-11-25 12:00',
-      returnDate: '2026-11-25 11:30',
-      deliveryOdometer: 12200,
-      returnOdometer: 12540,
-      fuelLevel: 75,
-      deliveryImages: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.cleanRear],
-      returnImages: [SAMPLE_PHOTOS.damageScratched, SAMPLE_PHOTOS.damageBrokenLight],
-      checklist: createDefaultChecklist({
-        lights: {
-          status: 'damage',
-          damageLocation: 'Cụm đèn pha LED trước',
-          damageSeverity: 'high',
-          note: 'Nứt chân bắt chóa đèn và vỡ nhẹ viền mica góc trái',
-          photos: [SAMPLE_PHOTOS.damageBrokenLight]
-        },
-        body: {
-          status: 'damage',
-          damageLocation: 'Dàn áo yếm trước bên phải',
-          damageSeverity: 'medium',
-          note: 'Trầy xước sâu 15cm, tróc sơn lót do cọ xát với tường đá',
-          photos: [SAMPLE_PHOTOS.damageScratched]
-        }
-      }),
-      pins: [
-        { id: 'pin-vis-1', x: 38, y: 42, label: 'Nứt chóa đèn pha LED', severity: 'high' },
-        { id: 'pin-vis-2', x: 64, y: 58, label: 'Trầy xước yếm phải 15cm', severity: 'medium' }
-      ],
-      brakes: true,
-      tires: true,
-      lightsAndHorn: false,
-      engine: true,
-      mirrorsAndBody: false,
-      status: 'damaged',
-      notes: 'Khách bị va quẹt nhẹ: Trầy xước dàn áo yếm phải và nứt viền chóa đèn pha.',
-      inspectorName: 'Nguyễn Minh Quân',
-      hasDamageReport: true,
-      damageReportId: 'dmg-01'
-    }
-  ]);
+  // Return Inspections (Real MongoDB)
+  const [returnInspections, setReturnInspections] = useState<ReturnInspectionItem[]>([]);
 
-  // Damage Reports
-  const [damageReports, setDamageReports] = useState<DamageReportItem[]>([
-    {
-      id: 'dmg-01',
-      code: 'BBHH-2026-023',
-      inspectionId: 'ins-042',
-      bookingCode: 'HD-DN-2026-318',
-      customerName: 'Lê Thảo Nguyên',
-      customerPhone: '0983 511 042',
-      vehicleId: 'v-2',
-      vehicleName: 'Honda CB150X Adventure',
-      licensePlate: '43A1-118.62',
-      reportedAt: '2026-11-25 16:45',
-      inspectorName: 'Nguyễn Minh Quân',
-      positions: [
-        {
-          id: 'pos-1',
-          position: 'Lốp sau & Vành xe',
-          severity: 'medium',
-          description: 'Lốp hơi non hơi nghi dính đinh nhỏ, cần kiểm tra vá ép nhiệt hoặc thay van',
-          photo: SAMPLE_PHOTOS.adventureSide,
-          suggestedAction: 'repair',
-          suggestedPartName: 'Kiểm tra lốp & bơm chuẩn 2.25 kg'
-        },
-        {
-          id: 'pos-2',
-          position: 'Chân gương chiếu hậu phải',
-          severity: 'medium',
-          description: 'Lỏng chân ren bắt gương và xước nhẹ mặt vỏ gương',
-          photo: SAMPLE_PHOTOS.damageScratched,
-          suggestedAction: 'replace',
-          suggestedPartName: 'Gương chiếu hậu nguyên bản Honda'
-        }
-      ],
-      overallSeverity: 'medium',
-      notes: 'Khách hàng xác nhận kiểm tra cùng KTV, đồng ý lập phương án xử lý.',
-      status: 'repair_proposed',
-      repairId: 'rep-020',
-      customerAgreedSignature: true
-    },
-    {
-      id: 'dmg-02',
-      code: 'BBHH-2026-022',
-      inspectionId: 'ins-01',
-      bookingCode: 'DH-202611-028',
-      customerName: 'Trần Văn Hoàng',
-      customerPhone: '0912 345 678',
-      vehicleId: 'v-4',
-      vehicleName: 'Honda Vision 2026 Smartkey',
-      licensePlate: '43E1-737.37',
-      reportedAt: '2026-11-25 11:45',
-      inspectorName: 'Nguyễn Minh Quân',
-      positions: [
-        {
-          id: 'pos-21',
-          position: 'Dàn áo yếm trước bên phải',
-          severity: 'medium',
-          description: 'Trầy xước sâu 15cm, tróc sơn lót do cọ xát với tường đá',
-          photo: SAMPLE_PHOTOS.damageScratched,
-          suggestedAction: 'repair',
-          suggestedPartName: 'Sơn dặm & đánh bóng dàn áo'
-        },
-        {
-          id: 'pos-22',
-          position: 'Cụm đèn pha LED trước',
-          severity: 'high',
-          description: 'Nứt chân bắt chóa đèn và vỡ nhẹ viền mica góc trái',
-          photo: SAMPLE_PHOTOS.damageBrokenLight,
-          suggestedAction: 'replace',
-          suggestedPartName: 'Cụm chóa đèn pha LED 2 tầng siêu sáng'
-        }
-      ],
-      overallSeverity: 'high',
-      notes: 'Khách đã ký biên bản hiện trạng khi trả xe.',
-      status: 'confirmed',
-      customerAgreedSignature: true
-    }
-  ]);
+  // Damage Reports (Real MongoDB)
+  const [damageReports, setDamageReports] = useState<DamageReportItem[]>([]);
 
-  // Repair Orders
-  const [repairs, setRepairs] = useState<RepairItem[]>([
-    {
-      id: 'rep-020',
-      code: 'PSC-2026-020',
-      damageReportId: 'dmg-01',
-      damageReportCode: 'BBHH-2026-023',
-      bookingCode: 'HD-DN-2026-318',
-      vehicleId: 'v-2',
-      vehicleCode: 'MR-DN-002',
-      vehicleName: 'Honda CB150X Adventure',
-      licensePlate: '43A1-118.62',
-      vehicleOdo: 16210,
-      vehicleType: 'Xe côn tay',
-      vehicleColor: 'Đen nhám',
-      vehicleImage: SAMPLE_PHOTOS.adventureSide,
-      customerName: 'Lê Thảo Nguyên',
-      customerPhone: '0983 511 042',
-      issueSummary: 'Kiểm tra lốp xe hơi non và chân gương phải lỏng ốc',
-      proposedSolution: 'Khắc phục các hạng mục theo BBHH-2026-023: Kiểm tra lốp xe, Kiểm tra đèn & gương',
-      parts: [
-        {
-          partId: 'p11',
-          partCode: 'PT-MIR-01',
-          name: 'Gương chiếu hậu nguyên bản Honda (Cặp)',
-          actionMethod: 'Thay mới chính hãng',
-          quantity: 1,
-          unitPrice: 780000,
-          laborFee: 150000,
-          total: 780000,
-          isActualUsed: false
-        }
-      ],
-      totalPartsPrice: 780000,
-      totalLaborFee: 150000,
-      totalEstimatedCost: 930000,
-      status: 'customer_approved',
-      progressPercent: 40,
-      customerFeedbackDate: '2026-11-25 17:02',
-      customerFeedbackNote: 'Khách hàng đã xác nhận đồng ý phương án và chi phí báo giá.',
-      technicianName: 'Nguyễn Minh Quân',
-      damageItems: [
-        {
-          id: 'di-020-1',
-          title: 'Kiểm tra lốp & chân gương',
-          severity: 'medium',
-          actionLabel: 'Sửa chữa / thay thế',
-          location: 'Lốp sau & Chân gương phải',
-          description: 'Khắc phục các hạng mục theo BBHH-2026-023: vá/bơm lốp chuẩn áp suất và thay chân gương.',
-          beforePhotos: [SAMPLE_PHOTOS.adventureSide],
-          newPartPhotos: [],
-          afterPhotos: []
-        }
-      ],
-      beforePhotos: [SAMPLE_PHOTOS.adventureSide],
-      afterPhotos: [],
-      replacementPhotos: [],
-      createdAt: '2026-11-25 16:59',
-      updatedAt: '2026-11-25 17:02'
-    },
-    {
-      id: 'rep-014',
-      code: 'PSC-2026-014',
-      bookingCode: 'HD-DN-2026-278',
-      vehicleId: 'v-3',
-      vehicleCode: 'MR-DN-003',
-      vehicleName: 'Honda Winner X 150 ABS',
-      licensePlate: '43D1-654.12',
-      vehicleOdo: 18400,
-      vehicleType: 'Xe côn tay',
-      vehicleColor: 'Đỏ đen',
-      vehicleImage: SAMPLE_PHOTOS.cleanRear,
-      customerName: 'Đặng Tuấn Anh',
-      customerPhone: '0935 777 666',
-      issueSummary: 'Vỡ cánh yếm trước phải, cong tay phanh và mòn má phanh',
-      proposedSolution: 'Thay mới cánh yếm trước phải chính hãng, thay tay phanh nhôm và cặp má phanh đĩa',
-      parts: [
-        { partId: 'p12', partCode: 'PT-BDY-01', name: 'Cánh yếm trước phải chính hãng', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 780000, laborFee: 80000, total: 780000, isActualUsed: true },
-        { partId: 'p3', partCode: 'PT-BRK-01', name: 'Má phanh đĩa trước Nissin', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 320000, laborFee: 50000, total: 320000, isActualUsed: true },
-        { partId: 'p11', partCode: 'PT-LV-01', name: 'Tay phanh nhôm CNC', actionMethod: 'Thay mới', quantity: 1, unitPrice: 180000, laborFee: 20000, total: 180000, isActualUsed: true }
-      ],
-      totalPartsPrice: 1280000,
-      totalLaborFee: 150000,
-      totalEstimatedCost: 1430000,
-      actualCost: 1430000,
-      status: 'in_progress',
-      progressPercent: 70,
-      customerFeedbackDate: '2026-11-22 16:30',
-      customerFeedbackNote: 'Khách đã duyệt báo giá qua điện thoại và đồng ý cấn trừ cọc.',
-      technicianName: 'Nguyễn Minh Quân',
-      damageItems: [
-        {
-          id: 'di-014-1',
-          title: 'Dàn áo trước phải & Tay phanh',
-          severity: 'high',
-          actionLabel: 'Thay mới chính hãng',
-          location: 'Yếm phải & cụm phanh trước',
-          description: 'Thay mới cánh yếm trước phải chính hãng, thay tay phanh nhôm và cặp má phanh đĩa.',
-          beforePhotos: [SAMPLE_PHOTOS.damageScratched],
-          newPartPhotos: [SAMPLE_PHOTOS.newPartInstalled],
-          afterPhotos: []
-        }
-      ],
-      beforePhotos: [SAMPLE_PHOTOS.damageScratched],
-      afterPhotos: [],
-      replacementPhotos: [SAMPLE_PHOTOS.newPartInstalled],
-      createdAt: '2026-11-22 16:00'
-    },
-    {
-      id: 'rep-015',
-      code: 'PSC-2026-015',
-      bookingCode: 'HD-DN-2026-295',
-      vehicleId: 'v-5',
-      vehicleCode: 'MR-DN-004',
-      vehicleName: 'Honda ADV 160 ABS Touring',
-      licensePlate: '43A1-045.88',
-      vehicleOdo: 11200,
-      vehicleType: 'Xe tay ga Touring',
-      vehicleColor: 'Đen nhám',
-      vehicleImage: SAMPLE_PHOTOS.adventureSide,
-      customerName: 'Phạm Hoàng Minh',
-      customerPhone: '0905 334 221',
-      issueSummary: 'Trầy xước ốp cánh yếm trước trái, gãy tay phanh và vỡ gương',
-      proposedSolution: 'Thay mới ốp cánh yếm trước trái chính hãng, thay tay phanh trái và gương chiếu hậu',
-      parts: [
-        { partId: 'p12', partCode: 'PT-BDY-02', name: 'Ốp cánh yếm trước trái ADV 160', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 1250000, laborFee: 100000, total: 1250000, isActualUsed: true },
-        { partId: 'p11', partCode: 'PT-MIR-01', name: 'Gương chiếu hậu ADV Touring', actionMethod: 'Thay mới', quantity: 1, unitPrice: 480000, laborFee: 50000, total: 480000, isActualUsed: true },
-        { partId: 'p3', partCode: 'PT-LV-02', name: 'Tay phanh trái chính hãng', actionMethod: 'Thay mới', quantity: 1, unitPrice: 250000, laborFee: 50000, total: 250000, isActualUsed: true }
-      ],
-      totalPartsPrice: 1980000,
-      totalLaborFee: 200000,
-      totalEstimatedCost: 2180000,
-      actualCost: 2180000,
-      status: 'completed',
-      progressPercent: 100,
-      customerFeedbackDate: '2026-11-24 17:30',
-      customerFeedbackNote: 'Khách đồng ý bồi thường đầy đủ.',
-      technicianName: 'Nguyễn Minh Quân',
-      beforePhotos: [SAMPLE_PHOTOS.damageScratched, SAMPLE_PHOTOS.damageBrokenLight],
-      afterPhotos: [SAMPLE_PHOTOS.repairedPerfect],
-      replacementPhotos: [SAMPLE_PHOTOS.newPartInstalled],
-      completionNotes: 'Đã thay hoàn thiện 3 phụ tùng chính hãng và test chạy thử ổn định.',
-      createdAt: '2026-11-24 17:10',
-      completedAt: '2026-11-25 10:15'
-    },
-    {
-      id: 'rep-011',
-      code: 'PSC-2026-011',
-      bookingCode: 'HD-DN-2026-240',
-      vehicleId: 'v-6',
-      vehicleCode: 'MR-DN-005',
-      vehicleName: 'Yamaha Exciter 155 VVA',
-      licensePlate: '43C1-530.77',
-      vehicleOdo: 19600,
-      vehicleType: 'Xe côn tay',
-      vehicleColor: 'Xanh GP',
-      vehicleImage: SAMPLE_PHOTOS.cleanRear,
-      customerName: 'Võ Thị Thanh Hà',
-      customerPhone: '0935 123 456',
-      issueSummary: 'Gãy gương chiếu hậu phải và lệch cần số',
-      proposedSolution: 'Thay mới gương chiếu hậu phải chính hãng và căn chỉnh cần số.',
-      parts: [
-        { partId: 'p11', partCode: 'PT-MIR-02', name: 'Gương chiếu hậu Yamaha chính hãng', actionMethod: 'Thay mới chính hãng', quantity: 1, unitPrice: 240000, laborFee: 80000, total: 240000, isActualUsed: true }
-      ],
-      totalPartsPrice: 240000,
-      totalLaborFee: 80000,
-      totalEstimatedCost: 320000,
-      actualCost: 320000,
-      status: 'completed',
-      progressPercent: 100,
-      customerFeedbackDate: '2026-11-14 15:20',
-      customerFeedbackNote: 'Đồng ý sửa chữa bảo dưỡng.',
-      technicianName: 'Nguyễn Minh Quân',
-      beforePhotos: [SAMPLE_PHOTOS.damageScratched],
-      afterPhotos: [SAMPLE_PHOTOS.repairedPerfect],
-      replacementPhotos: [SAMPLE_PHOTOS.newPartInstalled],
-      completionNotes: 'Đã lắp gương mới và cân chỉnh cần số mượt mà.',
-      createdAt: '2026-11-14 15:00',
-      completedAt: '2026-11-14 17:00'
-    },
-    {
-      id: 'rep-013',
-      code: 'PSC-2026-013',
-      bookingCode: 'HD-DN-2026-261',
-      vehicleId: 'v-4',
-      vehicleCode: 'MR-DN-006',
-      vehicleName: 'Honda Wave RSX 110 FI',
-      licensePlate: '43D1-409.33',
-      vehicleOdo: 27400,
-      vehicleType: 'Xe số',
-      vehicleColor: 'Đỏ đen',
-      vehicleImage: SAMPLE_PHOTOS.cleanFront,
-      customerName: 'Bùi Văn Hải',
-      customerPhone: '0914 667 889',
-      issueSummary: 'Trầy xước nhẹ chắn bùn trước',
-      proposedSolution: 'Đề xuất sơn dặm lại mảng trầy nhỏ ở chắn bùn trước.',
-      parts: [],
-      totalPartsPrice: 0,
-      totalLaborFee: 150000,
-      totalEstimatedCost: 150000,
-      status: 'customer_rejected',
-      progressPercent: 0,
-      customerFeedbackDate: '2026-11-20 11:45',
-      customerFeedbackNote: 'Khách chọn cấn trừ trực tiếp tiền sơn 150.000đ vào cọc, không cần sửa ngay.',
-      technicianName: 'Nguyễn Minh Quân',
-      beforePhotos: [SAMPLE_PHOTOS.damageScratched],
-      afterPhotos: [],
-      replacementPhotos: [],
-      createdAt: '2026-11-20 11:20'
-    }
-  ]);
+  // Repair Orders (Real MongoDB)
+  const [repairs, setRepairs] = useState<RepairItem[]>([]);
 
-  // Notifications
-  const [notifications, setNotifications] = useState<AppNotification[]>([
-    { id: 'nt-1', title: 'Khách Lê Thảo Nguyên vừa trả xe Honda CB150X (43A1-118.62) cần kiểm tra', description: 'Phiếu KT-2026-042 đang lưu nháp, còn 2 mục cần kiểm tra thêm.', time: '15 phút trước', unread: true, type: 'inspection', targetTab: 'return_inspection' },
-    { id: 'nt-2', title: 'Phiếu PSC-2026-020 đã được khách xác nhận báo giá 930.000 đ', description: 'Khách Lê Thảo Nguyên đồng ý thay gương và xử lý lốp sau.', time: '32 phút trước', unread: true, type: 'repair', targetTab: 'repair_management' },
-    { id: 'nt-3', title: 'Biên bản BBHH-2026-022 (43E1-737.37) đang chờ lập báo giá sửa chữa', description: 'Hư hỏng đèn pha LED và trầy xước dàn áo yếm phải.', time: '1 giờ trước', unread: true, type: 'damage', targetTab: 'damage_management' },
-    { id: 'nt-4', title: 'Xe Honda Winner X (43D1-654.12) đang thi công sửa chữa đạt 70%', description: 'Đã thay yếm trước và tay phanh, đang chờ chụp ảnh nghiệm thu.', time: '2 giờ trước', unread: true, type: 'repair', targetTab: 'repair_management' },
-    { id: 'nt-5', title: 'Cảnh báo tồn kho: Ốp yếm trước Honda chỉ còn 4 cái', description: 'Nên đề xuất nhập thêm 10 cái vào kho phụ tùng.', time: '3 giờ trước', unread: true, type: 'system', targetTab: 'parts_management' },
-    { id: 'nt-6', title: 'Lịch bảo dưỡng định kỳ Honda Air Blade (43C1-892.45) ngày mai', description: 'Kiểm tra tổng quát và má phanh ABS.', time: 'Hôm nay 09:30', unread: true, type: 'maintenance', targetTab: 'maintenance' },
-    { id: 'nt-7', title: 'Phiếu sửa chữa PSC-2026-015 (ADV 160) đã nghiệm thu hoàn thành', description: 'Xe đã chuyển về trạng thái Sẵn sàng cho thuê.', time: 'Hôm nay 08:15', unread: true, type: 'repair', targetTab: 'history' },
-    { id: 'nt-8', title: 'Nhắc nhở kiểm tra định kỳ đội xe cuối tháng 11/2026', description: 'Còn 2 xe đến mốc bảo dưỡng 5.000 km.', time: 'Hôm qua', unread: true, type: 'maintenance', targetTab: 'maintenance' }
-  ]);
+  // Notifications (Real MongoDB)
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
   // Profile Form States
-  const [profName, setProfName] = useState(user?.fullName || 'Nguyễn Minh Quân');
-  const [profPhone, setProfPhone] = useState(user?.phone || '0905 999 888');
-  const [profEmail, setProfEmail] = useState(user?.email || 'technician@motobike.vn');
+  const [profName, setProfName] = useState(user?.fullName || '');
+  const [profPhone, setProfPhone] = useState(user?.phone || '');
+  const [profEmail, setProfEmail] = useState(user?.email || '');
   const [profOldPass, setProfOldPass] = useState('');
   const [profNewPass, setProfNewPass] = useState('');
 
@@ -822,34 +212,13 @@ export default function TechnicianPortalPage() {
     notes?: string;
   } | null>(null);
 
-  // New Inspection Modal Form States
-  const [newInsBookingCode, setNewInsBookingCode] = useState('HD-DN-2026-322');
-  const [newInsCustName, setNewInsCustName] = useState('Đỗ Minh Tiến');
-  const [newInsCustPhone, setNewInsCustPhone] = useState('0987 654 321');
-  const [newInsVehicleId, setNewInsVehicleId] = useState('');
-  const [newInsDeliveryOdo, setNewInsDeliveryOdo] = useState(13200);
-  const [newInsOdo, setNewInsOdo] = useState(13400);
+  // New Inspection Modal Form States (strictly populated from returned booking)
+  const [newInsOdo, setNewInsOdo] = useState(0);
   const [newInsFuelLevel, setNewInsFuelLevel] = useState(90);
-  const [newInsBrakes, setNewInsBrakes] = useState(true);
-  const [newInsTires, setNewInsTires] = useState(true);
-  const [newInsLights, setNewInsLights] = useState(true);
-  const [newInsEngine, setNewInsEngine] = useState(true);
-  const [newInsBody, setNewInsBody] = useState(true);
-  const [newInsStatus, setNewInsStatus] = useState<'passed' | 'damaged'>('passed');
   const [newInsNotes, setNewInsNotes] = useState('');
 
   // Damage Report Modal States
-  const [dmgPositionsList, setDmgPositionsList] = useState<DamagePosition[]>([
-    {
-      id: 'p-init-1',
-      position: 'Dàn áo yếm trước bên phải',
-      severity: 'medium',
-      description: 'Cọ quẹt trầy xước sâu',
-      photo: SAMPLE_PHOTOS.damageScratched,
-      suggestedAction: 'repair',
-      suggestedPartName: 'Sơn dặm phục hồi'
-    }
-  ]);
+  const [dmgPositionsList, setDmgPositionsList] = useState<DamagePosition[]>([]);
   const [dmgNotes, setDmgNotes] = useState('');
   const [dmgOverallSeverity, setDmgOverallSeverity] = useState<'low' | 'medium' | 'high' | 'critical'>('medium');
 
@@ -857,36 +226,170 @@ export default function TechnicianPortalPage() {
   const [repSelectedParts, setRepSelectedParts] = useState<{ partId: string; quantity: number }[]>([]);
   const [repSolutionText, setRepSolutionText] = useState('');
 
-  const displayTechName = user?.fullName || profName || 'Nguyễn Minh Quân';
+  const displayTechName = user?.fullName || profName || 'Kỹ thuật viên';
+  const techInitials = useMemo(() => {
+    const parts = displayTechName.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return 'KT';
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }, [displayTechName]);
 
-  // Load Real Data from MongoDB backend (gracefully preserving fallback when backend list is empty)
+  const backendImgBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
+  const resolveUrl = (u?: string) => {
+    if (!u) return '';
+    if (u.startsWith('http') || u.startsWith('data:') || u.startsWith('blob:')) return u;
+    return `${backendImgBase}${u.startsWith('/') ? '' : '/'}${u}`;
+  };
+
+  useEffect(() => {
+    if (user) {
+      setProfName(prev => prev || user.fullName || '');
+      setProfPhone(prev => prev || user.phone || '');
+      setProfEmail(prev => prev || user.email || '');
+    }
+  }, [user]);
+
+  const selectReturnedBookingForModal = (bk: any) => {
+    if (!bk) {
+      setSelectedReturnedBookingId('');
+      setNewInsOdo(0);
+      setNewInsFuelLevel(90);
+      setNewInsNotes('');
+      return;
+    }
+    setSelectedReturnedBookingId(bk._id);
+    setNewInsOdo(Number(bk.checkOutOdometer || bk.checkInOdometer || bk.vehicle?.odometer || 0));
+    setNewInsFuelLevel(90);
+    setNewInsNotes(bk.customerReturnNote || '');
+  };
+
+  const openNewInspectionModal = (preselectBooking?: any) => {
+    const target = preselectBooking || returnedBookings[0] || null;
+    selectReturnedBookingForModal(target);
+    setShowNewInspectionModal(true);
+  };
+
+  // Load 100% Real Data from MongoDB backend
   const loadData = async () => {
     try {
       setLoading(true);
-      const [vRes, mRes, bRes] = await Promise.allSettled([
-        api.get('/vehicles'),
-        api.get('/maintenance'),
-        api.get('/bookings?limit=25')
+      const [vRes, mRes, tRes, nRes] = await Promise.allSettled([
+        api.get('/vehicles?limit=100'),
+        api.get('/maintenance?limit=100'),
+        api.get('/technician/overview'),
+        api.get('/notifications')
       ]);
 
-      if (vRes.status === 'fulfilled' && Array.isArray(vRes.value.data?.data) && vRes.value.data.data.length > 0) {
-        setVehicles(vRes.value.data.data);
-        if (!newInsVehicleId) setNewInsVehicleId(vRes.value.data.data[0]._id);
-      } else {
-        try {
-          const pubRes = await api.get('/vehicles/public');
-          if (Array.isArray(pubRes.data?.data) && pubRes.data.data.length > 0) {
-            setVehicles(pubRes.data.data);
-            if (!newInsVehicleId) setNewInsVehicleId(pubRes.data.data[0]._id);
-          }
-        } catch {}
+      if (vRes.status === 'fulfilled' && Array.isArray(vRes.value.data?.data)) {
+        const mappedVehs: VehicleItem[] = vRes.value.data.data.map((v: any, idx: number) => {
+          const rawStatus = v.availability || v.status || 'available';
+          let techStatus: VehicleItem['status'] = 'available';
+          if (rawStatus === 'rented') techStatus = 'rented';
+          else if (rawStatus === 'reserved' || rawStatus === 'booked' || rawStatus === 'pending_confirmation') techStatus = 'reserved';
+          else if (v.status === 'broken') techStatus = 'broken';
+          else if (v.status === 'maintenance') techStatus = 'maintenance';
+          else if (rawStatus === 'available') techStatus = 'available';
+
+          const mainImg = resolveUrl(v.mainImage || v.images?.[0]?.url) || SAMPLE_PHOTOS.cleanFront;
+          const imgs = Array.isArray(v.images) && v.images.length > 0
+            ? v.images.map((i: any) => resolveUrl(typeof i === 'string' ? i : i?.url)).filter(Boolean)
+            : [mainImg];
+
+          return {
+            _id: v._id,
+            code: `MR-DN-${String(idx + 1).padStart(3, '0')}`,
+            name: v.name,
+            brand: v.brand || 'Honda',
+            color: v.color || 'Tiêu chuẩn',
+            licensePlate: v.licensePlate,
+            type: v.type === 'scooter' ? 'Xe tay ga' : v.type === 'manual' ? 'Xe số' : v.type === 'clutch' ? 'Xe côn tay' : (v.type || 'Xe máy'),
+            year: v.year || 2024,
+            engineCC: v.engineCC || 125,
+            odometer: Number(v.odometer || 0),
+            nextMaintenanceOdo: Number(v.odometer || 0) + 2000,
+            status: techStatus,
+            lastMaintenanceDate: v.lastMaintenanceDate ? new Date(v.lastMaintenanceDate).toISOString().slice(0, 10) : 'Chưa bảo dưỡng',
+            techNote: v.description || '',
+            image: mainImg,
+            gallery: imgs
+          };
+        });
+        setVehicles(mappedVehs);
+        if (!newMaintVehId && mappedVehs[0]) setNewMaintVehId(mappedVehs[0]._id);
       }
 
-      if (mRes.status === 'fulfilled' && Array.isArray(mRes.value.data?.data) && mRes.value.data.data.length > 0) {
-        setMaintenances(mRes.value.data.data);
+      if (mRes.status === 'fulfilled' && Array.isArray(mRes.value.data?.data)) {
+        const mappedMaints: MaintenanceRecord[] = mRes.value.data.data.map((m: any) => ({
+          ...m,
+          scheduledDate: m.scheduledDate ? new Date(m.scheduledDate).toISOString().slice(0, 10) : '',
+          completedDate: m.completedDate ? new Date(m.completedDate).toISOString().slice(0, 10) : undefined
+        }));
+        setMaintenances(mappedMaints);
       }
-      if (bRes.status === 'fulfilled' && Array.isArray(bRes.value.data?.data)) {
-        setRealBookings(bRes.value.data.data);
+
+      if (tRes.status === 'fulfilled' && tRes.value.data?.data) {
+        const ov = tRes.value.data.data;
+        const fixIns = (ins: any): ReturnInspectionItem => ({
+          ...ins,
+          vehicleImage: resolveUrl(ins.vehicleImage) || SAMPLE_PHOTOS.cleanFront,
+          deliveryImages: (ins.deliveryImages || []).map(resolveUrl).filter(Boolean),
+          returnImages: (ins.returnImages || []).map(resolveUrl).filter(Boolean)
+        });
+        const fixRep = (rep: any): RepairItem => ({
+          ...rep,
+          vehicleImage: resolveUrl(rep.vehicleImage) || SAMPLE_PHOTOS.cleanFront,
+          beforePhotos: (rep.beforePhotos || []).map(resolveUrl).filter(Boolean),
+          afterPhotos: (rep.afterPhotos || []).map(resolveUrl).filter(Boolean),
+          replacementPhotos: (rep.replacementPhotos || []).map(resolveUrl).filter(Boolean)
+        });
+        const fixDmg = (dmg: any): DamageReportItem => ({
+          ...dmg,
+          positions: (dmg.positions || []).map((p: any) => ({
+            ...p,
+            photo: resolveUrl(p.photo)
+          }))
+        });
+
+        const insList = Array.isArray(ov.inspections) ? ov.inspections.map(fixIns) : [];
+        setReturnInspections(insList);
+        if (insList.length > 0 && (!activeInspectionId || !insList.some((x: any) => x.id === activeInspectionId))) {
+          setActiveInspectionId(insList[0].id);
+        } else if (insList.length === 0) {
+          setActiveInspectionId('');
+        }
+
+        setDamageReports(Array.isArray(ov.damageReports) ? ov.damageReports.map(fixDmg) : []);
+        setRepairs(Array.isArray(ov.repairs) ? ov.repairs.map(fixRep) : []);
+        setPartsCatalog(Array.isArray(ov.parts) ? ov.parts : []);
+
+        const retList = Array.isArray(ov.returnedBookings) ? ov.returnedBookings : [];
+        setReturnedBookings(retList);
+        if (retList.length > 0) {
+          selectReturnedBookingForModal(retList[0]);
+        } else {
+          selectReturnedBookingForModal(null);
+        }
+      }
+
+      if (nRes.status === 'fulfilled' && Array.isArray(nRes.value.data?.data)) {
+        const mappedNotifs: AppNotification[] = nRes.value.data.data.map((n: any) => {
+          let targetTab: TabId = 'notifications';
+          if (n.data?.action === 'customer_returned') targetTab = 'return_inspection';
+          else if (n.data?.repairId) targetTab = 'repair_management';
+          else if (n.data?.damageReportId) targetTab = 'damage_management';
+          else if (n.type === 'maintenance') targetTab = 'maintenance';
+
+          return {
+            id: n._id,
+            title: n.title,
+            description: n.message,
+            time: n.createdAt ? new Date(n.createdAt).toLocaleString('vi-VN') : '',
+            unread: !n.isRead,
+            type: n.type === 'maintenance' ? 'maintenance' : n.type === 'alert' ? 'damage' : 'system',
+            targetTab
+          };
+        });
+        setNotifications(mappedNotifs);
       }
     } finally {
       setLoading(false);
@@ -953,78 +456,62 @@ export default function TechnicianPortalPage() {
   }, [repSelectedParts, partsCatalog]);
 
   // ==========================================
-  // 3. EVENT HANDLERS
+  // 3. EVENT HANDLERS (100% REAL API PERSISTENCE)
   // ==========================================
-  const handleSaveInspection = (e: React.FormEvent) => {
+  const handleSaveInspection = async (e: React.FormEvent) => {
     e.preventDefault();
-    const veh = vehicles.find(v => v._id === newInsVehicleId) || vehicles[0];
-    const selectedBk = realBookings.find(b => b._id === selectedRealBookingId);
-    const newId = `ins-${Date.now()}`;
-    const newCode = `KT-2026-0${returnInspections.length + 43}`;
+    const selectedBk = returnedBookings.find(b => b._id === selectedReturnedBookingId);
+    if (!selectedBk) {
+      toast.error('Chỉ được tiếp nhận xe từ danh sách đơn khách hàng đã trả xe!');
+      return;
+    }
 
-    const checklist = createDefaultChecklist({
-      brakes: newInsBrakes ? undefined : { status: 'damage', damageLocation: 'Hệ thống phanh', note: 'Cần kiểm tra má phanh.' },
-      tires: newInsTires ? undefined : { status: 'check', damageLocation: 'Lốp xe', note: 'Lốp non hơi hoặc mòn.' },
-      lights: newInsLights ? undefined : { status: 'damage', damageLocation: 'Đèn pha / Còi', note: 'Kiểm tra hệ thống chiếu sáng.' },
-      engine: newInsEngine ? undefined : { status: 'damage', damageLocation: 'Động cơ', note: 'Tiếng máy không đều.' },
-      body: newInsBody ? undefined : { status: 'damage', damageLocation: 'Dàn áo / Gương', note: 'Phát hiện trầy xước.' }
-    });
+    try {
+      const checklist = createDefaultChecklist();
+      const res = await api.post('/technician/inspections', {
+        bookingId: selectedBk._id,
+        deliveryOdometer: Number(selectedBk.checkInOdometer || selectedBk.vehicle?.odometer || 0),
+        returnOdometer: Number(newInsOdo || 0),
+        fuelLevel: Number(newInsFuelLevel),
+        checklist,
+        pins: [],
+        notes: newInsNotes || selectedBk.customerReturnNote || 'Đã tiếp nhận xe khách trả để kiểm tra 8 hạng mục.'
+      });
 
-    const backendImgBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
-    const deliveryImgs = selectedBk?.checkInImages?.length
-      ? selectedBk.checkInImages.map((img: any) =>
-          img.url?.startsWith('http') ? img.url : `${backendImgBase}${img.url}`
-        )
-      : [SAMPLE_PHOTOS.cleanFront];
+      const created: ReturnInspectionItem = {
+        ...res.data.data,
+        vehicleImage: resolveUrl(res.data.data.vehicleImage) || SAMPLE_PHOTOS.cleanFront,
+        deliveryImages: (res.data.data.deliveryImages || []).map(resolveUrl).filter(Boolean),
+        returnImages: (res.data.data.returnImages || []).map(resolveUrl).filter(Boolean)
+      };
 
-    const newRecord: ReturnInspectionItem = {
-      id: newId,
-      inspectionCode: newCode,
-      bookingId: selectedBk?._id || `bk-${Date.now()}`,
-      bookingCode: newInsBookingCode,
-      isRealBooking: Boolean(selectedBk),
-      customerName: newInsCustName,
-      customerPhone: newInsCustPhone,
-      customerIdCard: selectedBk?.customer?.cccd || '048096009999',
-      vehicleId: veh?._id || 'v-gen',
-      vehicleName: veh?.name || 'Honda Vision',
-      licensePlate: veh?.licensePlate || '43C1-999.99',
-      vehicleImage: veh?.image || SAMPLE_PHOTOS.cleanFront,
-      rentalStartDate: selectedBk?.startDate
-        ? new Date(selectedBk.startDate).toISOString().slice(0, 16).replace('T', ' ')
-        : '2026-11-23 08:00',
-      rentalEndDate: selectedBk?.endDate
-        ? new Date(selectedBk.endDate).toISOString().slice(0, 16).replace('T', ' ')
-        : '2026-11-25 14:00',
-      returnDate: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      deliveryOdometer: newInsDeliveryOdo,
-      returnOdometer: newInsOdo,
-      fuelLevel: newInsFuelLevel,
-      deliveryImages: deliveryImgs,
-      returnImages: [veh?.image || SAMPLE_PHOTOS.cleanRear],
-      checklist,
-      pins: [],
-      brakes: newInsBrakes,
-      tires: newInsTires,
-      lightsAndHorn: newInsLights,
-      engine: newInsEngine,
-      mirrorsAndBody: newInsBody,
-      status: 'draft',
-      notes: newInsNotes || 'Đang kiểm tra 8 hạng mục kỹ thuật khi khách trả xe.',
-      inspectorName: displayTechName,
-      hasDamageReport: false
-    };
-
-    setReturnInspections(prev => [newRecord, ...prev]);
-    setActiveInspectionId(newId);
-    setActiveTab('return_inspection');
-    setShowNewInspectionModal(false);
-    setSelectedRealBookingId('');
-    toast.success(`Đã tiếp nhận phiếu ${newCode}!`);
+      setReturnInspections(prev => [created, ...prev]);
+      const nextReturned = returnedBookings.filter(b => b._id !== selectedBk._id);
+      setReturnedBookings(nextReturned);
+      selectReturnedBookingForModal(nextReturned[0] || null);
+      setActiveInspectionId(created.id);
+      setActiveTab('return_inspection');
+      setShowNewInspectionModal(false);
+      toast.success(`Đã tiếp nhận phiếu ${created.inspectionCode}!`);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể tiếp nhận xe chưa được khách trả');
+    }
   };
 
   const handleUpdateInspection = (updated: ReturnInspectionItem) => {
     setReturnInspections(prev => prev.map(item => (item.id === updated.id ? updated : item)));
+    api.put(`/technician/inspections/${updated.id}`, updated).catch(() => {});
+  };
+
+  const handleSaveDraftInspection = async (draft: ReturnInspectionItem) => {
+    setReturnInspections(prev => prev.map(item => (item.id === draft.id ? draft : item)));
+    try {
+      await api.put(`/technician/inspections/${draft.id}`, draft);
+      toast.success(`Đã lưu bản nháp phiếu ${draft.inspectionCode} lên hệ thống!`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Lỗi khi lưu bản nháp');
+    }
   };
 
   const handleConfirmInspection = async (ins: ReturnInspectionItem) => {
@@ -1032,30 +519,22 @@ export default function TechnicianPortalPage() {
     const checkItems = ins.checklist.filter(c => c.status === 'check');
     const finalStatus: ReturnInspectionItem['status'] = damageItems.length > 0 ? 'damaged' : 'passed';
 
-    handleUpdateInspection({ ...ins, status: finalStatus });
+    const payload = { ...ins, status: finalStatus };
+    setReturnInspections(prev => prev.map(item => (item.id === ins.id ? payload : item)));
 
-    setVehicles(prev =>
-      prev.map(v =>
-        v._id === ins.vehicleId
-          ? { ...v, odometer: ins.returnOdometer, status: finalStatus === 'passed' ? 'available' : 'broken' }
-          : v
-      )
-    );
-
-    if (ins.isRealBooking && ins.vehicleId && !ins.vehicleId.startsWith('v-')) {
-      try {
-        await api.put(`/vehicles/${ins.vehicleId}`, {
-          odometer: ins.returnOdometer,
-          status: finalStatus === 'passed' ? 'available' : 'broken'
-        });
-      } catch {}
+    try {
+      await api.put(`/technician/inspections/${ins.id}`, payload);
+      await loadData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Lỗi khi xác nhận kiểm tra');
+      return;
     }
 
     if (finalStatus === 'passed') {
       toast.success(
         checkItems.length > 0
           ? `Đã xác nhận ${ins.inspectionCode} (lưu ý ${checkItems.length} mục kiểm tra thêm).`
-          : `Đã xác nhận ĐẠT cho xe ${ins.licensePlate}!`
+          : `Đã xác nhận ĐẠT cho xe ${ins.licensePlate} — Xe chuyển về Sẵn sàng!`
       );
     } else {
       toast.error(`Phát hiện ${damageItems.length} hư hỏng! Hãy bấm "Lập biên bản hư hỏng".`);
@@ -1106,49 +585,37 @@ export default function TechnicianPortalPage() {
     setShowCreateDamageReportModal(updatedIns);
   };
 
-  const handleSaveDamageReport = (e: React.FormEvent) => {
+  const handleSaveDamageReport = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showCreateDamageReportModal) return;
 
     const ins = showCreateDamageReportModal;
-    const newDmgId = `dmg-${Date.now()}`;
-    const newCode = `BBHH-2026-0${damageReports.length + 24}`;
-
-    const newReport: DamageReportItem = {
-      id: newDmgId,
-      code: newCode,
-      inspectionId: ins.id,
-      bookingCode: ins.bookingCode,
-      customerName: ins.customerName,
-      customerPhone: ins.customerPhone,
-      vehicleId: ins.vehicleId,
-      vehicleName: ins.vehicleName,
-      licensePlate: ins.licensePlate,
-      reportedAt: new Date().toISOString().slice(0, 16).replace('T', ' '),
-      inspectorName: displayTechName,
-      positions: dmgPositionsList,
-      overallSeverity: dmgOverallSeverity,
-      notes: dmgNotes || 'Khách hàng đã ký xác nhận biên bản hư hỏng.',
-      status: 'confirmed',
-      customerAgreedSignature: true
-    };
-
-    setReturnInspections(prev =>
-      prev.map(i => (i.id === ins.id ? { ...i, hasDamageReport: true, damageReportId: newDmgId } : i))
-    );
-    setDamageReports(prev => [newReport, ...prev]);
-    setShowCreateDamageReportModal(null);
-    toast.success(`Đã lập Biên bản hư hỏng ${newCode}!`);
+    try {
+      const res = await api.post('/technician/damage-reports', {
+        inspectionId: ins.id,
+        positions: dmgPositionsList,
+        overallSeverity: dmgOverallSeverity,
+        notes: dmgNotes || 'Khách hàng đã ký xác nhận biên bản hư hỏng.',
+        customerAgreedSignature: true
+      });
+      const newReport: DamageReportItem = res.data.data;
+      setReturnInspections(prev =>
+        prev.map(i => (i.id === ins.id ? { ...i, status: 'damaged', hasDamageReport: true, damageReportId: newReport.id } : i))
+      );
+      setDamageReports(prev => [newReport, ...prev]);
+      setShowCreateDamageReportModal(null);
+      toast.success(`Đã lập Biên bản hư hỏng ${newReport.code}!`);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Lỗi khi lưu biên bản hư hỏng');
+    }
   };
 
-  const handleSaveRepairOrder = (e: React.FormEvent) => {
+  const handleSaveRepairOrder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!showCreateRepairModal) return;
 
     const dmg = showCreateRepairModal;
-    const newRepId = `rep-${Date.now()}`;
-    const newCode = `PSC-2026-0${repairs.length + 21}`;
-
     const partsLines: RepairPartLine[] = modalQuoteCalc.lines.map((l: any) => ({
       partId: l.id,
       partCode: l.code,
@@ -1161,70 +628,106 @@ export default function TechnicianPortalPage() {
       isActualUsed: false
     }));
 
-    const vehObj = vehicles.find(v => v._id === dmg.vehicleId);
-    const ts = new Date().toISOString().slice(0, 16).replace('T', ' ');
+    const partsPrice = partsLines.reduce((s, p) => s + p.total, 0);
+    const laborFee = modalQuoteCalc.laborPrice || 150000;
 
-    const newRepair: RepairItem = {
-      id: newRepId,
-      code: newCode,
-      damageReportId: dmg.id,
-      damageReportCode: dmg.code,
-      bookingCode: dmg.bookingCode,
-      vehicleId: dmg.vehicleId,
-      vehicleName: dmg.vehicleName,
-      licensePlate: dmg.licensePlate,
-      vehicleOdo: vehObj?.odometer || 14500,
-      vehicleType: vehObj?.type || 'Xe tay ga',
-      vehicleImage: vehObj?.image || SAMPLE_PHOTOS.cleanFront,
-      customerName: dmg.customerName,
-      customerPhone: dmg.customerPhone,
-      issueSummary: dmg.positions.map(p => `${p.position}: ${p.description}`).join('; '),
-      proposedSolution: repSolutionText || 'Thay thế phụ tùng mới chính hãng và phục hồi vị trí hư hỏng',
-      parts: partsLines,
-      totalPartsPrice: partsLines.reduce((s, p) => s + p.total, 0),
-      totalLaborFee: modalQuoteCalc.laborPrice || 150000,
-      totalEstimatedCost:
-        partsLines.reduce((s, p) => s + p.total, 0) + (modalQuoteCalc.laborPrice || 150000),
-      status: 'waiting_approval',
-      progressPercent: 25,
-      technicianName: displayTechName,
-      damageItems: dmg.positions.map(p => ({
-        id: p.id,
-        title: p.position,
-        severity: p.severity,
-        actionLabel: p.suggestedAction === 'replace' ? 'Thay mới chính hãng' : 'Sửa chữa / phục hồi',
-        location: p.position,
-        description: p.description,
-        beforePhotos: p.photo ? [p.photo] : [],
-        newPartPhotos: [],
-        afterPhotos: []
-      })),
-      beforePhotos: dmg.positions.map(p => p.photo || SAMPLE_PHOTOS.damageScratched),
-      afterPhotos: [],
-      replacementPhotos: [],
-      logs: [
-        {
-          id: `log-${Date.now()}`,
-          title: `Tạo phiếu sửa chữa ${newCode} từ ${dmg.code}`,
-          note: repSolutionText || 'Lập phương án báo giá gửi khách hàng',
-          actor: displayTechName,
-          timestamp: ts
-        }
-      ],
-      createdAt: ts,
-      updatedAt: ts
-    };
+    try {
+      const res = await api.post('/technician/repairs', {
+        damageReportId: dmg.id,
+        vehicleId: dmg.vehicleId,
+        bookingCode: dmg.bookingCode,
+        customerName: dmg.customerName,
+        customerPhone: dmg.customerPhone,
+        issueSummary: dmg.positions.map(p => `${p.position}: ${p.description}`).join('; '),
+        proposedSolution: repSolutionText || 'Thay thế phụ tùng mới chính hãng và phục hồi vị trí hư hỏng',
+        parts: partsLines,
+        totalPartsPrice: partsPrice,
+        totalLaborFee: laborFee,
+        totalEstimatedCost: partsPrice + laborFee,
+        status: 'waiting_approval',
+        damageItems: dmg.positions.map(p => ({
+          id: p.id,
+          title: p.position,
+          severity: p.severity,
+          actionLabel: p.suggestedAction === 'replace' ? 'Thay mới chính hãng' : 'Sửa chữa / phục hồi',
+          location: p.position,
+          description: p.description,
+          beforePhotos: p.photo ? [p.photo] : [],
+          newPartPhotos: [],
+          afterPhotos: []
+        })),
+        beforePhotos: dmg.positions.map(p => p.photo || SAMPLE_PHOTOS.damageScratched)
+      });
 
-    setDamageReports(prev =>
-      prev.map(d => (d.id === dmg.id ? { ...d, status: 'repair_proposed', repairId: newRepId } : d))
-    );
-    setRepairs(prev => [newRepair, ...prev]);
-    setSelectedRepairId(newRepId);
-    setShowCreateRepairModal(null);
-    setRepSelectedParts([]);
-    setRepSolutionText('');
-    setActiveTab('repair_management');
-    toast.success(`Đã tạo phiếu sửa chữa ${newCode} từ ${dmg.code}!`);
+      const createdRep: RepairItem = res.data.data;
+      setDamageReports(prev =>
+        prev.map(d => (d.id === dmg.id ? { ...d, status: 'repair_proposed', repairId: createdRep.id } : d))
+      );
+      setRepairs(prev => [createdRep, ...prev]);
+      setSelectedRepairId(createdRep.id);
+      setShowCreateRepairModal(null);
+      setRepSelectedParts([]);
+      setRepSolutionText('');
+      setActiveTab('repair_management');
+      toast.success(`Đã tạo phiếu sửa chữa ${createdRep.code} từ ${dmg.code}!`);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Lỗi khi tạo phiếu sửa chữa');
+    }
+  };
+
+  const handleCreateRepairFromWorkspace = async (draft: RepairItem) => {
+    try {
+      const res = await api.post('/technician/repairs', {
+        vehicleId: draft.vehicleId,
+        bookingCode: draft.bookingCode,
+        customerName: draft.customerName,
+        customerPhone: draft.customerPhone,
+        issueSummary: draft.issueSummary,
+        proposedSolution: draft.proposedSolution,
+        parts: draft.parts,
+        totalPartsPrice: draft.totalPartsPrice,
+        totalLaborFee: draft.totalLaborFee,
+        totalEstimatedCost: draft.totalEstimatedCost,
+        status: draft.status,
+        technicianNotes: draft.technicianNotes,
+        damageItems: draft.damageItems
+      });
+      const persisted: RepairItem = res.data.data;
+      setRepairs(prev => [persisted, ...prev]);
+      setSelectedRepairId(persisted.id);
+      loadData();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể lưu phiếu sửa chữa mới lên máy chủ');
+    }
+  };
+
+  const handleUpdateRepairInWorkspace = async (updated: RepairItem) => {
+    setRepairs(prev => prev.map(r => (r.id === updated.id ? updated : r)));
+    try {
+      await api.put(`/technician/repairs/${updated.id}`, updated);
+      if (updated.status === 'completed' || updated.status === 'in_progress') {
+        loadData();
+      }
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Lỗi cập nhật phiếu sửa chữa');
+    }
+  };
+
+  const handleMarkNotificationRead = async (n: AppNotification) => {
+    setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, unread: false } : x)));
+    try {
+      await api.put(`/notifications/${n.id}/read`);
+    } catch {}
+    if (n.targetTab) setActiveTab(n.targetTab);
+  };
+
+  const handleMarkAllNotificationsRead = async () => {
+    setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
+    try {
+      await api.put('/notifications/read-all');
+      toast.success('Đã đánh dấu tất cả thông báo là đã đọc!');
+    } catch {}
   };
 
   const handleUpdateVehicleStatus = async (veh: VehicleItem, newStatus: VehicleItem['status']) => {
@@ -1232,24 +735,59 @@ export default function TechnicianPortalPage() {
     if (selectedVehicleDetail?._id === veh._id) {
       setSelectedVehicleDetail({ ...selectedVehicleDetail, status: newStatus });
     }
-    if (!veh._id.startsWith('v-')) {
-      const apiStatus =
-        newStatus === 'repairing'
-          ? 'broken'
-          : newStatus === 'reserved'
-          ? 'rented'
-          : newStatus;
-      try {
-        await api.put(`/vehicles/${veh._id}`, { status: apiStatus });
-      } catch {}
+    const apiStatus =
+      newStatus === 'repairing'
+        ? 'broken'
+        : newStatus === 'reserved'
+        ? 'rented'
+        : newStatus;
+    try {
+      await api.put(`/vehicles/${veh._id}`, { status: apiStatus });
+      toast.success(`Đã cập nhật trạng thái xe ${veh.licensePlate} trong hệ thống!`);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể cập nhật trạng thái xe');
+      loadData();
     }
-    toast.success(`Đã cập nhật trạng thái xe ${veh.licensePlate}!`);
   };
+
+  const monthlyChartData: MonthlyChartDatum[] = useMemo(() => {
+    const now = new Date();
+    const months: Array<{ label: string }> = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push({
+        label: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`
+      });
+    }
+
+    const bucketOf = (dateStr?: string) => {
+      if (!dateStr) return null;
+      const dt = new Date(dateStr.replace(' ', 'T'));
+      if (isNaN(dt.getTime())) return null;
+      return `${String(dt.getMonth() + 1).padStart(2, '0')}/${String(dt.getFullYear()).slice(-2)}`;
+    };
+
+    return months.map(m => {
+      const insCount = returnInspections.filter(i => bucketOf(i.returnDate) === m.label).length;
+      const maintList = maintenances.filter(x => bucketOf(x.scheduledDate) === m.label);
+      const repList = repairs.filter(r => bucketOf(r.createdAt) === m.label);
+      const repCost = repList.reduce((s, r) => s + (r.actualCost || r.totalEstimatedCost || 0), 0);
+      const maintCost = maintList.reduce((s, x) => s + (x.cost || 0), 0);
+
+      return {
+        label: m.label,
+        inspections: insCount,
+        maintenance: maintList.length,
+        repairs: repList.length,
+        cost: repCost + maintCost
+      };
+    });
+  }, [returnInspections, maintenances, repairs]);
 
   const handleExportCsvReport = () => {
     const rows = [
       ['Tháng', 'Kiểm tra trả xe', 'Bảo dưỡng', 'Sửa chữa', 'Chi phí (VND)'],
-      ...CHART_DATA_6M.map(d => [d.label, d.inspections, d.maintenance, d.repairs, d.cost])
+      ...monthlyChartData.map(d => [d.label, d.inspections, d.maintenance, d.repairs, d.cost])
     ];
     const csv = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1273,7 +811,7 @@ export default function TechnicianPortalPage() {
   }> = [
     { id: 'home', label: 'Dashboard', icon: LayoutGrid },
     { id: 'vehicles', label: 'Quản lý xe', icon: Bike },
-    { id: 'return_inspection', label: 'Kiểm tra xe khi trả', icon: ClipboardCheck },
+    { id: 'return_inspection', label: 'Kiểm tra xe khi trả', icon: ClipboardCheck, badge: returnedBookings.length },
     { id: 'damage_management', label: 'Quản lý hư hỏng', icon: AlertTriangle },
     { id: 'repair_management', label: 'Quản lý sửa chữa', icon: Wrench, badge: activeRepairsCount },
     { id: 'parts_management', label: 'Quản lý phụ tùng', icon: Package },
@@ -1522,7 +1060,7 @@ export default function TechnicianPortalPage() {
         <div style={{ padding: '14px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
             <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: '#0f172a', border: '2px solid #3b82f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 800, fontSize: '12.5px', flexShrink: 0 }}>
-              MQ
+              {techInitials}
             </div>
             {sidebarOpen && (
               <div style={{ minWidth: 0 }}>
@@ -1727,7 +1265,7 @@ export default function TechnicianPortalPage() {
                   fontSize: '12px'
                 }}
               >
-                MQ
+                {techInitials}
               </div>
               <div>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a', lineHeight: 1.2 }}>{displayTechName}</div>
@@ -1758,7 +1296,7 @@ export default function TechnicianPortalPage() {
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                   <button
                     type="button"
-                    onClick={() => setShowNewInspectionModal(true)}
+                    onClick={() => openNewInspectionModal()}
                     style={{
                       display: 'inline-flex',
                       alignItems: 'center',
@@ -1775,7 +1313,7 @@ export default function TechnicianPortalPage() {
                     }}
                   >
                     <Plus size={16} />
-                    <span>Tiếp nhận kiểm tra trả xe</span>
+                    <span>Tiếp nhận kiểm tra trả xe ({returnedBookings.length})</span>
                   </button>
 
                   <button
@@ -1859,7 +1397,7 @@ export default function TechnicianPortalPage() {
                       Xem báo cáo →
                     </button>
                   </div>
-                  <MonthlyWorkBarChart data={CHART_DATA_6M} />
+                  <MonthlyWorkBarChart data={monthlyChartData} />
                 </div>
 
                 <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
@@ -1893,7 +1431,11 @@ export default function TechnicianPortalPage() {
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {maintenances.slice(0, 4).map(m => (
+                    {maintenances.length === 0 ? (
+                      <div style={{ fontSize: '12.5px', color: '#64748b', padding: '14px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px' }}>
+                        Chưa có lịch bảo dưỡng nào trong hệ thống.
+                      </div>
+                    ) : maintenances.slice(0, 4).map(m => (
                       <div key={m._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #f1f5f9', gap: '10px' }}>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
@@ -1902,7 +1444,7 @@ export default function TechnicianPortalPage() {
                           <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>{m.title}</div>
                         </div>
                         <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                          <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#475569' }}>{m.scheduledDate || '2026-11-26'}</div>
+                          <div style={{ fontSize: '11.5px', fontWeight: 700, color: '#475569' }}>{m.scheduledDate || ''}</div>
                           <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: m.status === 'completed' ? '#f0fdf4' : m.status === 'in_progress' ? '#eff6ff' : '#fefce8', color: m.status === 'completed' ? '#16a34a' : m.status === 'in_progress' ? '#2563eb' : '#a16207' }}>
                             {m.status === 'completed' ? 'Hoàn thành' : m.status === 'in_progress' ? 'Đang làm' : 'Đã lên lịch'}
                           </span>
@@ -1921,13 +1463,14 @@ export default function TechnicianPortalPage() {
                     </button>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                    {notifications.slice(0, 4).map(n => (
+                    {notifications.length === 0 ? (
+                      <div style={{ fontSize: '12.5px', color: '#64748b', padding: '14px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px' }}>
+                        Chưa có thông báo mới.
+                      </div>
+                    ) : notifications.slice(0, 4).map(n => (
                       <div
                         key={n.id}
-                        onClick={() => {
-                          setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, unread: false } : x)));
-                          if (n.targetTab) setActiveTab(n.targetTab);
-                        }}
+                        onClick={() => handleMarkNotificationRead(n)}
                         style={{
                           padding: '10px 12px',
                           borderRadius: '10px',
@@ -1949,17 +1492,47 @@ export default function TechnicianPortalPage() {
 
               {/* Recent Return Inspections Table */}
               <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Xe vừa trả & Công việc kỹ thuật cần xử lý
+                    Xe khách trả chờ tiếp nhận ({returnedBookings.length}) & Phiếu kiểm tra ({returnInspections.length})
                   </h3>
                   <button type="button" onClick={() => setActiveTab('return_inspection')} style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
                     Mở màn hình Kiểm tra xe ({returnInspections.length}) →
                   </button>
                 </div>
 
+                {returnedBookings.length > 0 && (
+                  <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    {returnedBookings.map((bk: any) => (
+                      <div key={bk._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: '#fff7ed', borderRadius: '11px', border: '1px solid #fed7aa', flexWrap: 'wrap', gap: '10px' }}>
+                        <div>
+                          <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#9a3412' }}>
+                            CHỜ TIẾP NHẬN • {bk.vehicle?.name} (<span style={{ fontFamily: 'monospace' }}>{bk.vehicle?.licensePlate}</span>)
+                          </div>
+                          <div style={{ fontSize: '12px', color: '#7c2d12' }}>
+                            Đơn <strong>{bk.bookingCode}</strong> • KH: {bk.customer?.fullName} • Trả lúc: {bk.customerReturnedAt ? new Date(bk.customerReturnedAt).toLocaleString('vi-VN') : 'Đã trả xe'}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openNewInspectionModal(bk)}
+                          style={{ padding: '7px 14px', background: '#ea580c', color: '#ffffff', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          + Tiếp nhận xe trả
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  {returnInspections.map(ins => (
+                  {returnInspections.length === 0 ? (
+                    <div style={{ fontSize: '12.5px', color: '#64748b', padding: '16px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px' }}>
+                      {returnedBookings.length > 0
+                        ? 'Chọn nút "+ Tiếp nhận xe trả" phía trên để mở phiếu kiểm tra 8 hạng mục.'
+                        : 'Chưa có phiếu kiểm tra xe khi trả nào (Chỉ tiếp nhận được xe sau khi khách hàng thực hiện trả xe).'}
+                    </div>
+                  ) : returnInspections.map(ins => (
                     <div key={ins.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#f8fafc', borderRadius: '11px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <img
@@ -2188,7 +1761,7 @@ export default function TechnicianPortalPage() {
                                 </td>
                                 <td style={{ padding: '12px 14px', color: '#334155' }}>{veh.type}</td>
                                 <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0f172a' }}>
-                                  {(veh.odometer || 12000).toLocaleString('vi-VN')} km
+                                  {(veh.odometer || 0).toLocaleString('vi-VN')} km
                                 </td>
                                 <td style={{ padding: '12px 14px' }}>
                                   <span
@@ -2209,7 +1782,7 @@ export default function TechnicianPortalPage() {
                                   </span>
                                 </td>
                                 <td style={{ padding: '12px 14px', fontSize: '12.5px', color: '#475569', fontFamily: 'monospace' }}>
-                                  {veh.lastMaintenanceDate || '2026-11-25'}
+                                  {veh.lastMaintenanceDate || 'Chưa bảo dưỡng'}
                                 </td>
                                 <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                                   <div style={{ display: 'inline-flex', gap: '6px' }}>
@@ -2362,7 +1935,10 @@ export default function TechnicianPortalPage() {
               activeInspectionId={activeInspectionId}
               onSelectInspection={setActiveInspectionId}
               onUpdateInspection={handleUpdateInspection}
-              onOpenNewModal={() => setShowNewInspectionModal(true)}
+              onSaveDraft={handleSaveDraftInspection}
+              onOpenNewModal={() => openNewInspectionModal()}
+              returnedBookings={returnedBookings}
+              onAcceptReturnedBooking={bk => openNewInspectionModal(bk)}
               onOpenPhotoCompare={payload => setShowPhotoCompareModal(payload)}
               onConfirmInspection={handleConfirmInspection}
               onOpenDamageReport={handleOpenDamageReportFromInspection}
@@ -2387,6 +1963,7 @@ export default function TechnicianPortalPage() {
                   onClick={() => {
                     const fallbackIns = returnInspections.find(i => i.id === activeInspectionId) || returnInspections[0];
                     if (fallbackIns) handleOpenDamageReportFromInspection(fallbackIns);
+                    else toast.error('Cần tiếp nhận và kiểm tra xe khách trả trước khi lập biên bản hư hỏng');
                   }}
                   style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 16px', borderRadius: '10px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
                 >
@@ -2422,6 +1999,11 @@ export default function TechnicianPortalPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {damageReports.filter(d => dmgFilter === 'all' || d.status === dmgFilter).length === 0 ? (
+                  <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '32px', background: '#ffffff', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                    Chưa có biên bản hư hỏng nào trong hệ thống.
+                  </div>
+                ) : null}
                 {damageReports
                   .filter(d => dmgFilter === 'all' || d.status === dmgFilter)
                   .map(dmg => (
@@ -2527,8 +2109,8 @@ export default function TechnicianPortalPage() {
               repairs={repairs}
               selectedRepairId={selectedRepairId}
               onSelectRepairId={setSelectedRepairId}
-              onUpdateRepair={updated => setRepairs(prev => prev.map(r => (r.id === updated.id ? updated : r)))}
-              onCreateRepair={created => setRepairs(prev => [created, ...prev])}
+              onUpdateRepair={handleUpdateRepairInWorkspace}
+              onCreateRepair={handleCreateRepairFromWorkspace}
               vehicles={vehicles}
               partsCatalog={partsCatalog}
               inspectorName={displayTechName}
@@ -2722,7 +2304,13 @@ export default function TechnicianPortalPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {maintenances
+                      {maintenances.filter(m => maintStatusFilter === 'all' || m.status === maintStatusFilter).length === 0 ? (
+                        <tr>
+                          <td colSpan={8} style={{ padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                            Chưa có lịch bảo dưỡng nào phù hợp.
+                          </td>
+                        </tr>
+                      ) : maintenances
                         .filter(m => maintStatusFilter === 'all' || m.status === maintStatusFilter)
                         .map(m => (
                           <tr key={m._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
@@ -2732,9 +2320,9 @@ export default function TechnicianPortalPage() {
                               <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace' }}>{m.vehicle?.licensePlate || '43-ĐN'}</div>
                             </td>
                             <td style={{ padding: '12px 16px', color: '#334155', fontWeight: 600 }}>{m.title}</td>
-                            <td style={{ padding: '12px 16px', color: '#64748b', fontFamily: 'monospace', fontSize: '12px' }}>{m.scheduledDate || '2026-11-25'}</td>
+                            <td style={{ padding: '12px 16px', color: '#64748b', fontFamily: 'monospace', fontSize: '12px' }}>{m.scheduledDate || ''}</td>
                             <td style={{ padding: '12px 16px', color: '#475569' }}>{m.technician?.fullName || displayTechName}</td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{(m.cost || 200000).toLocaleString('vi-VN')} đ</td>
+                            <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 800, color: '#0f172a' }}>{(m.cost || 0).toLocaleString('vi-VN')} đ</td>
                             <td style={{ padding: '12px 16px' }}>
                               <span style={{ padding: '3px 9px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 700, background: m.status === 'completed' ? '#f0fdf4' : m.status === 'in_progress' ? '#eff6ff' : '#fefce8', color: m.status === 'completed' ? '#16a34a' : m.status === 'in_progress' ? '#2563eb' : '#a16207' }}>
                                 {m.status === 'completed' ? 'Hoàn thành' : m.status === 'in_progress' ? 'Đang thực hiện' : 'Đã lên lịch'}
@@ -2748,9 +2336,15 @@ export default function TechnicianPortalPage() {
                                 {m.status === 'scheduled' && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      setMaintenances(prev => prev.map(x => (x._id === m._id ? { ...x, status: 'in_progress' } : x)));
-                                      toast.success('Đã tiếp nhận bảo dưỡng!');
+                                    onClick={async () => {
+                                      try {
+                                        await api.put(`/maintenance/${m._id}`, { status: 'in_progress' });
+                                        setMaintenances(prev => prev.map(x => (x._id === m._id ? { ...x, status: 'in_progress' } : x)));
+                                        toast.success('Đã tiếp nhận bảo dưỡng!');
+                                        loadData();
+                                      } catch (err: any) {
+                                        toast.error(err?.response?.data?.message || 'Lỗi khi tiếp nhận bảo dưỡng');
+                                      }
                                     }}
                                     style={{ padding: '5px 10px', borderRadius: '7px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                                   >
@@ -2760,9 +2354,15 @@ export default function TechnicianPortalPage() {
                                 {m.status === 'in_progress' && (
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      setMaintenances(prev => prev.map(x => (x._id === m._id ? { ...x, status: 'completed', completedDate: '2026-11-25' } : x)));
-                                      toast.success('Đã hoàn thành bảo dưỡng!');
+                                    onClick={async () => {
+                                      try {
+                                        await api.put(`/maintenance/${m._id}`, { status: 'completed' });
+                                        setMaintenances(prev => prev.map(x => (x._id === m._id ? { ...x, status: 'completed', completedDate: new Date().toISOString().slice(0, 10) } : x)));
+                                        toast.success('Đã hoàn thành bảo dưỡng và mở lại trạng thái Sẵn sàng!');
+                                        loadData();
+                                      } catch (err: any) {
+                                        toast.error(err?.response?.data?.message || 'Lỗi khi hoàn thành bảo dưỡng');
+                                      }
                                     }}
                                     style={{ padding: '5px 10px', borderRadius: '7px', border: 'none', background: '#16a34a', color: '#ffffff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
                                   >
@@ -2844,7 +2444,13 @@ export default function TechnicianPortalPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {unifiedHistory.map(h => (
+                      {unifiedHistory.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} style={{ padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                            Chưa có hồ sơ lịch sử kỹ thuật nào.
+                          </td>
+                        </tr>
+                      ) : unifiedHistory.map(h => (
                         <tr key={h.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
                           <td style={{ padding: '12px 16px' }}>
                             <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{h.code}</div>
@@ -2953,7 +2559,7 @@ export default function TechnicianPortalPage() {
                 <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
                   <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>Tổng lượt kiểm tra (6T)</div>
                   <div style={{ fontSize: '24px', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-                    {CHART_DATA_6M.reduce((s, d) => s + d.inspections, 0)} lượt
+                    {monthlyChartData.reduce((s, d) => s + d.inspections, 0)} lượt
                   </div>
                 </div>
                 <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
@@ -2978,13 +2584,13 @@ export default function TechnicianPortalPage() {
                 <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Số lượng công việc theo tháng</h3>
                   <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>Kiểm tra trả xe, Bảo dưỡng, Sửa chữa</p>
-                  <MonthlyWorkBarChart data={reportPeriod === '3m' ? CHART_DATA_6M.slice(-3) : CHART_DATA_6M} />
+                  <MonthlyWorkBarChart data={reportPeriod === '3m' ? monthlyChartData.slice(-3) : monthlyChartData} />
                 </div>
 
                 <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
                   <h3 style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px' }}>Biến động chi phí sửa chữa & phụ tùng</h3>
                   <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 12px' }}>Đơn vị tính: Triệu VNĐ</p>
-                  <CostTrendLineChart data={reportPeriod === '3m' ? CHART_DATA_6M.slice(-3) : CHART_DATA_6M} />
+                  <CostTrendLineChart data={reportPeriod === '3m' ? monthlyChartData.slice(-3) : monthlyChartData} />
                 </div>
               </div>
             </div>
@@ -3010,10 +2616,7 @@ export default function TechnicianPortalPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setNotifications(prev => prev.map(n => ({ ...n, unread: false })));
-                      toast.success('Đã đánh dấu tất cả thông báo là đã đọc!');
-                    }}
+                    onClick={handleMarkAllNotificationsRead}
                     style={{ padding: '7px 14px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '8px', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Đánh dấu tất cả đã đọc
@@ -3022,15 +2625,16 @@ export default function TechnicianPortalPage() {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {notifications
+                {notifications.filter(n => notifFilter === 'all' || n.unread).length === 0 ? (
+                  <div style={{ background: '#ffffff', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                    Không có thông báo nào.
+                  </div>
+                ) : notifications
                   .filter(n => notifFilter === 'all' || n.unread)
                   .map(n => (
                     <div
                       key={n.id}
-                      onClick={() => {
-                        setNotifications(prev => prev.map(x => (x.id === n.id ? { ...x, unread: false } : x)));
-                        if (n.targetTab) setActiveTab(n.targetTab);
-                      }}
+                      onClick={() => handleMarkNotificationRead(n)}
                       style={{
                         display: 'flex',
                         alignItems: 'center',
@@ -3083,7 +2687,7 @@ export default function TechnicianPortalPage() {
                 <div style={{ height: '74px', background: 'linear-gradient(135deg, #2563eb, #1e293b)' }} />
                 <div style={{ padding: '0 24px 20px', display: 'flex', alignItems: 'center', gap: '16px', marginTop: '-28px', flexWrap: 'wrap' }}>
                   <div style={{ width: '64px', height: '64px', borderRadius: '16px', background: '#2563eb', color: '#ffffff', border: '4px solid #ffffff', boxShadow: '0 4px 12px rgba(15,23,42,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '20px' }}>
-                    MQ
+                    {techInitials}
                   </div>
                   <div style={{ paddingTop: '28px' }}>
                     <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a' }}>{displayTechName}</div>
@@ -3098,8 +2702,11 @@ export default function TechnicianPortalPage() {
                     e.preventDefault();
                     try {
                       await api.put('/users/profile', { fullName: profName, phone: profPhone });
-                    } catch {}
-                    toast.success('Đã cập nhật thông tin cá nhân!');
+                      await initialize();
+                      toast.success('Đã cập nhật thông tin cá nhân!');
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message || 'Lỗi khi cập nhật hồ sơ');
+                    }
                   }}
                   style={{ background: '#ffffff', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}
                 >
@@ -3124,11 +2731,19 @@ export default function TechnicianPortalPage() {
                 </form>
 
                 <form
-                  onSubmit={e => {
+                  onSubmit={async e => {
                     e.preventDefault();
-                    toast.success('Đã cập nhật mật khẩu mới!');
-                    setProfOldPass('');
-                    setProfNewPass('');
+                    try {
+                      await api.put('/auth/change-password', {
+                        currentPassword: profOldPass,
+                        newPassword: profNewPass
+                      });
+                      toast.success('Đã cập nhật mật khẩu mới!');
+                      setProfOldPass('');
+                      setProfNewPass('');
+                    } catch (err: any) {
+                      toast.error(err?.response?.data?.message || 'Không thể đổi mật khẩu');
+                    }
                   }}
                   style={{ background: '#ffffff', padding: '20px', borderRadius: '14px', border: '1px solid #e2e8f0' }}
                 >
@@ -3175,100 +2790,100 @@ export default function TechnicianPortalPage() {
       </div>
 
       {/* ========================================================
-          MODAL 1: TIẾP NHẬN KIỂM TRA TRẢ XE MỚI
+          MODAL 1: TIẾP NHẬN KIỂM TRA TRẢ XE MỚI (CHỈ XE ĐÃ TRẢ)
           ======================================================== */}
-      {showNewInspectionModal && (
-        <div onClick={() => setShowNewInspectionModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
-          <form onSubmit={handleSaveInspection} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Tiếp nhận xe trả mới</h3>
-              <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {realBookings.length > 0 && (
-                <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '10px 12px' }}>
-                  <label style={{ fontSize: '11.5px', fontWeight: 800, color: '#1d4ed8', display: 'block', marginBottom: '5px' }}>Chọn nhanh đơn thuê từ hệ thống:</label>
-                  <select
-                    value={selectedRealBookingId}
-                    onChange={e => {
-                      const id = e.target.value;
-                      setSelectedRealBookingId(id);
-                      const bk = realBookings.find(b => b._id === id);
-                      if (bk) {
-                        setNewInsBookingCode(bk.bookingCode || bk._id.slice(-8).toUpperCase());
-                        setNewInsCustName(bk.customer?.fullName || 'Khách thuê xe');
-                        setNewInsCustPhone(bk.customer?.phone || '0905 000 000');
-                        if (bk.vehicle?._id) setNewInsVehicleId(bk.vehicle._id);
-                        const startOdo = Number(bk.checkInOdometer || bk.vehicle?.odometer || 12000);
-                        setNewInsDeliveryOdo(startOdo);
-                        setNewInsOdo(startOdo + 95);
-                      }
-                    }}
-                    style={{ width: '100%', padding: '7px 10px', borderRadius: '7px', border: '1px solid #93c5fd', fontSize: '12.5px', background: '#ffffff' }}
-                  >
-                    <option value="">-- Nhập thủ công --</option>
-                    {realBookings.map(b => (
-                      <option key={b._id} value={b._id}>
-                        {b.bookingCode} • {b.vehicle?.name || 'Xe máy'} ({b.vehicle?.licensePlate || '43-ĐN'}) • KH: {b.customer?.fullName || 'Khách'}
-                      </option>
-                    ))}
-                  </select>
+      {showNewInspectionModal && (() => {
+        const selectedBk = returnedBookings.find(b => b._id === selectedReturnedBookingId) || returnedBookings[0] || null;
+        return (
+          <div onClick={() => setShowNewInspectionModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
+            <form onSubmit={handleSaveInspection} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div>
+                  <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Tiếp nhận xe khách đã trả</h3>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    Chỉ hiển thị xe thuộc đơn thuê đã được khách hàng thực hiện trả xe
+                  </div>
                 </div>
+                <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
+              </div>
+
+              {returnedBookings.length === 0 || !selectedBk ? (
+                <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '18px', color: '#9a3412', fontSize: '13px', lineHeight: 1.55 }}>
+                  <strong>Chưa có xe nào được khách hàng trả chờ tiếp nhận!</strong>
+                  <div style={{ marginTop: '6px' }}>
+                    Theo quy trình hệ thống, nhân viên kỹ thuật chỉ được tiếp nhận khi khách hàng đã bấm <strong>Trả xe</strong> trên Cổng khách hàng hoặc lễ tân đã xác nhận nhận trả xe tại quầy.
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
+                    <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
+                      Đóng
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px' }}>
+                      <label style={{ fontSize: '12px', fontWeight: 800, color: '#1d4ed8', display: 'block', marginBottom: '6px' }}>
+                        Chọn đơn khách hàng đã trả ({returnedBookings.length} xe chờ kiểm tra): *
+                      </label>
+                      <select
+                        value={selectedBk._id}
+                        onChange={e => {
+                          const bk = returnedBookings.find(b => b._id === e.target.value);
+                          selectReturnedBookingForModal(bk || null);
+                        }}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #93c5fd', fontSize: '13px', background: '#ffffff', fontWeight: 600 }}
+                      >
+                        {returnedBookings.map(b => (
+                          <option key={b._id} value={b._id}>
+                            {b.bookingCode} • {b.vehicle?.name} ({b.vehicle?.licensePlate}) • KH: {b.customer?.fullName}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', fontSize: '12.5px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                      <div><span style={{ color: '#64748b' }}>Mã đơn thuê:</span> <strong style={{ fontFamily: 'monospace' }}>{selectedBk.bookingCode}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>Trả lúc:</span> <strong>{selectedBk.customerReturnedAt ? new Date(selectedBk.customerReturnedAt).toLocaleString('vi-VN') : 'Đã trả'}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>Khách hàng:</span> <strong>{selectedBk.customer?.fullName}</strong></div>
+                      <div><span style={{ color: '#64748b' }}>Số điện thoại:</span> <strong>{selectedBk.customer?.phone || 'N/A'}</strong></div>
+                      <div style={{ gridColumn: '1 / -1' }}>
+                        <span style={{ color: '#64748b' }}>Phương tiện:</span>{' '}
+                        <strong>{selectedBk.vehicle?.name}</strong> (<span style={{ color: '#2563eb', fontFamily: 'monospace', fontWeight: 800 }}>{selectedBk.vehicle?.licensePlate}</span>)
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo lúc giao</label>
+                        <input type="number" readOnly value={Number(selectedBk.checkInOdometer || selectedBk.vehicle?.odometer || 0)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#f1f5f9', fontSize: '13px', color: '#475569' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo khi trả *</label>
+                        <input type="number" required value={newInsOdo} onChange={e => setNewInsOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Nhiên liệu (%)</label>
+                        <input type="number" min={0} max={100} value={newInsFuelLevel} onChange={e => setNewInsFuelLevel(Math.min(100, Math.max(0, Number(e.target.value))))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Ghi chú nhận xe</label>
+                      <textarea rows={2} value={newInsNotes} onChange={e => setNewInsNotes(e.target.value)} placeholder="Tình trạng ban đầu khi nhận xe từ khách..." style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
+                    <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
+                    <button type="submit" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Tiếp nhận & Mở phiếu kiểm tra 8 hạng mục</button>
+                  </div>
+                </>
               )}
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Mã đơn thuê *</label>
-                  <input type="text" required value={newInsBookingCode} onChange={e => setNewInsBookingCode(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Họ tên khách hàng *</label>
-                  <input type="text" required value={newInsCustName} onChange={e => setNewInsCustName(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Chọn xe</label>
-                  <select value={newInsVehicleId || vehicles[0]?._id} onChange={e => setNewInsVehicleId(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#ffffff' }}>
-                    {vehicles.map(v => <option key={v._id} value={v._id}>{v.name} ({v.licensePlate})</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Số điện thoại</label>
-                  <input type="text" value={newInsCustPhone} onChange={e => setNewInsCustPhone(e.target.value)} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo lúc giao</label>
-                  <input type="number" value={newInsDeliveryOdo} onChange={e => setNewInsDeliveryOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Odo khi trả</label>
-                  <input type="number" value={newInsOdo} onChange={e => setNewInsOdo(Number(e.target.value))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                </div>
-                <div>
-                  <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Nhiên liệu (%)</label>
-                  <input type="number" min={0} max={100} value={newInsFuelLevel} onChange={e => setNewInsFuelLevel(Math.min(100, Math.max(0, Number(e.target.value))))} style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-                </div>
-              </div>
-
-              <div>
-                <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Ghi chú nhận xe</label>
-                <textarea rows={2} value={newInsNotes} onChange={e => setNewInsNotes(e.target.value)} placeholder="Tình trạng ban đầu khi nhận xe từ khách..." style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
-              <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', background: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Hủy</button>
-              <button type="submit" style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Tạo phiếu kiểm tra 8 hạng mục</button>
-            </div>
-          </form>
-        </div>
-      )}
+            </form>
+          </div>
+        );
+      })()}
 
       {/* ========================================================
           MODAL 2: LẬP BIÊN BẢN HƯ HỎNG
@@ -3747,24 +3362,29 @@ export default function TechnicianPortalPage() {
       {showAddPartModal && (
         <div onClick={() => setShowAddPartModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
           <form
-            onSubmit={e => {
+            onSubmit={async e => {
               e.preventDefault();
-              const newItem: PartItem = {
-                id: `p-${Date.now()}`,
-                code: newPartCode.trim() || `PT-NEW-${partsCatalog.length + 1}`,
-                name: newPartName.trim(),
-                category: newPartCategory,
-                unitPrice: newPartPrice,
-                laborFee: newPartLabor,
-                warranty: '6 tháng',
-                stock: newPartStock,
-                compatible: 'Đa dòng xe'
-              };
-              setPartsCatalog(prev => [newItem, ...prev]);
-              setShowAddPartModal(false);
-              setNewPartCode('');
-              setNewPartName('');
-              toast.success('Đã thêm phụ tùng mới vào kho!');
+              try {
+                const res = await api.post('/technician/parts', {
+                  code: newPartCode.trim(),
+                  name: newPartName.trim(),
+                  category: newPartCategory,
+                  unitPrice: newPartPrice,
+                  laborFee: newPartLabor,
+                  warranty: '6 tháng',
+                  stock: newPartStock,
+                  compatible: 'Đa dòng xe'
+                });
+                if (res.data?.data) {
+                  setPartsCatalog(prev => [...prev, res.data.data]);
+                }
+                setShowAddPartModal(false);
+                setNewPartCode('');
+                setNewPartName('');
+                toast.success('Đã thêm phụ tùng mới vào kho cơ sở dữ liệu!');
+              } catch (err: any) {
+                toast.error(err?.response?.data?.message || 'Lỗi khi thêm phụ tùng');
+              }
             }}
             onClick={e => e.stopPropagation()}
             style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '500px', width: '100%' }}
@@ -3803,23 +3423,29 @@ export default function TechnicianPortalPage() {
       {showNewMaintModal && (
         <div onClick={() => setShowNewMaintModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
           <form
-            onSubmit={e => {
+            onSubmit={async e => {
               e.preventDefault();
-              const veh = vehicles.find(v => v._id === newMaintVehId) || vehicles[0];
-              const created: MaintenanceRecord = {
-                _id: `m-${Date.now()}`,
-                vehicle: { _id: veh._id, name: veh.name, licensePlate: veh.licensePlate },
-                technician: { fullName: displayTechName },
-                type: 'Định kỳ',
-                title: newMaintTitle,
-                status: 'scheduled',
-                scheduledDate: newMaintDate,
-                cost: newMaintCost,
-                notes: newMaintNotes
-              };
-              setMaintenances(prev => [created, ...prev]);
-              setShowNewMaintModal(false);
-              toast.success('Đã tạo lịch bảo dưỡng mới!');
+              const vehId = newMaintVehId || vehicles[0]?._id;
+              if (!vehId) {
+                toast.error('Chưa có xe hợp lệ');
+                return;
+              }
+              try {
+                await api.post('/maintenance', {
+                  vehicle: vehId,
+                  type: 'routine',
+                  title: newMaintTitle,
+                  scheduledDate: newMaintDate,
+                  cost: newMaintCost,
+                  description: newMaintNotes,
+                  status: 'scheduled'
+                });
+                setShowNewMaintModal(false);
+                toast.success('Đã tạo lịch bảo dưỡng mới vào hệ thống!');
+                loadData();
+              } catch (err: any) {
+                toast.error(err?.response?.data?.message || 'Lỗi khi tạo lịch bảo dưỡng');
+              }
             }}
             onClick={e => e.stopPropagation()}
             style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '500px', width: '100%' }}

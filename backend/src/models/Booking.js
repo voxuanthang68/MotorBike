@@ -54,6 +54,16 @@ const bookingSchema = new mongoose.Schema({
   checkOutSignature: String, // Staff
   checkOutCustomerSignature: String, // Customer
   checkOutStaff: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  // Return to technician workflow
+  returnStatus: {
+    type: String,
+    enum: ['not_returned', 'customer_returned', 'tech_accepted', 'inspected'],
+    default: 'not_returned'
+  },
+  customerReturnedAt: Date,
+  customerReturnNote: String,
+  techAcceptedAt: Date,
+  techAcceptedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   // Additional charges
   lateFee: { type: Number, default: 0 },
   damageFee: { type: Number, default: 0 },

@@ -697,17 +697,38 @@ router.put('/:id/return', checkAuthOrAdmin, async (req, res) => {
         checkOutSignature: checkOutStaffSignature || '',
         checkOutCustomerSignature: checkOutCustomerSignature || '',
         checkOutStaff: req.user?._id,
+        returnStatus: 'customer_returned',
+        customerReturnedAt: contract.actualReturnDate,
+        customerReturnNote: returnNote || 'Khách trả xe tại quầy lễ tân',
         lateFee: Number(lateFee) || 0,
         damageFee: Number(damageFee) || 0,
         fuelFee: Number(fuelFee) || 0
       };
+      let updatedBooking = null;
       if (mongoose.Types.ObjectId.isValid(targetBookingId)) {
-        await Booking.findByIdAndUpdate(targetBookingId, updateData);
+        updatedBooking = await Booking.findByIdAndUpdate(targetBookingId, updateData, { new: true });
       } else {
-        await Booking.findOneAndUpdate(
+        updatedBooking = await Booking.findOneAndUpdate(
           { $or: [{ _id: targetBookingId }, { bookingCode: targetBookingId }] },
-          updateData
+          updateData,
+          { new: true }
         );
+      }
+      if (updatedBooking) {
+        try {
+          const Notification = require('../models/Notification');
+          const techs = await User.find({ role: { $in: ['technician', 'admin'] }, isActive: { $ne: false } }).select('_id');
+          if (techs.length > 0) {
+            await Notification.insertMany(techs.map(t => ({
+              recipient: t._id,
+              title: `Xe ${contract.vehicleInfo?.name || ''} (${contract.vehicleInfo?.licensePlate || ''}) vừa trả tại quầy`,
+              message: `Đơn ${updatedBooking.bookingCode} vừa làm thủ tục trả xe (${returnNote || 'không ghi chú'}). Chờ KTV tiếp nhận kiểm tra.`,
+              type: 'maintenance',
+              link: '/technician',
+              data: { bookingId: updatedBooking._id, vehicleId: updatedBooking.vehicle, action: 'customer_returned' }
+            })));
+          }
+        } catch {}
       }
     }
 

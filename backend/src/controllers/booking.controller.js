@@ -18,6 +18,13 @@ const notifyStaff = async (notification) => {
   }
 };
 
+const notifyTechnicians = async (notification) => {
+  const techs = await User.find({ role: { $in: ['technician', 'admin'] }, isActive: { $ne: false } }).select('_id');
+  if (techs.length) {
+    await Notification.insertMany(techs.map(({ _id }) => ({ ...notification, recipient: _id })));
+  }
+};
+
 // @GET /api/bookings
 exports.getAll = async (req, res) => {
   try {
@@ -38,8 +45,8 @@ exports.getAll = async (req, res) => {
 
     const total = await Booking.countDocuments(query);
     const bookings = await Booking.find(query)
-      .populate('customer', 'fullName email phone avatar')
-      .populate('vehicle', 'name brand licensePlate mainImage pricePerDay')
+      .populate('customer', 'fullName email phone avatar cccd')
+      .populate('vehicle', 'name brand licensePlate mainImage pricePerDay type odometer year engineCC color status')
       .populate('assignedReceptionist', 'fullName')
       .populate('assignedTechnician', 'fullName')
       .sort({ createdAt: -1 })
@@ -290,11 +297,69 @@ exports.checkIn = async (req, res) => {
   }
 };
 
+// @PUT /api/bookings/:id/customer-return - Customer confirms vehicle return (enables technician acceptance)
+exports.customerReturn = async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+      .populate('vehicle', 'name licensePlate odometer')
+      .populate('customer', 'fullName phone');
+    if (!booking) return res.status(404).json({ success: false, message: 'Không tìm thấy đơn thuê xe.' });
+
+    if (req.user.role === 'customer' && String(booking.customer?._id || booking.customer) !== String(req.user._id)) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền trả đơn thuê này.' });
+    }
+
+    if (booking.status === 'cancelled' || booking.status === 'pending' || booking.status === 'confirmed') {
+      return res.status(400).json({ success: false, message: 'Đơn thuê chưa được giao xe, không thể thực hiện trả xe.' });
+    }
+
+    if (booking.returnStatus === 'customer_returned' || booking.returnStatus === 'tech_accepted' || booking.returnStatus === 'inspected') {
+      return res.status(400).json({ success: false, message: 'Đơn thuê này đã được ghi nhận trả xe trước đó.' });
+    }
+
+    const note = req.body?.note || req.body?.customerReturnNote || 'Khách hàng xác nhận đã trả xe chờ kỹ thuật viên kiểm tra.';
+    booking.returnStatus = 'customer_returned';
+    booking.customerReturnedAt = new Date();
+    booking.customerReturnNote = note;
+    if (req.body?.checkOutOdometer !== undefined) {
+      booking.checkOutOdometer = Number(req.body.checkOutOdometer);
+    }
+    await booking.save();
+
+    if (booking.vehicle?._id) {
+      await Vehicle.findByIdAndUpdate(booking.vehicle._id, { status: 'maintenance' });
+    }
+
+    await notifyTechnicians({
+      title: `Khách ${booking.customer?.fullName || 'thuê xe'} vừa trả xe ${booking.vehicle?.name || ''} (${booking.vehicle?.licensePlate || ''})`,
+      message: `Đơn ${booking.bookingCode}: "${note}". Vui lòng tiếp nhận và kiểm tra 8 hạng mục kỹ thuật.`,
+      type: 'maintenance',
+      link: '/technician',
+      data: { bookingId: booking._id, vehicleId: booking.vehicle?._id, action: 'customer_returned' }
+    });
+
+    try {
+      await Notification.create({
+        recipient: booking.customer?._id || booking.customer,
+        title: 'Đã gửi yêu cầu trả xe thành công',
+        message: `Xe ${booking.vehicle?.name} (${booking.vehicle?.licensePlate}) đang chờ kỹ thuật viên tiếp nhận kiểm tra.`,
+        type: 'booking',
+        link: '/portal',
+        data: { bookingId: booking._id, returnStatus: booking.returnStatus }
+      });
+    } catch {}
+
+    res.json({ success: true, message: 'Đã xác nhận trả xe! Kỹ thuật viên sẽ tiếp nhận kiểm tra xe ngay.', data: booking });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // @PUT /api/bookings/:id/checkout
 exports.checkOut = async (req, res) => {
   try {
     const { checkOutOdometer, checkOutNote, checkOutSignature, lateFee, damageFee, fuelFee } = req.body;
-    const booking = await Booking.findById(req.params.id);
+    const booking = await Booking.findById(req.params.id).populate('vehicle customer');
     if (!booking) return res.status(404).json({ success: false, message: 'Không tìm thấy đặt xe.' });
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ success: false, message: 'Vui lòng chụp hoặc tải ít nhất 1 ảnh tình trạng xe trước khi check-out.' });
@@ -309,6 +374,11 @@ exports.checkOut = async (req, res) => {
     booking.damageFee = damageFee || 0;
     booking.fuelFee = fuelFee || 0;
     booking.status = 'completed';
+    if (!booking.returnStatus || booking.returnStatus === 'not_returned') {
+      booking.returnStatus = 'customer_returned';
+      booking.customerReturnedAt = booking.checkOutTime;
+      booking.customerReturnNote = checkOutNote || 'Khách trả xe tại quầy lễ tân';
+    }
 
     if (req.files) {
       booking.checkOutImages = req.files.map(f => ({
@@ -318,11 +388,19 @@ exports.checkOut = async (req, res) => {
     }
 
     await booking.save();
-    await Vehicle.findByIdAndUpdate(booking.vehicle, { 
+    await Vehicle.findByIdAndUpdate(booking.vehicle?._id || booking.vehicle, { 
       status: 'available',
       odometer: checkOutOdometer 
     });
     await Contract.updateMany({ booking: booking._id }, { status: 'completed' });
+
+    await notifyTechnicians({
+      title: `Xe ${booking.vehicle?.name || ''} (${booking.vehicle?.licensePlate || ''}) vừa trả tại quầy`,
+      message: `Đơn ${booking.bookingCode} (KH: ${booking.customer?.fullName || 'Khách'}) đã check-out và sẵn sàng chờ KTV tiếp nhận kiểm tra.`,
+      type: 'maintenance',
+      link: '/technician',
+      data: { bookingId: booking._id, vehicleId: booking.vehicle?._id, action: 'customer_returned' }
+    });
 
     res.json({ success: true, message: 'Check-out thành công.', data: booking });
   } catch (error) {

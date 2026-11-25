@@ -38,78 +38,6 @@ interface UserManagementWorkspaceProps {
   onJumpToRepair?: (id: string) => void;
 }
 
-const FALLBACK_CUSTOMERS: CustomerUserItem[] = [
-  {
-    _id: 'cust-318',
-    customerCode: 'KH0318',
-    fullName: 'Lê Thảo Nguyên',
-    phone: '0983 511 042',
-    email: 'thaonguyen@gmail.com',
-    cccd: '048198004321',
-    drivingLicense: '480198005412',
-    drivingLicenseClass: 'A2',
-    customerType: 'standard',
-    customerTier: 'vip',
-    address: 'Hải Châu, Đà Nẵng',
-    isBlacklisted: false,
-    notes: 'Khách thuê dài ngày, chạy Honda CB150X rất giữ gìn.',
-    debtAmount: 0,
-    totalRentals: 5
-  },
-  {
-    _id: 'cust-028',
-    customerCode: 'KH0028',
-    fullName: 'Trần Văn Hoàng',
-    phone: '0912 345 678',
-    email: 'hoang.tran@gmail.com',
-    cccd: '048096001234',
-    drivingLicense: '480096008812',
-    drivingLicenseClass: 'A1',
-    customerType: 'high_risk',
-    customerTier: 'regular',
-    address: 'Sơn Trà, Đà Nẵng',
-    isBlacklisted: true,
-    riskReason: 'Từng va quẹt trầy dàn áo và nứt chóa đèn Honda Vision (BBHD-2611-001)',
-    notes: 'Đã ký biên bản bồi thường và đồng ý sửa chữa.',
-    debtAmount: 0,
-    totalRentals: 2
-  },
-  {
-    _id: 'cust-315',
-    customerCode: 'KH0315',
-    fullName: 'Trần Quốc Khánh',
-    phone: '0905 412 889',
-    email: 'khanh.tran@gmail.com',
-    cccd: '048092007788',
-    drivingLicense: '480092009911',
-    drivingLicenseClass: 'A1',
-    customerType: 'standard',
-    customerTier: 'regular',
-    address: 'Thanh Khê, Đà Nẵng',
-    isBlacklisted: false,
-    notes: 'Trả xe đúng giờ, xe sạch đẹp.',
-    debtAmount: 0,
-    totalRentals: 3
-  },
-  {
-    _id: 'cust-278',
-    customerCode: 'KH0278',
-    fullName: 'Đặng Tuấn Anh',
-    phone: '0935 777 666',
-    email: 'tuananh.dn@gmail.com',
-    cccd: '048095003344',
-    drivingLicense: '480095002211',
-    drivingLicenseClass: 'A2',
-    customerType: 'standard',
-    customerTier: 'regular',
-    address: 'Ngũ Hành Sơn, Đà Nẵng',
-    isBlacklisted: false,
-    notes: 'Đang phối hợp xử lý phiếu sửa chữa PSC-2026-014.',
-    debtAmount: 1430000,
-    totalRentals: 4
-  }
-];
-
 export default function UserManagementWorkspace({
   inspections,
   repairs,
@@ -120,8 +48,9 @@ export default function UserManagementWorkspace({
   onJumpToRepair
 }: UserManagementWorkspaceProps) {
   const [subTab, setSubTab] = useState<'customers' | 'technicians'>('customers');
-  const [customers, setCustomers] = useState<CustomerUserItem[]>(FALLBACK_CUSTOMERS);
-  const [loading, setLoading] = useState(false);
+  const [customers, setCustomers] = useState<CustomerUserItem[]>([]);
+  const [techStaff, setTechStaff] = useState<TechnicianStaffItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [localSearch, setLocalSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'standard' | 'walk_in' | 'high_risk'>('all');
   const [onlyRisk, setOnlyRisk] = useState(false);
@@ -140,80 +69,17 @@ export default function UserManagementWorkspace({
   const [newAddress, setNewAddress] = useState('Hải Châu, Đà Nẵng');
   const [newNotes, setNewNotes] = useState('');
 
-  const [techStaff] = useState<TechnicianStaffItem[]>([
-    {
-      id: 'st-1',
-      code: 'KTV-001',
-      fullName: inspectorName || 'Nguyễn Văn Minh',
-      roleTitle: 'Nhân viên Kỹ thuật trưởng',
-      phone: '0905 999 888',
-      email: inspectorEmail,
-      specialty: 'Tổng thể, Phanh ABS, Kiểm định trả xe',
-      shift: 'Ca sáng (07:30 - 17:00)',
-      activeJobs: repairs.filter(r => r.status !== 'completed' && r.status !== 'customer_rejected').length,
-      completedJobs: repairs.filter(r => r.status === 'completed').length + 18,
-      status: 'online'
-    },
-    {
-      id: 'st-2',
-      code: 'KTV-002',
-      fullName: 'Trần Đình Huy',
-      roleTitle: 'Kỹ thuật viên Động cơ & Truyền động',
-      phone: '0905 445 778',
-      email: 'huy.ktv@motobike.vn',
-      specialty: 'Động cơ FI, Côn tay, Nhông sên dĩa, Phanh đĩa',
-      shift: 'Ca hành chính (08:00 - 17:30)',
-      activeJobs: 2,
-      completedJobs: 27,
-      status: 'busy'
-    },
-    {
-      id: 'st-3',
-      code: 'KTV-003',
-      fullName: 'Lê Minh Tuấn',
-      roleTitle: 'Kỹ thuật viên Điện & Dàn áo',
-      phone: '0935 221 904',
-      email: 'tuan.ktv@motobike.vn',
-      specialty: 'Hệ thống đèn LED, Smartkey, Ắc quy, Dàn áo',
-      shift: 'Ca chiều (12:30 - 21:00)',
-      activeJobs: 1,
-      completedJobs: 21,
-      status: 'online'
-    }
-  ]);
-
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const res = await api.get('/customers?limit=50');
-      if (res.data?.data && Array.isArray(res.data.data) && res.data.data.length > 0) {
-        const mapped: CustomerUserItem[] = res.data.data.map((c: any) => ({
-          _id: c._id,
-          customerCode: c.customerCode || `KH${String(c._id).slice(-4).toUpperCase()}`,
-          fullName: c.fullName,
-          phone: c.phone,
-          email: c.email,
-          cccd: c.cccd,
-          drivingLicense: c.drivingLicense,
-          drivingLicenseClass: c.drivingLicenseClass,
-          customerType: c.customerType || 'standard',
-          customerTier: c.customerTier || 'regular',
-          address: c.address,
-          isBlacklisted: Boolean(c.isBlacklisted),
-          riskReason: c.riskReason,
-          notes: c.notes,
-          debtAmount: c.debtAmount || 0,
-          totalRentals: c.totalRentals || 0,
-          isRealRecord: true,
-          createdAt: c.createdAt
-        }));
-        // Merge real DB records with unmatched sample records linked to inspections/repairs
-        const realPhones = new Set(mapped.map(m => m.phone));
-        const extra = FALLBACK_CUSTOMERS.filter(f => !realPhones.has(f.phone));
-        setCustomers([...mapped, ...extra]);
+      const res = await api.get('/technician/users');
+      const data = res.data?.data;
+      if (data) {
+        setCustomers(Array.isArray(data.customers) ? data.customers : []);
+        setTechStaff(Array.isArray(data.technicians) ? data.technicians : []);
       }
     } catch {
-      // Fallback gracefully when unauthenticated or offline
+      toast.error('Không thể tải danh sách người dùng từ máy chủ');
     } finally {
       setLoading(false);
     }
@@ -248,99 +114,53 @@ export default function UserManagementWorkspace({
     }
 
     try {
-      const res = await api.post('/customers', {
+      const res = await api.post('/technician/customers', {
         fullName: newName.trim(),
         phone: newPhone.trim(),
         email: newEmail.trim() || undefined,
         cccd: newCccd.trim(),
         drivingLicense: newGplx.trim(),
-        customerType: newType,
-        address: newAddress.trim(),
-        notes: newNotes.trim(),
-        isBlacklisted: newType === 'high_risk'
+        address: newAddress.trim()
       });
 
       if (res.data?.data) {
-        const c = res.data.data;
-        setCustomers(prev => [
-          {
-            _id: c._id,
-            customerCode: c.customerCode || `KH${String(customers.length + 1).padStart(4, '0')}`,
-            fullName: c.fullName,
-            phone: c.phone,
-            email: c.email,
-            cccd: c.cccd,
-            drivingLicense: c.drivingLicense,
-            customerType: c.customerType || newType,
-            customerTier: c.customerTier || 'regular',
-            address: c.address,
-            isBlacklisted: Boolean(c.isBlacklisted),
-            notes: c.notes,
-            debtAmount: 0,
-            totalRentals: 0,
-            isRealRecord: true
-          },
-          ...prev
-        ]);
+        setCustomers(prev => [res.data.data, ...prev]);
         toast.success('Đã tạo khách hàng mới vào hệ thống!');
+        setShowCreateModal(false);
+        setNewName('');
+        setNewPhone('');
+        setNewEmail('');
+        setNewCccd('');
+        setNewGplx('');
+        setNewNotes('');
       }
-    } catch {
-      const localCreated: CustomerUserItem = {
-        _id: `cust-${Date.now()}`,
-        customerCode: `KH${String(customers.length + 101).padStart(4, '0')}`,
-        fullName: newName.trim(),
-        phone: newPhone.trim(),
-        email: newEmail.trim(),
-        cccd: newCccd.trim(),
-        drivingLicense: newGplx.trim(),
-        customerType: newType,
-        customerTier: 'regular',
-        address: newAddress.trim(),
-        isBlacklisted: newType === 'high_risk',
-        notes: newNotes.trim(),
-        debtAmount: 0,
-        totalRentals: 0
-      };
-      setCustomers(prev => [localCreated, ...prev]);
-      toast.success('Đã thêm hồ sơ khách hàng mới!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Không thể tạo khách hàng mới');
     }
-
-    setShowCreateModal(false);
-    setNewName('');
-    setNewPhone('');
-    setNewEmail('');
-    setNewCccd('');
-    setNewGplx('');
-    setNewNotes('');
   };
 
   const handleSaveEditCustomer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editCustomer) return;
 
-    if (editCustomer.isRealRecord) {
-      try {
-        await api.put(`/customers/${editCustomer._id}`, {
-          fullName: editCustomer.fullName,
-          phone: editCustomer.phone,
-          email: editCustomer.email,
-          cccd: editCustomer.cccd,
-          drivingLicense: editCustomer.drivingLicense,
-          customerType: editCustomer.customerType,
-          address: editCustomer.address,
-          notes: editCustomer.notes,
-          riskReason: editCustomer.riskReason,
-          isBlacklisted: editCustomer.isBlacklisted
-        });
-      } catch {}
+    try {
+      await api.put(`/technician/customers/${editCustomer._id}`, {
+        fullName: editCustomer.fullName,
+        phone: editCustomer.phone,
+        email: editCustomer.email,
+        cccd: editCustomer.cccd,
+        drivingLicense: editCustomer.drivingLicense,
+        address: editCustomer.address
+      });
+      setCustomers(prev => prev.map(c => (c._id === editCustomer._id ? editCustomer : c)));
+      if (detailCustomer?._id === editCustomer._id) {
+        setDetailCustomer(editCustomer);
+      }
+      setEditCustomer(null);
+      toast.success('Đã cập nhật thông tin khách hàng!');
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message || 'Lỗi khi cập nhật thông tin khách hàng');
     }
-
-    setCustomers(prev => prev.map(c => (c._id === editCustomer._id ? editCustomer : c)));
-    if (detailCustomer?._id === editCustomer._id) {
-      setDetailCustomer(editCustomer);
-    }
-    setEditCustomer(null);
-    toast.success('Đã cập nhật thông tin người dùng!');
   };
 
   const getCustomerRelatedInspections = (c: CustomerUserItem) =>

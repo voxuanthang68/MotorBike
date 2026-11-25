@@ -36,7 +36,10 @@ interface ReturnInspectionWorkspaceProps {
   activeInspectionId: string;
   onSelectInspection: (id: string) => void;
   onUpdateInspection: (updated: ReturnInspectionItem) => void;
+  onSaveDraft?: (ins: ReturnInspectionItem) => Promise<void> | void;
   onOpenNewModal: () => void;
+  returnedBookings?: any[];
+  onAcceptReturnedBooking?: (booking: any) => void;
   onOpenPhotoCompare: (payload: {
     title: string;
     subtitle: string;
@@ -65,7 +68,10 @@ export default function ReturnInspectionWorkspace({
   activeInspectionId,
   onSelectInspection,
   onUpdateInspection,
+  onSaveDraft,
   onOpenNewModal,
+  returnedBookings = [],
+  onAcceptReturnedBooking,
   onOpenPhotoCompare,
   onConfirmInspection,
   onOpenDamageReport,
@@ -97,42 +103,76 @@ export default function ReturnInspectionWorkspace({
 
   if (!activeIns) {
     return (
-      <div
-        style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          border: '1px solid #e2e8f0',
-          padding: '48px 24px',
-          textAlign: 'center'
-        }}
-      >
-        <ClipboardCheck size={42} color="#94a3b8" style={{ margin: '0 auto 12px' }} />
-        <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
-          Chưa có phiếu kiểm tra xe khi trả
-        </div>
-        <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px' }}>
-          Nhấn nút bên dưới để tiếp nhận đơn trả xe đầu tiên từ khách hàng.
-        </p>
-        <button
-          type="button"
-          onClick={onOpenNewModal}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        {returnedBookings.length > 0 && (
+          <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '14px', padding: '16px 18px' }}>
+            <div style={{ fontSize: '14px', fontWeight: 800, color: '#9a3412', marginBottom: '10px' }}>
+              Xe khách vừa trả chờ kỹ thuật viên tiếp nhận ({returnedBookings.length} đơn)
+            </div>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {returnedBookings.map((bk: any) => (
+                <div key={bk._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', background: '#ffffff', border: '1px solid #fdba74', borderRadius: '10px', padding: '12px 14px' }}>
+                  <div>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                      {bk.vehicle?.name} • <span style={{ color: '#2563eb', fontFamily: 'monospace' }}>{bk.vehicle?.licensePlate}</span>
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                      Đơn <strong>{bk.bookingCode}</strong> • KH: <strong>{bk.customer?.fullName}</strong> ({bk.customer?.phone || 'N/A'}) • Trả lúc:{' '}
+                      {bk.customerReturnedAt ? new Date(bk.customerReturnedAt).toLocaleString('vi-VN') : 'Đã trả xe'}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => onAcceptReturnedBooking?.(bk)}
+                    style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}
+                  >
+                    + Tiếp nhận kiểm tra
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: '#2563eb',
-            color: '#ffffff',
-            border: 'none',
-            padding: '10px 18px',
-            borderRadius: '10px',
-            fontSize: '13px',
-            fontWeight: 700,
-            cursor: 'pointer'
+            background: '#ffffff',
+            borderRadius: '16px',
+            border: '1px solid #e2e8f0',
+            padding: '48px 24px',
+            textAlign: 'center'
           }}
         >
-          <Plus size={16} />
-          <span>Tiếp nhận xe trả mới</span>
-        </button>
+          <ClipboardCheck size={42} color="#94a3b8" style={{ margin: '0 auto 12px' }} />
+          <div style={{ fontSize: '16px', fontWeight: 800, color: '#0f172a', marginBottom: '6px' }}>
+            Chưa có phiếu kiểm tra xe khi trả nào được tiếp nhận
+          </div>
+          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '16px', maxWidth: '520px', margin: '0 auto 16px' }}>
+            {returnedBookings.length > 0
+              ? 'Hãy chọn một đơn xe khách hàng vừa trả ở trên hoặc bấm Tiếp nhận xe trả mới để bắt đầu kiểm tra 8 hạng mục.'
+              : 'Hiện chưa có xe nào được khách hàng trả chờ kiểm tra. Nhân viên kỹ thuật chỉ có thể tiếp nhận xe sau khi khách hàng thực hiện trả xe.'}
+          </p>
+          <button
+            type="button"
+            onClick={onOpenNewModal}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: returnedBookings.length > 0 ? '#2563eb' : '#64748b',
+              color: '#ffffff',
+              border: 'none',
+              padding: '10px 18px',
+              borderRadius: '10px',
+              fontSize: '13px',
+              fontWeight: 700,
+              cursor: 'pointer'
+            }}
+          >
+            <Plus size={16} />
+            <span>Tiếp nhận xe trả mới ({returnedBookings.length})</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -232,11 +272,16 @@ export default function ReturnInspectionWorkspace({
   };
 
   const handleSaveDraft = () => {
-    onUpdateInspection({
+    const draftObj: ReturnInspectionItem = {
       ...activeIns,
       status: 'draft'
-    });
-    toast.success(`Đã lưu bản nháp phiếu ${activeIns.inspectionCode}!`);
+    };
+    if (onSaveDraft) {
+      onSaveDraft(draftObj);
+    } else {
+      onUpdateInspection(draftObj);
+      toast.success(`Đã lưu bản nháp phiếu ${activeIns.inspectionCode}!`);
+    }
   };
 
   const getStatusBadgeStyle = (status: ReturnInspectionItem['status']) => {
@@ -301,9 +346,27 @@ export default function ReturnInspectionWorkspace({
           }}
         >
           <Plus size={16} />
-          <span>Tiếp nhận xe trả mới</span>
+          <span>Tiếp nhận xe trả mới ({returnedBookings.length})</span>
         </button>
       </div>
+
+      {returnedBookings.length > 0 && (
+        <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '12px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div style={{ fontSize: '12.5px', color: '#9a3412', fontWeight: 700 }}>
+            Có <strong>{returnedBookings.length}</strong> xe khách hàng đã trả đang chờ KTV tiếp nhận kiểm tra:
+            <span style={{ marginLeft: '6px', fontWeight: 600 }}>
+              {returnedBookings.slice(0, 3).map((b: any) => `${b.vehicle?.licensePlate || b.bookingCode}`).join(', ')}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={onOpenNewModal}
+            style={{ padding: '6px 12px', borderRadius: '8px', border: 'none', background: '#ea580c', color: '#ffffff', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+          >
+            Chọn xe đã trả để tiếp nhận →
+          </button>
+        </div>
+      )}
 
       {/* ==========================================
           2. TICKET SELECTOR STRIP

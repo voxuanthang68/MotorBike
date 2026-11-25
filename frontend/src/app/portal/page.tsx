@@ -38,8 +38,14 @@ const getBookingDisplay = (b: any, relatedContract?: any) => {
   if (b.status === 'cancelled') {
     return { label: 'Đã hủy', color: '#dc2626', bg: '#fee2e2', step: 0 };
   }
-  if (b.status === 'completed') {
+  if (b.status === 'completed' || b.returnStatus === 'inspected') {
     return { label: 'Hoàn thành', color: '#475569', bg: '#f1f5f9', step: 4 };
+  }
+  if (b.returnStatus === 'tech_accepted') {
+    return { label: 'KTV đã tiếp nhận kiểm tra', color: '#2563eb', bg: '#eff6ff', step: 3 };
+  }
+  if (b.returnStatus === 'customer_returned') {
+    return { label: 'Đã trả xe (Chờ KTV tiếp nhận)', color: '#d97706', bg: '#fef3c7', step: 3 };
   }
 
   // Check if physical handover actually occurred (photos and timestamp recorded)
@@ -98,6 +104,9 @@ export default function CustomerPortalPage() {
   const [signModal, setSignModal] = useState<any | null>(null);
   const [rescueModal, setRescueModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+  const [returnModalBooking, setReturnModalBooking] = useState<any | null>(null);
+  const [customerReturnNote, setCustomerReturnNote] = useState('Khách xác nhận trả xe đúng hẹn tại cửa hàng');
+  const [customerReturnOdo, setCustomerReturnOdo] = useState<string>('');
 
   // Canvas for Customer Digital Signature
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -155,6 +164,16 @@ export default function CustomerPortalPage() {
     queryKey: ['my-contracts'],
     queryFn: async () => {
       const res = await api.get('/contracts');
+      return res.data;
+    },
+    enabled: !!isAuthenticated && !authLoading
+  });
+
+  // Query my repair quotes from technician
+  const { data: myRepairsData } = useQuery({
+    queryKey: ['my-repairs'],
+    queryFn: async () => {
+      const res = await api.get('/technician/my-repairs');
       return res.data;
     },
     enabled: !!isAuthenticated && !authLoading
@@ -302,6 +321,30 @@ export default function CustomerPortalPage() {
       toast.success('Đã gửi phản hồi!');
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Gửi thất bại!')
+  });
+
+  const customerReturnMutation = useMutation({
+    mutationFn: async ({ id, note, checkOutOdometer }: { id: string; note: string; checkOutOdometer?: number }) => {
+      return api.put(`/bookings/${id}/customer-return`, { note, checkOutOdometer });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['my-contracts'] });
+      setReturnModalBooking(null);
+      toast.success('Đã xác nhận trả xe! Kỹ thuật viên sẽ tiếp nhận kiểm tra ngay.');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Không thể gửi yêu cầu trả xe!')
+  });
+
+  const repairFeedbackMutation = useMutation({
+    mutationFn: async ({ id, approved, note }: { id: string; approved: boolean; note: string }) => {
+      return api.put(`/technician/repairs/${id}/customer-feedback`, { approved, note });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-repairs'] });
+      toast.success('Đã gửi phản hồi báo giá sửa chữa!');
+    },
+    onError: (err: any) => toast.error(err.response?.data?.message || 'Không thể phản hồi báo giá!')
   });
 
   const handleChatImageFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1125,8 +1168,48 @@ export default function CustomerPortalPage() {
                       <div><div style={{ fontSize: 17, fontWeight: 800, color: '#172033' }}>{b.vehicle?.name}</div><span style={{ display: 'inline-block', marginTop: 7, padding: '4px 10px', borderRadius: 6, color: '#1463ff', background: '#eff6ff', fontSize: 12, fontWeight: 700 }}>{b.vehicle?.licensePlate}</span><div style={{ marginTop: 8, color: '#64748b', fontSize: 13 }}>Thời gian: {new Date(b.startDate).toLocaleDateString('vi-VN')} → {new Date(b.endDate).toLocaleDateString('vi-VN')} ({b.totalDays} ngày)</div></div>
                       <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 20, fontSize: 13 }}><div style={{ color: '#64748b' }}>Tổng tiền thuê:</div><strong>{(b.finalPrice || b.totalPrice || 0).toLocaleString('vi-VN')} đ</strong><div style={{ color: '#64748b', marginTop: 8 }}>Tiền cọc quy định:</div><strong>{(b.deposit || 0).toLocaleString('vi-VN')} đ</strong></div>
                       <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 20, fontSize: 13 }}><div style={{ color: '#64748b' }}>Tình trạng cọc:</div><strong style={{ color: b.paymentStatus === 'deposit_paid' || b.paymentStatus === 'fully_paid' ? '#059669' : '#d97706' }}>{b.paymentStatus === 'deposit_paid' || b.paymentStatus === 'fully_paid' ? '✓ Đã cọc' : 'Chưa thanh toán'}</strong><div style={{ color: '#64748b', marginTop: 8 }}>Điểm nhận:</div><span>{b.pickupLocation || 'Tại cửa hàng'}</span></div>
-                      {relatedContract ? <button onClick={() => setContractModal(relatedContract)} style={{ minWidth: 150, padding: '10px 14px', borderRadius: 10, border: '1px solid #bfdbfe', background: '#fff', color: '#1463ff', fontWeight: 700, cursor: 'pointer' }}>▣ Hợp Đồng Điện Tử</button> : <span style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center' }}>Chưa có hợp đồng</span>}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {relatedContract ? <button onClick={() => setContractModal(relatedContract)} style={{ minWidth: 150, padding: '10px 14px', borderRadius: 10, border: '1px solid #bfdbfe', background: '#fff', color: '#1463ff', fontWeight: 700, cursor: 'pointer' }}>▣ Hợp Đồng Điện Tử</button> : <span style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center' }}>Chưa có hợp đồng</span>}
+                        {b.status === 'active' && (!b.returnStatus || b.returnStatus === 'not_returned') && (
+                          <button
+                            onClick={() => {
+                              setCustomerReturnNote('Khách xác nhận trả xe đúng hẹn tại cửa hàng 128 Bạch Đằng');
+                              setCustomerReturnOdo(String(b.checkInOdometer ? Number(b.checkInOdometer) + 80 : b.vehicle?.odometer || ''));
+                              setReturnModalBooking(b);
+                            }}
+                            style={{ minWidth: 150, padding: '10px 14px', borderRadius: 10, border: 'none', background: '#0f766e', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            ↩ Trả xe ngay
+                          </button>
+                        )}
+                      </div>
                     </div>
+
+                    {/* Báo giá sửa chữa kỹ thuật nếu có */}
+                    {(myRepairsData?.data || []).filter((r: any) => r.bookingCode === b.bookingCode).map((rep: any) => (
+                      <div key={rep.id} style={{ padding: '12px 22px', background: '#fff7ed', borderTop: '1px solid #fed7aa', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+                        <div style={{ fontSize: 13 }}>
+                          <strong style={{ color: '#9a3412' }}>Báo giá sửa chữa {rep.code}:</strong> {rep.proposedSolution} • Tổng: <strong>{(rep.totalEstimatedCost || 0).toLocaleString('vi-VN')} đ</strong>
+                          <span style={{ marginLeft: 8, fontSize: 12, color: '#64748b' }}>({rep.status === 'waiting_approval' ? 'Chờ bạn xác nhận' : rep.status === 'customer_approved' ? 'Đã đồng ý' : rep.status === 'customer_rejected' ? 'Đã từ chối' : rep.status})</span>
+                        </div>
+                        {rep.status === 'waiting_approval' && (
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={() => repairFeedbackMutation.mutate({ id: rep.id, approved: true, note: 'Khách hàng xác nhận đồng ý báo giá qua Portal.' })}
+                              style={{ padding: '7px 12px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              ✓ Đồng ý sửa chữa
+                            </button>
+                            <button
+                              onClick={() => repairFeedbackMutation.mutate({ id: rep.id, approved: false, note: 'Khách hàng từ chối báo giá.' })}
+                              style={{ padding: '7px 12px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fff', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}
+                            >
+                              Từ chối
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
 
                     {/* Tiến trình đơn hàng chuẩn 4 giai đoạn */}
                     <div style={{ background: '#f8fafc', padding: '10px 22px', borderTop: '1px solid #eef2f7', display: 'flex', gap: '8px', alignItems: 'center', fontSize: '11.5px', flexWrap: 'wrap' }}>
@@ -2239,6 +2322,94 @@ export default function CustomerPortalPage() {
               </div>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* Customer Return Modal */}
+      {returnModalBooking && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.7)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px',
+          }}
+          onClick={() => setReturnModalBooking(null)}
+        >
+          <form
+            onClick={(e) => e.stopPropagation()}
+            onSubmit={(e) => {
+              e.preventDefault();
+              customerReturnMutation.mutate({
+                id: returnModalBooking._id,
+                note: customerReturnNote,
+                checkOutOdometer: customerReturnOdo ? Number(customerReturnOdo) : undefined,
+              });
+            }}
+            style={{
+              background: '#ffffff',
+              borderRadius: '18px',
+              padding: '24px',
+              maxWidth: '480px',
+              width: '100%',
+              boxShadow: '0 20px 50px rgba(0,0,0,0.2)',
+            }}
+          >
+            <h3 style={{ margin: '0 0 8px', fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+              Xác nhận trả xe cho cửa hàng
+            </h3>
+            <p style={{ margin: '0 0 14px', fontSize: '13px', color: '#475569' }}>
+              Đơn <strong>{returnModalBooking.bookingCode}</strong> • Xe{' '}
+              <strong>{returnModalBooking.vehicle?.name}</strong> ({returnModalBooking.vehicle?.licensePlate})
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '18px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  Số ODO hiện tại (km)
+                </label>
+                <input
+                  type="number"
+                  value={customerReturnOdo}
+                  onChange={(e) => setCustomerReturnOdo(e.target.value)}
+                  placeholder="Nhập số km trên đồng hồ"
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '9px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  Ghi chú tình trạng xe khi trả
+                </label>
+                <textarea
+                  rows={3}
+                  value={customerReturnNote}
+                  onChange={(e) => setCustomerReturnNote(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', borderRadius: '9px', border: '1px solid #cbd5e1', fontSize: '13px', fontFamily: 'inherit' }}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setReturnModalBooking(null)}
+                style={{ padding: '9px 16px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                Hủy
+              </button>
+              <button
+                type="submit"
+                disabled={customerReturnMutation.isPending}
+                style={{ padding: '9px 18px', borderRadius: '9px', border: 'none', background: '#0f766e', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {customerReturnMutation.isPending ? 'Đang gửi...' : 'Xác nhận trả xe'}
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
