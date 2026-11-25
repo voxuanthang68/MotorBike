@@ -64,20 +64,25 @@ import {
 // ==========================================
 export interface VehicleItem {
   _id: string;
+  code?: string;
   name: string;
   licensePlate: string;
   brand: string;
   model?: string;
   type: string;
-  status: 'available' | 'rented' | 'maintenance' | 'broken' | 'retired' | 'reserved';
+  color?: string;
+  status: 'available' | 'rented' | 'maintenance' | 'repairing' | 'broken' | 'retired' | 'reserved';
   image?: string;
+  gallery?: string[];
   year?: number;
   engineCC?: number;
   odometer?: number;
   condition?: string;
+  techNote?: string;
   location?: string;
   lastMaintenanceDate?: string;
   nextMaintenanceDate?: string;
+  nextMaintenanceOdo?: number;
   createdAt?: string;
 }
 
@@ -138,12 +143,150 @@ const INITIAL_PARTS_CATALOG: PartItem[] = [
 ];
 
 const FALLBACK_VEHICLES: VehicleItem[] = [
-  { _id: 'v-1', name: 'Honda Air Blade 160 ABS', brand: 'Honda', licensePlate: '43C1-892.45', type: 'Xe tay ga', year: 2025, engineCC: 160, odometer: 14820, status: 'available', lastMaintenanceDate: '2026-11-10', image: SAMPLE_PHOTOS.cleanFront },
-  { _id: 'v-2', name: 'Honda CB150X Adventure', brand: 'Honda', licensePlate: '43A1-118.62', type: 'Xe côn tay', year: 2025, engineCC: 150, odometer: 16210, status: 'maintenance', lastMaintenanceDate: '2026-10-20', image: SAMPLE_PHOTOS.adventureSide },
-  { _id: 'v-3', name: 'Honda Winner X 150 ABS', brand: 'Honda', licensePlate: '43D1-654.12', type: 'Xe côn tay', year: 2024, engineCC: 150, odometer: 18400, status: 'broken', lastMaintenanceDate: '2026-10-15', image: SAMPLE_PHOTOS.cleanRear },
-  { _id: 'v-4', name: 'Honda Vision 2026 Smartkey', brand: 'Honda', licensePlate: '43E1-737.37', type: 'Xe tay ga', year: 2026, engineCC: 110, odometer: 12540, status: 'rented', lastMaintenanceDate: '2026-11-05', image: SAMPLE_PHOTOS.cleanFront },
-  { _id: 'v-5', name: 'Honda ADV 160 ABS Touring', brand: 'Honda', licensePlate: '43A1-045.88', type: 'Xe tay ga', year: 2025, engineCC: 160, odometer: 11200, status: 'available', lastMaintenanceDate: '2026-11-24', image: SAMPLE_PHOTOS.adventureSide },
-  { _id: 'v-6', name: 'Yamaha Exciter 155 VVA', brand: 'Yamaha', licensePlate: '43C1-530.77', type: 'Xe côn tay', year: 2024, engineCC: 155, odometer: 19600, status: 'rented', lastMaintenanceDate: '2026-11-14', image: SAMPLE_PHOTOS.cleanRear }
+  {
+    _id: 'v-1',
+    code: 'MR-DN-001',
+    name: 'Honda Air Blade 160 ABS',
+    brand: 'Honda',
+    color: 'Xám đen nhám',
+    licensePlate: '43C1-892.45',
+    type: 'Xe tay ga',
+    year: 2024,
+    engineCC: 160,
+    odometer: 14820,
+    nextMaintenanceOdo: 16820,
+    status: 'broken',
+    lastMaintenanceDate: '2026-11-25',
+    techNote: 'Khách vừa trả tại quầy Bạch Đằng, phản ánh phanh trước hơi kêu.',
+    image: SAMPLE_PHOTOS.cleanFront,
+    gallery: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.newPartInstalled]
+  },
+  {
+    _id: 'v-2',
+    code: 'MR-DN-002',
+    name: 'Honda Winner X 150 ABS',
+    brand: 'Honda',
+    color: 'Đỏ đen thể thao',
+    licensePlate: '43D1-654.12',
+    type: 'Xe côn tay',
+    year: 2024,
+    engineCC: 150,
+    odometer: 19340,
+    nextMaintenanceOdo: 21000,
+    status: 'repairing',
+    lastMaintenanceDate: '2026-10-05',
+    techNote: 'Đang thay cánh yếm trước phải và má phanh đĩa theo phiếu PSC-2026-014.',
+    image: SAMPLE_PHOTOS.cleanRear,
+    gallery: [SAMPLE_PHOTOS.cleanRear, SAMPLE_PHOTOS.damageScratched]
+  },
+  {
+    _id: 'v-3',
+    code: 'MR-DN-003',
+    name: 'Honda ADV 160 ABS Touring',
+    brand: 'Honda',
+    color: 'Xanh đậm nhám',
+    licensePlate: '43A1-045.88',
+    type: 'Xe tay ga',
+    year: 2025,
+    engineCC: 160,
+    odometer: 9650,
+    nextMaintenanceOdo: 12000,
+    status: 'available',
+    lastMaintenanceDate: '2026-10-28',
+    techNote: 'Đã nghiệm thu hoàn tất, xe sạch đẹp đạt chuẩn giao khách.',
+    image: SAMPLE_PHOTOS.adventureSide,
+    gallery: [SAMPLE_PHOTOS.adventureSide, SAMPLE_PHOTOS.repairedPerfect]
+  },
+  {
+    _id: 'v-4',
+    code: 'MR-DN-004',
+    name: 'Yamaha NVX 155 VVA',
+    brand: 'Yamaha',
+    color: 'Xám titan',
+    licensePlate: '43E1-712.09',
+    type: 'Xe tay ga',
+    year: 2024,
+    engineCC: 155,
+    odometer: 21800,
+    nextMaintenanceOdo: 23500,
+    status: 'available',
+    lastMaintenanceDate: '2026-11-25',
+    techNote: 'Vừa thay nhớt Motul và kiểm tra áp suất lốp đạt chuẩn.',
+    image: SAMPLE_PHOTOS.cleanFront,
+    gallery: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.cleanRear]
+  },
+  {
+    _id: 'v-5',
+    code: 'MR-DN-005',
+    name: 'Yamaha Exciter 155 VVA',
+    brand: 'Yamaha',
+    color: 'Đỏ đen GP',
+    licensePlate: '43C1-530.77',
+    type: 'Xe côn tay',
+    year: 2024,
+    engineCC: 155,
+    odometer: 11420,
+    nextMaintenanceOdo: 13500,
+    status: 'available',
+    lastMaintenanceDate: '2026-11-15',
+    techNote: 'Nhông sên dĩa vừa cân chỉnh êm ái.',
+    image: SAMPLE_PHOTOS.cleanRear,
+    gallery: [SAMPLE_PHOTOS.cleanRear, SAMPLE_PHOTOS.newPartInstalled]
+  },
+  {
+    _id: 'v-6',
+    code: 'MR-DN-006',
+    name: 'Honda CB150X Adventure',
+    brand: 'Honda',
+    color: 'Xanh quân đội',
+    licensePlate: '43A1-118.62',
+    type: 'Moto PKL',
+    year: 2024,
+    engineCC: 150,
+    odometer: 16210,
+    nextMaintenanceOdo: 18000,
+    status: 'broken',
+    lastMaintenanceDate: '2026-11-25',
+    techNote: 'Khách vừa trả xe (KT-2026-042), cần kiểm tra lốp sau non hơi và lỏng chân gương phải.',
+    image: SAMPLE_PHOTOS.adventureSide,
+    gallery: [SAMPLE_PHOTOS.adventureSide, SAMPLE_PHOTOS.cleanFront]
+  },
+  {
+    _id: 'v-7',
+    code: 'MR-DN-007',
+    name: 'Honda Vision 2026 Smartkey',
+    brand: 'Honda',
+    color: 'Trắng ngọc trai',
+    licensePlate: '43E1-737.37',
+    type: 'Xe tay ga',
+    year: 2026,
+    engineCC: 110,
+    odometer: 12540,
+    nextMaintenanceOdo: 14500,
+    status: 'rented',
+    lastMaintenanceDate: '2026-11-05',
+    techNote: 'Xe đang được kiểm tra tổng thể sau khi hoàn tất bảo dưỡng.',
+    image: SAMPLE_PHOTOS.cleanFront,
+    gallery: [SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.repairedPerfect]
+  },
+  {
+    _id: 'v-8',
+    code: 'MR-DN-008',
+    name: 'Honda Wave RSX 110 FI',
+    brand: 'Honda',
+    color: 'Đỏ đen',
+    licensePlate: '43D1-409.33',
+    type: 'Xe số',
+    year: 2024,
+    engineCC: 110,
+    odometer: 27400,
+    nextMaintenanceOdo: 29000,
+    status: 'maintenance',
+    lastMaintenanceDate: '2026-11-20',
+    techNote: 'Chờ thay nhớt định kỳ và kiểm tra thắng đùm.',
+    image: SAMPLE_PHOTOS.cleanRear,
+    gallery: [SAMPLE_PHOTOS.cleanRear, SAMPLE_PHOTOS.cleanFront]
+  }
 ];
 
 const FALLBACK_MAINTENANCES: MaintenanceRecord[] = [
@@ -184,8 +327,10 @@ export default function TechnicianPortalPage() {
   const [selectedRepairId, setSelectedRepairId] = useState<string | null>(null);
 
   // Filter States for various tabs
+  const [vehLocalSearch, setVehLocalSearch] = useState('');
   const [vehStatusFilter, setVehStatusFilter] = useState<string>('all');
   const [vehTypeFilter, setVehTypeFilter] = useState<string>('all');
+  const [vehPage, setVehPage] = useState(1);
   const [selectedVehicleDetail, setSelectedVehicleDetail] = useState<VehicleItem | null>(null);
 
   const [dmgFilter, setDmgFilter] = useState<'all' | 'confirmed' | 'repair_proposed'>('all');
@@ -1088,8 +1233,14 @@ export default function TechnicianPortalPage() {
       setSelectedVehicleDetail({ ...selectedVehicleDetail, status: newStatus });
     }
     if (!veh._id.startsWith('v-')) {
+      const apiStatus =
+        newStatus === 'repairing'
+          ? 'broken'
+          : newStatus === 'reserved'
+          ? 'rented'
+          : newStatus;
       try {
-        await api.put(`/vehicles/${veh._id}`, { status: newStatus });
+        await api.put(`/vehicles/${veh._id}`, { status: apiStatus });
       } catch {}
     }
     toast.success(`Đã cập nhật trạng thái xe ${veh.licensePlate}!`);
@@ -1725,7 +1876,7 @@ export default function TechnicianPortalPage() {
                       { label: 'Sẵn sàng cho thuê', value: vehicles.filter(v => v.status === 'available').length, color: '#16a34a' },
                       { label: 'Đang cho thuê', value: vehicles.filter(v => v.status === 'rented').length, color: '#2563eb' },
                       { label: 'Đang bảo dưỡng', value: vehicles.filter(v => v.status === 'maintenance').length, color: '#d97706' },
-                      { label: 'Đang hư hỏng', value: vehicles.filter(v => v.status === 'broken').length, color: '#dc2626' }
+                      { label: 'Đang sửa / Hư hỏng', value: vehicles.filter(v => v.status === 'broken' || v.status === 'repairing').length, color: '#dc2626' }
                     ]}
                   />
                 </div>
@@ -1853,119 +2004,354 @@ export default function TechnicianPortalPage() {
           )}
 
           {/* ========================================================
-              TAB 2: QUẢN LÝ XE (VEHICLES)
+              TAB 2: QUẢN LÝ XE (VEHICLES — ĐÚNG THEO 2 SCREENSHOT MẪU)
               ======================================================== */}
-          {activeTab === 'vehicles' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+          {activeTab === 'vehicles' && (() => {
+            const q = (vehLocalSearch || searchQuery).trim().toLowerCase();
+            const filteredVehicles = vehicles.filter(v => {
+              const codeStr = (v.code || `MR-DN-${v._id.slice(-3).toUpperCase()}`).toLowerCase();
+              const matchQ =
+                !q ||
+                v.name.toLowerCase().includes(q) ||
+                v.licensePlate.toLowerCase().includes(q) ||
+                codeStr.includes(q);
+              const matchS = vehStatusFilter === 'all' || v.status === vehStatusFilter;
+              const matchT = vehTypeFilter === 'all' || v.type === vehTypeFilter;
+              return matchQ && matchS && matchT;
+            });
+            const PER_PAGE = 6;
+            const totalPages = Math.max(1, Math.ceil(filteredVehicles.length / PER_PAGE));
+            const safeVehPage = Math.min(vehPage, totalPages);
+            const pagedVehicles = filteredVehicles.slice((safeVehPage - 1) * PER_PAGE, safeVehPage * PER_PAGE);
+
+            const getVehBadge = (st: VehicleItem['status']) => {
+              switch (st) {
+                case 'broken':
+                  return { label: '⚠ Có hư hỏng', bg: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' };
+                case 'repairing':
+                  return { label: '🔧 Đang sửa chữa', bg: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe' };
+                case 'maintenance':
+                  return { label: '🛠 Đang bảo dưỡng', bg: '#fefce8', color: '#a16207', border: '1px solid #fde68a' };
+                case 'rented':
+                  return { label: '🛵 Đang cho thuê', bg: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1' };
+                case 'reserved':
+                  return { label: '⏳ Đã đặt trước', bg: '#f5f3ff', color: '#7c3aed', border: '1px solid #ddd6fe' };
+                case 'available':
+                default:
+                  return { label: '✓ Sẵn sàng', bg: '#f0fdf4', color: '#16a34a', border: '1px solid #bbf7d0' };
+              }
+            };
+
+            return (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                 <div>
-                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>Quản lý đội xe</h1>
+                  <h1 style={{ fontSize: '22px', fontWeight: 900, color: '#0f172a', margin: '0 0 4px' }}>
+                    Quản lý xe
+                  </h1>
                   <p style={{ fontSize: '13px', color: '#64748b', margin: 0 }}>
-                    Tra cứu biển số, số kilomet (ODO), lịch sử bảo dưỡng và cập nhật tình trạng kỹ thuật
+                    Danh sách phương tiện thuộc chi nhánh Hải Châu, Đà Nẵng và tình trạng kỹ thuật hiện tại.
                   </p>
                 </div>
-              </div>
 
-              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '14px 16px', display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'center' }}>
-                <select value={vehStatusFilter} onChange={e => setVehStatusFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: 600 }}>
-                  <option value="all">Tất cả trạng thái</option>
-                  <option value="available">Sẵn sàng</option>
-                  <option value="rented">Đang cho thuê</option>
-                  <option value="maintenance">Đang bảo dưỡng</option>
-                  <option value="broken">Đang hư hỏng</option>
-                </select>
+                {/* Filter Card */}
+                <div
+                  style={{
+                    background: '#ffffff',
+                    borderRadius: '14px',
+                    border: '1px solid #e2e8f0',
+                    padding: '14px 16px',
+                    display: 'grid',
+                    gridTemplateColumns: 'minmax(240px, 1.8fr) minmax(160px, 1fr) minmax(160px, 1fr)',
+                    gap: '12px',
+                    alignItems: 'center'
+                  }}
+                >
+                  <div style={{ position: 'relative' }}>
+                    <Search size={15} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                    <input
+                      type="text"
+                      value={vehLocalSearch}
+                      onChange={e => {
+                        setVehLocalSearch(e.target.value);
+                        setVehPage(1);
+                      }}
+                      placeholder="Tìm theo mã xe, tên xe, biển số 43..."
+                      style={{
+                        width: '100%',
+                        padding: '8px 12px 8px 36px',
+                        borderRadius: '9px',
+                        border: '1px solid #e2e8f0',
+                        background: '#ffffff',
+                        fontSize: '13px',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
 
-                <select value={vehTypeFilter} onChange={e => setVehTypeFilter(e.target.value)} style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '12.5px', background: '#ffffff', fontWeight: 600 }}>
-                  <option value="all">Tất cả loại xe</option>
-                  {[...new Set(vehicles.map(v => v.type))].map(t => (
-                    <option key={t} value={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
+                  <select
+                    value={vehTypeFilter}
+                    onChange={e => {
+                      setVehTypeFilter(e.target.value);
+                      setVehPage(1);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '9px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '13px',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <option value="all">Tất cả loại xe</option>
+                    {[...new Set(vehicles.map(v => v.type))].map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
 
-              <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-                    <thead>
-                      <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
-                        <th style={{ padding: '12px 16px' }}>Phương tiện</th>
-                        <th style={{ padding: '12px 16px' }}>Biển số</th>
-                        <th style={{ padding: '12px 16px' }}>Loại xe</th>
-                        <th style={{ padding: '12px 16px' }}>Số km (ODO)</th>
-                        <th style={{ padding: '12px 16px' }}>Tình trạng kỹ thuật</th>
-                        <th style={{ padding: '12px 16px' }}>Bảo dưỡng gần nhất</th>
-                        <th style={{ padding: '12px 16px', textAlign: 'right' }}>Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vehicles
-                        .filter(v => {
-                          const q = searchQuery.trim().toLowerCase();
-                          const matchQ = !q || v.name.toLowerCase().includes(q) || v.licensePlate.toLowerCase().includes(q) || v._id.toLowerCase().includes(q);
-                          const matchS = vehStatusFilter === 'all' || v.status === vehStatusFilter;
-                          const matchT = vehTypeFilter === 'all' || v.type === vehTypeFilter;
-                          return matchQ && matchS && matchT;
-                        })
-                        .map(veh => (
-                          <tr key={veh._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
-                            <td style={{ padding: '12px 16px' }}>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                <img src={veh.image || SAMPLE_PHOTOS.cleanFront} alt={veh.name} style={{ width: '50px', height: '38px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
-                                <div>
-                                  <div style={{ fontWeight: 800, color: '#0f172a' }}>{veh.name}</div>
-                                  <div style={{ fontSize: '11.5px', color: '#64748b' }}>#{veh._id.slice(-6).toUpperCase()} • {veh.brand}</div>
-                                </div>
-                              </div>
-                            </td>
-                            <td style={{ padding: '12px 16px' }}>
-                              <span style={{ fontWeight: 800, color: '#2563eb', background: '#eff6ff', padding: '3px 8px', borderRadius: '6px', fontFamily: 'monospace', fontSize: '12px' }}>
-                                {veh.licensePlate}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px 16px', color: '#475569' }}>{veh.type}</td>
-                            <td style={{ padding: '12px 16px', fontWeight: 700, color: '#0f172a' }}>{(veh.odometer || 12000).toLocaleString('vi-VN')} km</td>
-                            <td style={{ padding: '12px 16px' }}>
-                              <span style={{ padding: '3px 10px', borderRadius: '999px', fontSize: '11.5px', fontWeight: 700, background: veh.status === 'available' ? '#f0fdf4' : veh.status === 'rented' ? '#eff6ff' : veh.status === 'broken' ? '#fef2f2' : '#fefce8', color: veh.status === 'available' ? '#16a34a' : veh.status === 'rented' ? '#2563eb' : veh.status === 'broken' ? '#dc2626' : '#a16207' }}>
-                                {veh.status === 'available' && 'Sẵn sàng'}
-                                {veh.status === 'rented' && 'Đang cho thuê'}
-                                {veh.status === 'broken' && 'Đang hư hỏng'}
-                                {veh.status === 'maintenance' && 'Đang bảo dưỡng'}
-                                {veh.status === 'reserved' && 'Đã đặt trước'}
-                                {veh.status === 'retired' && 'Ngừng khai thác'}
-                              </span>
-                            </td>
-                            <td style={{ padding: '12px 16px', fontSize: '12px', color: '#64748b', fontFamily: 'monospace' }}>
-                              {veh.lastMaintenanceDate || '2026-11-10'}
-                            </td>
-                            <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                              <div style={{ display: 'inline-flex', gap: '6px' }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedVehicleDetail(veh)}
-                                  style={{ padding: '5px 10px', background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', borderRadius: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                                >
-                                  Chi tiết
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setNewInsVehicleId(veh._id);
-                                    setShowNewInspectionModal(true);
-                                  }}
-                                  style={{ padding: '5px 10px', background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '7px', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
-                                >
-                                  Kiểm tra trả
-                                </button>
-                              </div>
+                  <select
+                    value={vehStatusFilter}
+                    onChange={e => {
+                      setVehStatusFilter(e.target.value);
+                      setVehPage(1);
+                    }}
+                    style={{
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: '9px',
+                      border: '1px solid #e2e8f0',
+                      fontSize: '13px',
+                      background: '#ffffff',
+                      color: '#0f172a',
+                      fontWeight: 600
+                    }}
+                  >
+                    <option value="all">Tất cả tình trạng</option>
+                    <option value="available">Sẵn sàng</option>
+                    <option value="broken">Có hư hỏng</option>
+                    <option value="repairing">Đang sửa chữa</option>
+                    <option value="maintenance">Đang bảo dưỡng</option>
+                    <option value="rented">Đang cho thuê</option>
+                  </select>
+                </div>
+
+                {/* Table Card */}
+                <div style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                      <thead>
+                        <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', fontWeight: 700 }}>
+                          <th style={{ padding: '12px 16px' }}>Hình ảnh xe</th>
+                          <th style={{ padding: '12px 14px' }}>Mã xe</th>
+                          <th style={{ padding: '12px 14px' }}>Tên xe</th>
+                          <th style={{ padding: '12px 14px' }}>Biển số</th>
+                          <th style={{ padding: '12px 14px' }}>Loại xe</th>
+                          <th style={{ padding: '12px 14px' }}>Số kilomet</th>
+                          <th style={{ padding: '12px 14px' }}>Tình trạng kỹ thuật</th>
+                          <th style={{ padding: '12px 14px' }}>Bảo dưỡng gần nhất</th>
+                          <th style={{ padding: '12px 16px', textAlign: 'right' }}>Thao tác</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pagedVehicles.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                              Không tìm thấy phương tiện phù hợp.
                             </td>
                           </tr>
-                        ))}
-                    </tbody>
-                  </table>
+                        ) : (
+                          pagedVehicles.map((veh, idx) => {
+                            const vehCode = veh.code || `MR-DN-${String((safeVehPage - 1) * PER_PAGE + idx + 1).padStart(3, '0')}`;
+                            const badge = getVehBadge(veh.status);
+                            return (
+                              <tr key={veh._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                                <td style={{ padding: '12px 16px' }}>
+                                  <img
+                                    src={veh.image || SAMPLE_PHOTOS.cleanFront}
+                                    alt={veh.name}
+                                    style={{ width: '56px', height: '38px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0', display: 'block' }}
+                                  />
+                                </td>
+                                <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontWeight: 700, color: '#0f172a', fontSize: '12.5px' }}>
+                                  {vehCode}
+                                </td>
+                                <td style={{ padding: '12px 14px' }}>
+                                  <div style={{ fontWeight: 800, color: '#0f172a' }}>{veh.name}</div>
+                                  <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>
+                                    {veh.color || 'Tiêu chuẩn'} • Đời {veh.year || 2024}
+                                  </div>
+                                </td>
+                                <td style={{ padding: '12px 14px', fontWeight: 700, color: '#2563eb', fontFamily: 'monospace' }}>
+                                  {veh.licensePlate}
+                                </td>
+                                <td style={{ padding: '12px 14px', color: '#334155' }}>{veh.type}</td>
+                                <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0f172a' }}>
+                                  {(veh.odometer || 12000).toLocaleString('vi-VN')} km
+                                </td>
+                                <td style={{ padding: '12px 14px' }}>
+                                  <span
+                                    style={{
+                                      display: 'inline-flex',
+                                      alignItems: 'center',
+                                      padding: '4px 10px',
+                                      borderRadius: '999px',
+                                      fontSize: '11.5px',
+                                      fontWeight: 700,
+                                      background: badge.bg,
+                                      color: badge.color,
+                                      border: badge.border,
+                                      whiteSpace: 'nowrap'
+                                    }}
+                                  >
+                                    {badge.label}
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px 14px', fontSize: '12.5px', color: '#475569', fontFamily: 'monospace' }}>
+                                  {veh.lastMaintenanceDate || '2026-11-25'}
+                                </td>
+                                <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                                  <div style={{ display: 'inline-flex', gap: '6px' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedVehicleDetail({ ...veh, code: vehCode })}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        padding: '6px 10px',
+                                        background: '#ffffff',
+                                        color: '#334155',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      <Eye size={13} />
+                                      <span>Chi tiết</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setHistoryVehicleFilter(veh.name);
+                                        setActiveTab('history');
+                                      }}
+                                      style={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        gap: '5px',
+                                        padding: '6px 10px',
+                                        background: '#eff6ff',
+                                        color: '#1d4ed8',
+                                        border: '1px solid #bfdbfe',
+                                        borderRadius: '8px',
+                                        fontSize: '12px',
+                                        fontWeight: 700,
+                                        cursor: 'pointer',
+                                        whiteSpace: 'nowrap'
+                                      }}
+                                    >
+                                      <History size={13} />
+                                      <span>Lịch sử KT</span>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination Footer */}
+                  <div
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      padding: '12px 16px',
+                      borderTop: '1px solid #f1f5f9',
+                      fontSize: '12.5px',
+                      color: '#64748b',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}
+                  >
+                    <span>
+                      Hiển thị{' '}
+                      <strong>
+                        {filteredVehicles.length === 0 ? 0 : (safeVehPage - 1) * PER_PAGE + 1}–
+                        {Math.min(safeVehPage * PER_PAGE, filteredVehicles.length)}
+                      </strong>{' '}
+                      trong tổng số <strong>{filteredVehicles.length}</strong> bản ghi
+                    </span>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button
+                        type="button"
+                        disabled={safeVehPage <= 1}
+                        onClick={() => setVehPage(p => Math.max(1, p - 1))}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '7px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          color: safeVehPage <= 1 ? '#cbd5e1' : '#334155',
+                          fontSize: '12px',
+                          cursor: safeVehPage <= 1 ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        ‹ Trước
+                      </button>
+
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(pNum => (
+                        <button
+                          key={pNum}
+                          type="button"
+                          onClick={() => setVehPage(pNum)}
+                          style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '7px',
+                            border: safeVehPage === pNum ? 'none' : '1px solid #e2e8f0',
+                            background: safeVehPage === pNum ? '#2563eb' : '#ffffff',
+                            color: safeVehPage === pNum ? '#ffffff' : '#334155',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {pNum}
+                        </button>
+                      ))}
+
+                      <button
+                        type="button"
+                        disabled={safeVehPage >= totalPages}
+                        onClick={() => setVehPage(p => Math.min(totalPages, p + 1))}
+                        style={{
+                          padding: '5px 10px',
+                          borderRadius: '7px',
+                          border: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          color: safeVehPage >= totalPages ? '#cbd5e1' : '#334155',
+                          fontSize: '12px',
+                          cursor: safeVehPage >= totalPages ? 'not-allowed' : 'pointer'
+                        }}
+                      >
+                        Sau ›
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
 
           {/* ========================================================
               TAB 3: KIỂM TRA XE KHI TRẢ
@@ -3096,45 +3482,264 @@ export default function TechnicianPortalPage() {
       )}
 
       {/* ========================================================
-          MODAL 6: CHI TIẾT XE & CẬP NHẬT TRẠNG THÁI
+          MODAL 6: CHI TIẾT XE & CẬP NHẬT TRẠNG THÁI (ĐÚNG SCREENSHOT 2)
           ======================================================== */}
-      {selectedVehicleDetail && (
-        <div onClick={() => setSelectedVehicleDetail(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
-              <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
-                {selectedVehicleDetail.name} ({selectedVehicleDetail.licensePlate})
-              </h3>
-              <button type="button" onClick={() => setSelectedVehicleDetail(null)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
-            </div>
+      {selectedVehicleDetail && (() => {
+        const veh = selectedVehicleDetail;
+        const vehCode = veh.code || `MR-DN-${veh._id.slice(-3).toUpperCase()}`;
+        const galleryImgs =
+          veh.gallery && veh.gallery.length > 0
+            ? veh.gallery
+            : [veh.image || SAMPLE_PHOTOS.cleanFront, SAMPLE_PHOTOS.newPartInstalled];
+        const nextMaintOdo = veh.nextMaintenanceOdo || (veh.odometer || 12000) + 2000;
 
-            <div style={{ display: 'flex', gap: '14px', alignItems: 'center', marginBottom: '14px' }}>
-              <img src={selectedVehicleDetail.image || SAMPLE_PHOTOS.cleanFront} alt={selectedVehicleDetail.name} style={{ width: '96px', height: '72px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0' }} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: '13px', color: '#475569' }}>Hãng: <strong>{selectedVehicleDetail.brand}</strong> • Loại: <strong>{selectedVehicleDetail.type}</strong></div>
-                <div style={{ fontSize: '13px', color: '#475569', marginTop: '4px' }}>ODO hiện tại: <strong>{(selectedVehicleDetail.odometer || 12000).toLocaleString('vi-VN')} km</strong></div>
-                <div style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: '#334155' }}>Cập nhật trạng thái:</span>
-                  <select
-                    value={selectedVehicleDetail.status}
-                    onChange={e => handleUpdateVehicleStatus(selectedVehicleDetail, e.target.value as any)}
-                    style={{ padding: '5px 10px', borderRadius: '7px', border: '1px solid #cbd5e1', fontSize: '12.5px', fontWeight: 700, background: '#ffffff' }}
-                  >
-                    <option value="available">Sẵn sàng</option>
-                    <option value="rented">Đang cho thuê</option>
-                    <option value="maintenance">Đang bảo dưỡng</option>
-                    <option value="broken">Đang hư hỏng</option>
-                  </select>
+        return (
+          <div
+            onClick={() => setSelectedVehicleDetail(null)}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.72)',
+              backdropFilter: 'blur(3px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 120,
+              padding: '16px'
+            }}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                background: '#ffffff',
+                borderRadius: '18px',
+                padding: '24px',
+                maxWidth: '680px',
+                width: '100%',
+                maxHeight: '92vh',
+                overflowY: 'auto'
+              }}
+            >
+              {/* Modal Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <h3 style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                    {veh.name} ({veh.licensePlate})
+                  </h3>
+                  <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '3px', fontFamily: 'monospace' }}>
+                    Mã phương tiện: {vehCode}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedVehicleDetail(null)}
+                  style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* 2-Column Image + Specs */}
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '18px',
+                  alignItems: 'center',
+                  marginBottom: '16px'
+                }}
+              >
+                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', height: '180px' }}>
+                  <img
+                    src={veh.image || SAMPLE_PHOTOS.cleanFront}
+                    alt={veh.name}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', fontSize: '13px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>Loại xe / Phân khối</span>
+                    <strong style={{ color: '#0f172a' }}>{veh.type} ({veh.engineCC || 150}cc)</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>Màu sắc / Đời xe</span>
+                    <strong style={{ color: '#0f172a' }}>{veh.color || 'Tiêu chuẩn'} • {veh.year || 2024}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>ODO hiện tại</span>
+                    <strong style={{ color: '#0f172a' }}>{(veh.odometer || 12000).toLocaleString('vi-VN')} km</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '6px', borderBottom: '1px solid #f1f5f9' }}>
+                    <span style={{ color: '#64748b' }}>Bảo dưỡng gần nhất</span>
+                    <strong style={{ color: '#0f172a', fontFamily: 'monospace' }}>{veh.lastMaintenanceDate || '2026-11-25'}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#64748b' }}>Mốc bảo dưỡng kế</span>
+                    <strong style={{ color: '#2563eb' }}>{nextMaintOdo.toLocaleString('vi-VN')} km</strong>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button type="button" onClick={() => setSelectedVehicleDetail(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>Đóng</button>
+              {/* Quick Status Update Card */}
+              <div
+                style={{
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                  padding: '12px 16px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '10px',
+                  marginBottom: '14px'
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                    Cập nhật trạng thái kỹ thuật nhanh
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    Trạng thái sẽ đồng bộ tức thì sang toàn bộ phân hệ
+                  </div>
+                </div>
+                <select
+                  value={veh.status}
+                  onChange={e => handleUpdateVehicleStatus(veh, e.target.value as any)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '9px',
+                    border: '1px solid #cbd5e1',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    background: '#ffffff',
+                    color: '#0f172a'
+                  }}
+                >
+                  <option value="available">Sẵn sàng</option>
+                  <option value="broken">Có hư hỏng</option>
+                  <option value="repairing">Đang sửa chữa</option>
+                  <option value="maintenance">Đang bảo dưỡng</option>
+                  <option value="rented">Đang cho thuê</option>
+                </select>
+              </div>
+
+              {/* Yellow Tech Note Banner */}
+              <div
+                style={{
+                  background: '#fefce8',
+                  border: '1px solid #fde68a',
+                  borderRadius: '10px',
+                  padding: '10px 14px',
+                  fontSize: '12.5px',
+                  color: '#92400e',
+                  marginBottom: '16px'
+                }}
+              >
+                <strong>Ghi chú kỹ thuật:</strong>{' '}
+                {veh.techNote || 'Xe hoạt động ổn định, không có ghi nhận bất thường.'}
+              </div>
+
+              {/* Gallery Section */}
+              <div style={{ marginBottom: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: 800, color: '#475569', textTransform: 'uppercase' }}>
+                    ẢNH HIỆN TRẠNG CHUẨN BÀN GIAO ({galleryImgs.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowPhotoCompareModal({
+                        title: `Thư viện ảnh xe ${veh.name} (${veh.licensePlate})`,
+                        subtitle: `Mã xe: ${vehCode} • ODO: ${(veh.odometer || 12000).toLocaleString('vi-VN')} km`,
+                        beforeImgs: galleryImgs,
+                        afterImgs: galleryImgs,
+                        notes: veh.techNote
+                      });
+                    }}
+                    style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Camera size={13} />
+                    <span>Phóng to thư viện</span>
+                  </button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                  {galleryImgs.map((src, i) => (
+                    <img
+                      key={i}
+                      src={src}
+                      alt={`${veh.name} #${i + 1}`}
+                      onClick={() =>
+                        setShowPhotoCompareModal({
+                          title: `Thư viện ảnh xe ${veh.name} (${veh.licensePlate})`,
+                          subtitle: `Mã xe: ${vehCode}`,
+                          beforeImgs: galleryImgs,
+                          afterImgs: galleryImgs,
+                          notes: veh.techNote
+                        })
+                      }
+                      style={{
+                        width: '100%',
+                        height: '120px',
+                        borderRadius: '10px',
+                        objectFit: 'cover',
+                        border: '1px solid #cbd5e1',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHistoryVehicleFilter(veh.name);
+                    setSelectedVehicleDetail(null);
+                    setActiveTab('history');
+                  }}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 14px',
+                    borderRadius: '9px',
+                    border: '1px solid #cbd5e1',
+                    background: '#ffffff',
+                    color: '#334155',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  <History size={14} />
+                  <span>Xem lịch sử kỹ thuật</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedVehicleDetail(null)}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '9px',
+                    border: 'none',
+                    background: '#2563eb',
+                    color: '#ffffff',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    cursor: 'pointer'
+                  }}
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ========================================================
           MODAL 7: THÊM PHỤ TÙNG MỚI
