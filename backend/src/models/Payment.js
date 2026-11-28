@@ -22,6 +22,7 @@ const paymentSchema = new mongoose.Schema({
   },
   note: String,
   referenceNumber: String, // Bank transfer reference
+  qrSession: { type: mongoose.Schema.Types.ObjectId, ref: 'QrPaymentSession' },
   collectedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   transactionDate: { type: Date, default: Date.now },
 }, { timestamps: true });

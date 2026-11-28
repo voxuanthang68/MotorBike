@@ -267,6 +267,7 @@ export default function MaintenancePage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '52px', textAlign: 'center' }}>STT</th>
                   <th>Xe Moto</th>
                   <th>Loại Phiếu</th>
                   <th>Mô Tả / Tình Trạng</th>
@@ -279,11 +280,12 @@ export default function MaintenancePage() {
                 </tr>
               </thead>
               <tbody>
-                {records.map((rec: any) => {
+                {records.map((rec: any, idx: number) => {
                   const typeInfo = TYPE_LABELS[rec.type] || { label: rec.type, icon: '🔧' };
                   const statusInfo = STATUS_LABELS[rec.status] || { label: rec.status, class: 'badge-pending' };
                   return (
                     <tr key={rec._id}>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                       <td>
                         <div style={{ fontWeight: 600 }}>{rec.vehicle?.name || 'Xe hệ thống'}</div>
                         <div style={{ fontSize: '12px', color: 'var(--brand-primary)', fontWeight: 700 }}>

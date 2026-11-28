@@ -176,7 +176,7 @@ async function getEligibleReturnedBookings() {
   const [bookings, existingInspections] = await Promise.all([
     Booking.find({ status: { $ne: 'cancelled' } })
       .populate('customer', 'fullName phone email cccd drivingLicense address')
-      .populate('vehicle', 'name brand licensePlate type odometer mainImage images year engineCC color status')
+      .populate('vehicle', 'name brand licensePlate type odometer mainImage images year engineCC color status isActive')
       .sort({ customerReturnedAt: -1, checkOutTime: -1, updatedAt: -1 }),
     ReturnInspection.find({}, 'booking').lean()
   ]);
@@ -185,40 +185,30 @@ async function getEligibleReturnedBookings() {
   const activeUnreturnedVehicleIds = new Set();
 
   for (const b of bookings) {
-    if (b.status === 'active' && b.returnStatus !== 'customer_returned' && b.vehicle) {
+    if (b.status === 'active' && b.returnStatus !== 'customer_returned' && b.vehicle && b.vehicle.isActive !== false) {
       activeUnreturnedVehicleIds.add(String(b.vehicle._id || b.vehicle));
     }
   }
 
   const eligible = [];
-  const seenHistoricalVehicleIds = new Set();
+  const seenVehicleIds = new Set();
 
   for (const b of bookings) {
-    if (!b.vehicle) continue;
+    if (!b.vehicle || b.vehicle.isActive === false) continue;
     const bid = String(b._id);
     const vid = String(b.vehicle._id || b.vehicle);
 
+    // Inspect at most the single most recent booking per physical vehicle
+    if (seenVehicleIds.has(vid)) continue;
+    seenVehicleIds.add(vid);
+
     if (inspectedBookingIds.has(bid)) continue;
     if (b.returnStatus === 'tech_accepted' || b.returnStatus === 'inspected') continue;
+    if (activeUnreturnedVehicleIds.has(vid)) continue;
 
-    // Case 1: Explicit customer return event (via Portal customer-return OR Reception checkout/return)
+    // Strictly require a real customer/counter return awaiting technical acceptance
     if (b.returnStatus === 'customer_returned') {
       eligible.push({ booking: b, returnSource: 'customer_returned' });
-      seenHistoricalVehicleIds.add(vid);
-      continue;
-    }
-
-    // Case 2: Historical completed booking with real checkOutTime on a bike NOT currently active/rented
-    if (
-      b.status === 'completed' &&
-      b.checkOutTime &&
-      !activeUnreturnedVehicleIds.has(vid) &&
-      !seenHistoricalVehicleIds.has(vid) &&
-      b.vehicle.status !== 'rented' &&
-      b.vehicle.status !== 'reserved'
-    ) {
-      seenHistoricalVehicleIds.add(vid);
-      eligible.push({ booking: b, returnSource: 'checked_out' });
     }
   }
 
@@ -659,6 +649,12 @@ router.post('/inspections', async (req, res) => {
     booking.techAcceptedBy = req.user._id;
     booking.assignedTechnician = req.user._id;
     await booking.save();
+
+    // Mark any older duplicate un-inspected returns on the same physical vehicle as superseded
+    await Booking.updateMany(
+      { _id: { $ne: booking._id }, vehicle: booking.vehicle._id, returnStatus: 'customer_returned' },
+      { returnStatus: 'inspected' }
+    );
 
     await Vehicle.findByIdAndUpdate(booking.vehicle._id, {
       status: 'maintenance',

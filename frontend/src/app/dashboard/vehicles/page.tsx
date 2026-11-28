@@ -76,6 +76,8 @@ export default function VehiclesPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(editVehicle ? 'Cập nhật xe thành công!' : 'Thêm xe thành công!');
       setShowModal(false);
       resetForm();
@@ -85,9 +87,11 @@ export default function VehiclesPage() {
 
   const toggleStatusMutation = useMutation({
     mutationFn: (v: any) =>
-      api.put(`/vehicles/${v._id}`, { ...v, status: v.status === 'available' ? 'retired' : 'available' }),
+      api.put(`/vehicles/${v._id}`, { status: v.status === 'available' ? 'retired' : 'available' }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Đã cập nhật trạng thái!');
       setDetailVehicle(null);
     },
@@ -103,6 +107,8 @@ export default function VehiclesPage() {
     mutationFn: (id: string) => api.delete(`/vehicles/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Đã xóa xe thành công!');
     },
     onError: (err: any) => toast.error(err.response?.data?.message || 'Không thể xóa xe!'),
@@ -117,6 +123,8 @@ export default function VehiclesPage() {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['owner-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Đã cập nhật giá thuê xe thành công!');
       setQuickPriceVehicle(null);
     },

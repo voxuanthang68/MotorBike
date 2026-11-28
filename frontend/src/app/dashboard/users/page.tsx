@@ -225,6 +225,7 @@ export default function UsersPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '52px', textAlign: 'center' }}>STT</th>
                   <th>Nhân Viên / Người Dùng</th>
                   <th>Số Điện Thoại</th>
                   <th>Vai Trò (Role)</th>
@@ -235,10 +236,11 @@ export default function UsersPage() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u: any) => {
+                {users.map((u: any, idx: number) => {
                   const cfg = ROLE_CONFIG[u.role] || { label: u.role, color: '#94a3b8', desc: '' };
                   return (
                     <tr key={u._id}>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div
@@ -341,9 +343,10 @@ export default function UsersPage() {
             </div>
             <div style={{ overflowX: 'auto', marginTop: 14 }}>
               <table className="data-table" style={{ minWidth: 760 }}>
-                <thead><tr><th>Chức năng</th><th style={{ textAlign: 'center' }}>Xem</th><th style={{ textAlign: 'center' }}>Thêm</th><th style={{ textAlign: 'center' }}>Sửa</th><th style={{ textAlign: 'center' }}>Xóa</th></tr></thead>
+                <thead><tr><th style={{ width: '52px', textAlign: 'center' }}>STT</th><th>Chức năng</th><th style={{ textAlign: 'center' }}>Xem</th><th style={{ textAlign: 'center' }}>Thêm</th><th style={{ textAlign: 'center' }}>Sửa</th><th style={{ textAlign: 'center' }}>Xóa</th></tr></thead>
                 <tbody>
-                  {(activePermission?.permissions || []).map((permission: any) => <tr key={permission.module}>
+                  {(activePermission?.permissions || []).map((permission: any, idx: number) => <tr key={permission.module}>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                     <td><strong>{MODULE_CONFIG[permission.module] || permission.module}</strong><div style={{ fontSize: 11, color: '#94a3b8' }}>{permission.module}</div></td>
                     {(['view', 'create', 'update', 'delete'] as const).map(action => <td key={action} style={{ textAlign: 'center' }}><input type="checkbox" checked={Boolean(permission[action])} onChange={() => togglePermission(permission.module, action)} style={{ width: 18, height: 18, accentColor: '#2563eb' }} /></td>)}
                   </tr>)}

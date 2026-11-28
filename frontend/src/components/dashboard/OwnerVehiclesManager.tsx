@@ -302,6 +302,7 @@ export default function OwnerVehiclesManager() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '12px 12px', fontSize: '12px', fontWeight: 700, color: '#475569', textAlign: 'center', width: '52px' }}>STT</th>
                   <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>XE & BIỂN SỐ</th>
                   <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>LOẠI XE</th>
                   <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>GIÁ THUÊ / NGÀY</th>
@@ -312,10 +313,13 @@ export default function OwnerVehiclesManager() {
                 </tr>
               </thead>
               <tbody>
-                {vehicles.map((v: any) => {
+                {vehicles.map((v: any, idx: number) => {
                   const statusInfo = STATUS_LABELS[v.status] || { label: v.status, color: '#64748b', bg: '#f1f5f9' };
                   return (
                     <tr key={v._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b', fontSize: '13px' }}>
+                        {idx + 1}
+                      </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ fontWeight: 700, color: '#0f172a', fontSize: '14px' }}>{v.name}</div>
                         <div style={{ fontSize: '12px', color: '#64748b', display: 'flex', gap: '8px', marginTop: '2px' }}>

@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import StandardRentalContractDocument, { mapContractToStandardData } from '@/components/contract/StandardRentalContractDocument';
 import {
   Phone,
   Camera,
@@ -70,7 +71,7 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
     queryKey: ['bookings-today'],
     queryFn: async () => {
       try {
-        const res = await api.get('/bookings');
+        const res = await api.get('/bookings?limit=100');
         return res.data?.data || [];
       } catch (err: any) {
         console.error('Lỗi tải danh sách đặt xe thật:', err);
@@ -112,9 +113,19 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
     const toReturn: any[] = [];
 
     // 1. Process real contracts
+    const handledBookingIds = new Set<string>();
     contracts.forEach((c) => {
+      const bookingObj = typeof c.booking === 'object' ? c.booking : null;
+      const bookingId = bookingObj?._id ? String(bookingObj._id) : c.booking ? String(c.booking) : '';
+      if (bookingId) handledBookingIds.add(bookingId);
+
+      // Skip already completed, cancelled, terminated, returned contracts or deleted vehicles
+      if (['completed', 'cancelled', 'terminated'].includes(c.status)) return;
+      if (c.actualReturnDate || c.checkOutTime) return;
+      if (bookingObj && ['completed', 'cancelled'].includes(bookingObj.status)) return;
+      if (c.vehicle && typeof c.vehicle === 'object' && c.vehicle.isActive === false) return;
+
       const end = c.endDate ? new Date(c.endDate) : null;
-      const start = c.startDate ? new Date(c.startDate) : null;
 
       // Real Debt calculation
       const total = Number(c.totalPayable ?? c.totalRentalFee ?? 0);
@@ -122,8 +133,19 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
       const deposit = Number(c.depositAmount ?? 0);
       const debt = Number(c.remainingDebt ?? Math.max(0, total - (paid + deposit)));
 
-      // OVERDUE: Contract is active AND end date is in the past
-      if (c.status === 'active' && end && end < now) {
+      // PENDING PICKUP / HANDOVER: pending approval/signature/confirmed or active not yet handed over
+      if (
+        ['pending_signature', 'pending_approval', 'confirmed', 'draft'].includes(c.status) ||
+        (c.status === 'active' && !c.checkInTime)
+      ) {
+        pickup.push({
+          ...c,
+          taskType: 'pickup',
+          remainingDebt: debt,
+        });
+      }
+      // OVERDUE: Contract is active, handed over, AND end date is in the past
+      else if (c.status === 'active' && end && end < now) {
         const diffMs = now.getTime() - end.getTime();
         const diffHours = Math.max(1, Math.round(diffMs / (1000 * 60 * 60)));
         overdue.push({
@@ -143,56 +165,57 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
           remainingDebt: debt,
         });
       }
-      // PENDING PICKUP / HANDOVER: Contract pending signature, draft, or not yet checked-in
-      else if (
-        ['pending_signature', 'draft'].includes(c.status) ||
-        (c.status === 'active' && !c.checkInTime)
-      ) {
-        pickup.push({
-          ...c,
-          taskType: 'pickup',
-          remainingDebt: debt,
-        });
-      }
     });
 
-    // 2. Process real bookings waiting for vehicle handover (confirmed or pending)
+    // 2. Process real bookings without a contract
     bookings.forEach((b) => {
-      if (['pending', 'confirmed'].includes(b.status)) {
-        // Only include if no contract has already been created for this booking
-        const hasContract = contracts.some(
-          (c) =>
-            (c.booking?._id && String(c.booking._id) === String(b._id)) ||
-            (c.booking && String(c.booking) === String(b._id)) ||
-            (c.contractCode && b.contractCode && c.contractCode === b.contractCode)
-        );
+      if (['completed', 'cancelled'].includes(b.status)) return;
+      if (b.checkOutTime) return;
+      if (b.vehicle && typeof b.vehicle === 'object' && b.vehicle.isActive === false) return;
 
-        if (!hasContract) {
-          const finalPrice = Number(b.finalPrice ?? b.totalPrice ?? 0);
-          const dep = Number(b.deposit ?? 0);
-          pickup.push({
-            _id: b._id,
-            isBookingOnly: true,
-            contractCode: b.bookingCode || `BK-${b._id.slice(-5).toUpperCase()}`,
-            customerInfo: {
-              fullName: b.customer?.fullName || b.customerName || 'Khách đặt xe',
-              phone: b.customer?.phone || b.customerPhone || '0901234567',
-              email: b.customer?.email,
-            },
-            vehicleInfo: {
-              name: b.vehicle?.name || 'Phương tiện thuê',
-              licensePlate: b.vehicle?.licensePlate || 'Chưa gắn biển',
-              brand: b.vehicle?.brand || '',
-              model: b.vehicle?.model || '',
-            },
-            startDate: b.startDate,
-            endDate: b.endDate,
-            totalPayable: finalPrice,
-            remainingDebt: Math.max(0, finalPrice - dep),
-            taskType: 'pickup',
-            status: b.status,
-          });
-        }
+      const hasContract = handledBookingIds.has(String(b._id)) || contracts.some(
+        (c) =>
+          (c.booking?._id && String(c.booking._id) === String(b._id)) ||
+          (c.booking && String(c.booking) === String(b._id)) ||
+          (c.contractCode && b.contractCode && c.contractCode === b.contractCode)
+      );
+      if (hasContract) return;
+
+      const finalPrice = Number(b.finalPrice ?? b.totalPrice ?? 0);
+      const dep = Number(b.deposit ?? 0);
+      const debt = Math.max(0, finalPrice - dep);
+      const end = b.endDate ? new Date(b.endDate) : null;
+      const baseItem = {
+        _id: b._id,
+        isBookingOnly: true,
+        contractCode: b.bookingCode || `BK-${b._id.slice(-5).toUpperCase()}`,
+        customerInfo: {
+          fullName: b.customer?.fullName || b.customerName || 'Khách đặt xe',
+          phone: b.customer?.phone || b.customerPhone || '',
+          email: b.customer?.email,
+        },
+        vehicle: b.vehicle,
+        vehicleInfo: {
+          name: b.vehicle?.name || 'Phương tiện thuê',
+          licensePlate: b.vehicle?.licensePlate || 'Chưa gắn biển',
+          brand: b.vehicle?.brand || '',
+          model: b.vehicle?.model || '',
+        },
+        startDate: b.startDate,
+        endDate: b.endDate,
+        totalPayable: finalPrice,
+        remainingDebt: debt,
+        status: b.status,
+      };
+
+      if (['pending', 'confirmed'].includes(b.status)) {
+        pickup.push({ ...baseItem, taskType: 'pickup' });
+      } else if (b.status === 'overdue' || (b.status === 'active' && end && end < now)) {
+        const diffHours = end ? Math.max(1, Math.round((now.getTime() - end.getTime()) / (1000 * 60 * 60))) : 1;
+        overdue.push({ ...baseItem, taskType: 'overdue', overdueHours: diffHours });
+      } else if (b.status === 'active' && end && end >= now) {
+        const isToday = end >= todayStart && end <= todayEnd;
+        toReturn.push({ ...baseItem, taskType: 'return', isTodayReturn: isToday });
       }
     });
 
@@ -211,14 +234,22 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
 
   // Return vehicle mutation (calls real backend API)
   const returnMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+    mutationFn: async ({ id, isBookingOnly, data }: { id: string; isBookingOnly?: boolean; data: any }) => {
+      if (isBookingOnly) {
+        const res = await api.put(`/bookings/${id}/status`, { status: 'completed', note: data?.returnNote });
+        return res.data;
+      }
       const res = await api.put(`/contracts/${id}/return`, data);
       return res.data;
     },
     onSuccess: () => {
       toast.success('Nhận lại xe thành công! Hợp đồng đã hoàn tất.');
       queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setReturnModalContract(null);
     },
@@ -229,14 +260,22 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
 
   // Handover vehicle mutation (calls real backend API)
   const handoverMutation = useMutation({
-    mutationFn: async ({ id, data }: { id: string; data: any }) => {
-      const res = await api.put(`/contracts/${id}/checkin`, data);
+    mutationFn: async ({ id, isBookingOnly, data }: { id: string; isBookingOnly?: boolean; data: any }) => {
+      if (isBookingOnly) {
+        const res = await api.put(`/bookings/${id}/status`, { status: 'active' });
+        return res.data;
+      }
+      const res = await api.put(`/contracts/${id}/handover`, data);
       return res.data;
     },
     onSuccess: () => {
       toast.success('Bàn giao xe thành công! Xe đã được giao cho khách.');
       queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setHandoverModalContract(null);
     },
@@ -595,9 +634,15 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                         color: '#0f172a',
                         letterSpacing: '-0.2px',
                         lineHeight: 1.2,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
                       }}
                     >
-                      {licensePlate}
+                      <span style={{ fontSize: '12px', fontWeight: 800, background: '#f1f5f9', color: '#475569', padding: '2px 8px', borderRadius: '6px' }}>
+                        STT #{idx + 1}
+                      </span>
+                      <span>{licensePlate}</span>
                     </div>
                     <div
                       style={{
@@ -913,6 +958,7 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                 e.preventDefault();
                 returnMutation.mutate({
                   id: returnModalContract._id,
+                  isBookingOnly: Boolean(returnModalContract.isBookingOnly),
                   data: {
                     actualReturnDate: returnDate,
                     checkOutOdometer: returnOdometer ? Number(returnOdometer) : undefined,
@@ -1108,6 +1154,7 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                 e.preventDefault();
                 handoverMutation.mutate({
                   id: handoverModalContract._id,
+                  isBookingOnly: Boolean(handoverModalContract.isBookingOnly),
                   data: {
                     checkInOdometer: Number(handoverOdometer),
                     checkInNote: handoverNote,
@@ -1214,7 +1261,7 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
             style={{
               background: '#ffffff',
               borderRadius: '8px',
-              maxWidth: '600px',
+              maxWidth: '820px',
               width: '100%',
               padding: '24px',
               boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
@@ -1248,59 +1295,11 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', fontSize: '13px' }}>
-              {/* Customer */}
-              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px' }}>
-                <div style={{ fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  👤 Khách hàng
-                </div>
-                <div>Họ và tên: <strong>{detailModalContract.customerInfo?.fullName || '---'}</strong></div>
-                <div>Số điện thoại: <strong>{detailModalContract.customerInfo?.phone || '---'}</strong></div>
-                {detailModalContract.customerInfo?.cccd && (
-                  <div>CCCD: <strong>{detailModalContract.customerInfo.cccd}</strong></div>
-                )}
-                {detailModalContract.customerInfo?.address && (
-                  <div>Địa chỉ: <strong>{detailModalContract.customerInfo.address}</strong></div>
-                )}
-              </div>
-
-              {/* Vehicle */}
-              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px' }}>
-                <div style={{ fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  🏍️ Phương tiện thuê
-                </div>
-                <div>Tên xe: <strong>{detailModalContract.vehicleInfo?.name || detailModalContract.vehicle?.name || '---'}</strong></div>
-                <div>Biển số: <strong>{detailModalContract.vehicleInfo?.licensePlate || detailModalContract.vehicle?.licensePlate || '---'}</strong></div>
-                <div>Hãng xe: <strong>{detailModalContract.vehicleInfo?.brand || detailModalContract.vehicle?.brand || '---'}</strong></div>
-              </div>
-
-              {/* Schedule */}
-              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px' }}>
-                <div style={{ fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  📅 Thời gian thuê
-                </div>
-                <div>Bắt đầu: <strong>{formatDate(detailModalContract.startDate)}</strong></div>
-                <div>Kết thúc: <strong>{formatDate(detailModalContract.endDate)}</strong></div>
-                {detailModalContract.actualReturnDate && (
-                  <div>Trả thực tế: <strong>{formatDate(detailModalContract.actualReturnDate)}</strong></div>
-                )}
-              </div>
-
-              {/* Financials */}
-              <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '6px' }}>
-                <div style={{ fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                  💰 Tài chính & Công nợ
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
-                  <div>Tổng tiền thuê: <strong>{formatMoney(detailModalContract.totalPayable)}</strong></div>
-                  <div>Tiền cọc: <strong>{formatMoney(detailModalContract.depositAmount)}</strong></div>
-                  <div>Đã thanh toán: <strong>{formatMoney(detailModalContract.paidAmount)}</strong></div>
-                  <div style={{ color: Number(detailModalContract.remainingDebt) > 0 ? '#dc2626' : '#059669' }}>
-                    Khách còn nợ: <strong>{formatMoney(detailModalContract.remainingDebt)}</strong>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <StandardRentalContractDocument
+              mode="populated"
+              data={mapContractToStandardData(detailModalContract)}
+              compact
+            />
 
             <div style={{ marginTop: '20px', textAlign: 'right' }}>
               <button

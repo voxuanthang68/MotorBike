@@ -44,17 +44,17 @@ export default function DashboardOverviewPage() {
     return `${num.toLocaleString('vi-VN')} đ`;
   };
 
-  const totalVehicles = dashData?.totalVehicles ?? dashData?.operationsScope?.totalVehicles ?? 4;
+  const totalVehicles = dashData?.totalVehicles ?? dashData?.operationsScope?.totalVehicles ?? 0;
   const rentedVehicles = dashData?.rentedVehicles ?? dashData?.activeRentals ?? 0;
   const utilizationRate = dashData?.utilizationRate ?? (totalVehicles > 0 ? Math.round((rentedVehicles / totalVehicles) * 100) : 0);
 
-  const activeContracts = dashData?.activeContracts ?? 1;
+  const activeContracts = dashData?.activeContracts ?? 0;
   const pendingBookings = dashData?.pendingBookings ?? dashData?.todayBookings ?? 0;
 
   const monthRevenue = dashData?.monthRevenue ?? 0;
   const completedContractsThisMonth = dashData?.completedContractsThisMonth ?? dashData?.operationsScope?.completedContractsThisMonth ?? 0;
 
-  const debtAmount = dashData?.debtAmount ?? 1740000;
+  const debtAmount = dashData?.debtAmount ?? 0;
   const monthExpenses = dashData?.monthExpenses ?? 0;
   const monthProfit = dashData?.monthProfit ?? 0;
   const profitMargin = dashData?.profitMargin ?? 0;
@@ -68,31 +68,12 @@ export default function DashboardOverviewPage() {
 
   const operationsScope = dashData?.operationsScope || {
     totalVehicles: totalVehicles,
-    totalCustomers: dashData?.totalCustomers || 1,
-    totalDrivers: 1,
+    totalCustomers: dashData?.totalCustomers ?? 0,
+    totalDrivers: 0,
     completedContractsThisMonth: completedContractsThisMonth,
   };
 
-  const alerts = dashData?.alerts?.length > 0 ? dashData.alerts : [
-    {
-      label: 'Cần xử lý',
-      message: '1 hợp đồng QUÁ HẠN chưa trả xe',
-      actionText: 'Xem hợp đồng →',
-      actionUrl: '/dashboard/contracts',
-    },
-    {
-      label: 'Giấy tờ xe',
-      message: '43AC-092.92 — Đăng kiểm đã hết hạn 5 ngày',
-      actionText: null,
-      actionUrl: null,
-    },
-    {
-      label: 'Bảo dưỡng xe',
-      message: '59X1-234.56 — Quá hạn bảo dưỡng 6.000 km',
-      actionText: 'Xem xe →',
-      actionUrl: '/dashboard/vehicles',
-    },
-  ];
+  const alerts = Array.isArray(dashData?.alerts) ? dashData.alerts : [];
 
   return (
     <div style={{ padding: '24px 32px', background: '#f8fafc', minHeight: '100vh', color: '#0f172a' }}>
@@ -291,45 +272,47 @@ export default function DashboardOverviewPage() {
         </div>
       )}
 
-      {/* 2. Alert Banners */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
-        {alerts.map((alert: any, idx: number) => (
-          <div
-            key={idx}
-            style={{
-              background: '#fff1f2',
-              border: '1px solid #fee2e2',
-              borderRadius: '6px',
-              padding: '12px 18px',
-              display: 'flex',
-              alignItems: 'center',
-              fontSize: '13.5px',
-              lineHeight: 1.4,
-            }}
-          >
-            <span style={{ fontWeight: 700, color: '#991b1b', marginRight: '6px', whiteSpace: 'nowrap' }}>
-              {alert.label}:
-            </span>
-            <span style={{ color: '#b91c1c' }}>
-              {alert.message}
-            </span>
-            {alert.actionText && (
-              <Link
-                href={alert.actionUrl || '/dashboard/contracts'}
-                style={{
-                  marginLeft: '8px',
-                  color: '#1d4ed8',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {alert.actionText}
-              </Link>
-            )}
-          </div>
-        ))}
-      </div>
+      {/* 2. Alert Banners (only shown when real alerts exist) */}
+      {!isLoading && alerts.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+          {alerts.map((alert: any, idx: number) => (
+            <div
+              key={idx}
+              style={{
+                background: '#fff1f2',
+                border: '1px solid #fee2e2',
+                borderRadius: '6px',
+                padding: '12px 18px',
+                display: 'flex',
+                alignItems: 'center',
+                fontSize: '13.5px',
+                lineHeight: 1.4,
+              }}
+            >
+              <span style={{ fontWeight: 700, color: '#991b1b', marginRight: '6px', whiteSpace: 'nowrap' }}>
+                {alert.label}:
+              </span>
+              <span style={{ color: '#b91c1c' }}>
+                {alert.message}
+              </span>
+              {alert.actionText && (
+                <Link
+                  href={alert.actionUrl || '/dashboard/contracts'}
+                  style={{
+                    marginLeft: '8px',
+                    color: '#1d4ed8',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {alert.actionText}
+                </Link>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* 3. Metric Cards — Row 1 (4 Cards) */}
       <div
@@ -777,7 +760,7 @@ export default function DashboardOverviewPage() {
           {/* Action Buttons */}
           <div style={{ display: 'flex', gap: '12px', marginTop: '24px', flexWrap: 'wrap' }}>
             <Link
-              href="/dashboard/contracts"
+              href="/dashboard/contracts?create=1"
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',

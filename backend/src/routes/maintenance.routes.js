@@ -16,15 +16,16 @@ router.get('/', async (req, res) => {
     if (status) query.status = status;
     if (type) query.type = type;
 
-    const total = await Maintenance.countDocuments(query);
     const records = await Maintenance.find(query)
-      .populate('vehicle', 'name licensePlate brand')
+      .populate('vehicle', 'name licensePlate brand isActive')
       .populate('technician', 'fullName phone')
       .sort({ scheduledDate: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
 
-    res.json({ success: true, data: records, pagination: { total, page: Number(page), pages: Math.ceil(total / limit) } });
+    const activeRecords = records.filter(r => !r.vehicle || r.vehicle.isActive !== false);
+
+    res.json({ success: true, data: activeRecords, pagination: { total: activeRecords.length, page: Number(page), pages: Math.ceil(activeRecords.length / limit) } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

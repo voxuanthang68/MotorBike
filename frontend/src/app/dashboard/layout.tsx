@@ -38,8 +38,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <div className="layout-wrapper">
       <Sidebar />
-      <AccountMenu />
       <main className="main-content">
+        <header className="dashboard-topbar">
+          <div className="dashboard-topbar-brand">
+            <span className="dashboard-topbar-dot" />
+            <span>XTBike Hải Châu • Điều hành cho thuê xe</span>
+          </div>
+          <AccountMenu />
+        </header>
         {children}
       </main>
     </div>

@@ -1,9 +1,14 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import VietQrPaymentBox, { QrSessionData } from '@/components/payment/VietQrPaymentBox';
+import StandardRentalContractDocument, {
+  buildStandardContractTerms,
+  mapContractToStandardData,
+} from '@/components/contract/StandardRentalContractDocument';
 import {
   Search,
   Calendar,
@@ -44,40 +49,63 @@ export default function VehicleBookingSchedulePage() {
   const [bookingListStatus, setBookingListStatus] = useState<string>('all');
   const [bookingListSearch, setBookingListSearch] = useState<string>('');
 
-  // Search & Filter state for Timeline
+  // Search & Filter state for Timeline (dynamic around today)
   const [searchInput, setSearchInput] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('2026-09-03');
-  const [endDateFilter, setEndDateFilter] = useState('2026-10-02');
+  const [startDateFilter, setStartDateFilter] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 3);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDateFilter, setEndDateFilter] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 26);
+    return d.toISOString().slice(0, 10);
+  });
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [selectedDayKey, setSelectedDayKey] = useState('2026-09-03');
+  const [selectedDayKey, setSelectedDayKey] = useState(() => new Date().toISOString().slice(0, 10));
 
   // MODALS STATE
-  // 1. Quick create contract on empty slot click (Timeline)
-  const [quickCreateModal, setQuickCreateModal] = useState<{
-    vehicleId: string;
-    vehiclePlate: string;
-    vehicleName: string;
-    startDate: string;
-  } | null>(null);
+  // 1. Walk-in booking modal (Khách đến cửa hàng thuê xe / bấm ô trống Timeline)
+  const [walkInModalOpen, setWalkInModalOpen] = useState(false);
+  const [walkInCustomerMode, setWalkInCustomerMode] = useState<'walkin' | 'existing'>('walkin');
+  const [walkInCustomerId, setWalkInCustomerId] = useState('');
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const [walkInCccd, setWalkInCccd] = useState('');
+  const [walkInLicense, setWalkInLicense] = useState('');
+  const [walkInAddress, setWalkInAddress] = useState('');
+  const [walkInVehicleId, setWalkInVehicleId] = useState('');
+  const [walkInStartDate, setWalkInStartDate] = useState('');
+  const [walkInEndDate, setWalkInEndDate] = useState('');
+  const [walkInRentalType, setWalkInRentalType] = useState<'daily' | 'monthly'>('daily');
+  const [walkInAccessories, setWalkInAccessories] = useState<string[]>([]);
+  const [walkInPaymentMethod, setWalkInPaymentMethod] = useState<'cash' | 'qr' | 'bank_transfer'>('cash');
+  const [walkInPaymentStatus, setWalkInPaymentStatus] = useState<'unpaid' | 'deposit_paid' | 'fully_paid'>('deposit_paid');
+  const [walkInDeposit, setWalkInDeposit] = useState<number>(500000);
+  const [walkInNote, setWalkInNote] = useState('');
 
   // 2. Timeline item detail
   const [selectedBookingDetail, setSelectedBookingDetail] = useState<any | null>(null);
 
-  // 3. FULL CONTRACT & E-SIGN MODAL (HIỂN THỊ TOÀN BỘ HỢP ĐỒNG & BÊN MÌNH KÝ XÁC NHẬN)
+  // 3. FULL CONTRACT & E-SIGN MODAL (HIỂN THỊ TOÀN BỘ HỢP ĐỒNG & KÝ 2 BÊN)
   const [contractModal, setContractModal] = useState<{
     booking: any;
     contract?: any;
-    customerSignature?: string;
-    customerSignedAt?: string;
-    staffSignature?: string;
-    staffSignedAt?: string;
+    customerSignature?: string | null;
+    customerSignedAt?: string | null;
+    staffSignature?: string | null;
+    staffSignedAt?: string | null;
   } | null>(null);
 
   const contractStaffCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isDrawingContractStaff, setIsDrawingContractStaff] = useState(false);
   const [hasDrawnContractStaff, setHasDrawnContractStaff] = useState(false);
+  const contractCustCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [isDrawingContractCust, setIsDrawingContractCust] = useState(false);
+  const [hasDrawnContractCust, setHasDrawnContractCust] = useState(false);
+  const [contractError, setContractError] = useState<string | null>(null);
   const [isSubmittingContract, setIsSubmittingContract] = useState(false);
 
   // 3.5. APPROVE & SIGN MODAL (LỄ TÂN / ADMIN DUYỆT ĐƠN & KÝ SỐ)
@@ -128,19 +156,12 @@ export default function VehicleBookingSchedulePage() {
   // 6. VIEW INSPECTION IMAGES & SIGNATURES MODAL
   const [viewHandoverImagesModal, setViewHandoverImagesModal] = useState<any | null>(null);
 
-  // Quick create form inputs
-  const [newCustomerName, setNewCustomerName] = useState('');
-  const [newCustomerPhone, setNewCustomerPhone] = useState('');
-  const [newEndDate, setNewEndDate] = useState('2026-09-05');
-  const [newPricePerDay, setNewPricePerDay] = useState(800000);
-  const [newDeposit, setNewDeposit] = useState(2000000);
-
   // 1. Fetch vehicles
   const { data: vehiclesData } = useQuery({
     queryKey: ['vehicles-schedule'],
     queryFn: async () => {
       try {
-        const res = await api.get('/vehicles');
+        const res = await api.get('/vehicles?limit=100');
         return res.data?.data || [];
       } catch {
         return [];
@@ -174,182 +195,118 @@ export default function VehicleBookingSchedulePage() {
     }
   });
 
-  // Fallback vehicles
-  const fallbackVehicles = useMemo(() => [
-    { _id: 'v-vios', licensePlate: '51K-123.45', name: 'Toyota Vios', brand: 'Toyota', type: 'car', pricePerDay: 800000 },
-    { _id: 'v-transit', licensePlate: '51F-678.90', name: 'Ford Transit', brand: 'Ford', type: 'car', pricePerDay: 1200000 },
-    { _id: 'v-vision', licensePlate: '59X1-234.56', name: 'Honda Vision', brand: 'Honda', type: 'scooter', pricePerDay: 130000 },
-    { _id: 'v-vinfast', licensePlate: '43AC-092.92', name: 'VinFast Evo 200', brand: 'VinFast', type: 'scooter', pricePerDay: 120000 },
-  ], []);
-
-  // Fallback sample bookings representing the full workflow:
-  // 1. Pending (Khách đặt chờ duyệt -> Chưa được tạo hợp đồng)
-  // 2. Confirmed (Đã duyệt -> Được phép tạo HĐ & Ký số & Bàn giao xe)
-  // 3. Active (Đang thuê -> Chuẩn bị trả xe)
-  const fallbackBookings = useMemo(() => [
-    {
-      _id: 'sch-book-01',
-      bookingCode: 'BK-8899',
-      customer: { fullName: 'Trần Văn Bình', phone: '0905123456', email: 'binh.tran@gmail.com', cccd: '048200009988' },
-      vehicle: { _id: 'v-vios', licensePlate: '51K-123.45', name: 'Toyota Vios', brand: 'Toyota', pricePerDay: 800000 },
-      startDate: '2026-09-05T08:00:00',
-      endDate: '2026-09-08T18:00:00',
-      totalDays: 3,
-      pricePerDay: 800000,
-      totalPrice: 2400000,
-      finalPrice: 2400000,
-      deposit: 2000000,
-      paymentMethod: 'bank_transfer',
-      status: 'pending', // Chờ duyệt -> PHẢI DUYỆT ĐƠN TRƯỚC!
-      bookingSource: 'online',
-      customerNote: 'Khách nhận xe tại Sân bay Đà Nẵng, cần hỗ trợ thêm 2 mũ bảo hiểm.',
-      createdAt: '2026-09-02T10:15:00',
-    },
-    {
-      _id: 'sch-book-02',
-      bookingCode: 'BK-8898',
-      customer: { fullName: 'Lê Thị Mai', phone: '0908765432', email: 'mai.le@gmail.com', cccd: '048200005544' },
-      vehicle: { _id: 'v-vinfast', licensePlate: '43AC-092.92', name: 'VinFast Evo 200', brand: 'VinFast', pricePerDay: 120000 },
-      startDate: '2026-09-06T09:00:00',
-      endDate: '2026-09-09T18:00:00',
-      totalDays: 3,
-      pricePerDay: 120000,
-      totalPrice: 360000,
-      finalPrice: 360000,
-      deposit: 500000,
-      paymentMethod: 'cash',
-      status: 'confirmed', // Đã duyệt -> ĐƯỢC TẠO HỢP ĐỒNG & BÀN GIAO XE!
-      bookingSource: 'online',
-      contractCreated: false,
-      createdAt: '2026-09-01T14:30:00',
-    },
-    {
-      _id: 'sch-book-03',
-      bookingCode: 'HD0001',
-      contractCode: 'HD0001',
-      contractId: 'seed-hd0001',
-      customer: { fullName: 'Nguyễn Văn An', phone: '901234567', email: 'customer@gmail.com', cccd: '048200001234' },
-      vehicle: { _id: 'v-vios', licensePlate: '51K-123.45', name: 'Toyota Vios', brand: 'Toyota', pricePerDay: 800000 },
-      startDate: '2026-09-03T00:00:00',
-      endDate: '2026-09-04T23:59:59',
-      totalDays: 2,
-      pricePerDay: 800000,
-      totalPrice: 1600000,
-      finalPrice: 1600000,
-      deposit: 0,
-      paymentMethod: 'bank_transfer',
-      status: 'active', // Đang thuê -> ĐÃ GIAO XE, CHỜ TRẢ XE!
-      contractCreated: true,
-      customerSignature: 'data:image/png;base64,sampleSignature',
-      checkInImages: [
-        'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'
-      ],
-      checkInOdometer: 15000,
-      createdAt: '2026-08-30T09:00:00',
+  // 3.5. Fetch customers list for walk-in booking selector
+  const { data: customersData } = useQuery({
+    queryKey: ['customers-list'],
+    queryFn: async () => {
+      try {
+        const res = await api.get('/customers?limit=100');
+        return res.data?.data || [];
+      } catch {
+        return [];
+      }
     }
-  ], []);
+  });
 
-  // Merge live vehicles and fallback vehicles
+  // Real vehicles & customers from API only
   const vehiclesList = useMemo(() => {
-    if (vehiclesData && vehiclesData.length > 0) return vehiclesData;
-    return fallbackVehicles;
-  }, [vehiclesData, fallbackVehicles]);
+    return Array.isArray(vehiclesData) ? vehiclesData : [];
+  }, [vehiclesData]);
+  const customersList = useMemo(() => {
+    return Array.isArray(customersData) ? customersData : [];
+  }, [customersData]);
 
-  // Local tracking maps for immediate UI updates & persistent reload
-  const [localContractCreatedMap, setLocalContractCreatedMap] = useState<Record<string, any>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('xtbike_local_contracts');
-        return saved ? JSON.parse(saved) : {};
-      } catch { return {}; }
-    }
-    return {};
-  });
-
-  const [localBookingStatusMap, setLocalBookingStatusMap] = useState<Record<string, string>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('xtbike_local_booking_status');
-        return saved ? JSON.parse(saved) : {};
-      } catch { return {}; }
-    }
-    return {};
-  });
-
-  const [localHandoverDataMap, setLocalHandoverDataMap] = useState<Record<string, any>>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const saved = localStorage.getItem('xtbike_local_handover_data');
-        return saved ? JSON.parse(saved) : {};
-      } catch { return {}; }
-    }
-    return {};
-  });
-
-  // Helper functions to persist to state and localStorage
-  const updateBookingStatusLocal = (bookingId: string, status: string) => {
-    setLocalBookingStatusMap(prev => {
-      const next = { ...prev, [bookingId]: status };
-      if (typeof window !== 'undefined') {
-        try { localStorage.setItem('xtbike_local_booking_status', JSON.stringify(next)); } catch {}
-      }
-      return next;
-    });
+  const toLocalDateTimeInput = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
   };
 
-  const updateHandoverDataLocal = (bookingId: string, data: any) => {
-    setLocalHandoverDataMap(prev => {
-      const next = { ...prev, [bookingId]: data };
-      if (typeof window !== 'undefined') {
-        try { localStorage.setItem('xtbike_local_handover_data', JSON.stringify(next)); } catch {}
-      }
-      return next;
-    });
+  const WALKIN_ACCESSORY_OPTIONS = [
+    { id: 'helmet', name: 'Mũ bảo hiểm 3/4', price: 20000 },
+    { id: 'raincoat', name: 'Áo mưa bộ', price: 15000 },
+    { id: 'phone_holder', name: 'Giá đỡ điện thoại', price: 10000 },
+  ];
+
+  const openWalkInBookingModal = (preset?: { vehicleId?: string; startDateKey?: string }) => {
+    const startDt = preset?.startDateKey ? new Date(`${preset.startDateKey}T08:00`) : new Date();
+    const validStart = Number.isNaN(startDt.getTime()) ? new Date() : startDt;
+    const endDt = new Date(validStart.getTime() + 86400000);
+
+    const availableOrFirst =
+      (preset?.vehicleId && vehiclesList.find((v: any) => v._id === preset.vehicleId)) ||
+      vehiclesList.find((v: any) => v.status === 'available' && v.availability === 'available') ||
+      vehiclesList[0];
+
+    setWalkInCustomerMode('walkin');
+    setWalkInCustomerId(customersList[0]?._id || '');
+    setWalkInName('');
+    setWalkInPhone('');
+    setWalkInCccd('');
+    setWalkInLicense('');
+    setWalkInAddress('');
+    setWalkInVehicleId(availableOrFirst?._id || '');
+    setWalkInStartDate(toLocalDateTimeInput(validStart));
+    setWalkInEndDate(toLocalDateTimeInput(endDt));
+    setWalkInRentalType('daily');
+    setWalkInAccessories([]);
+    setWalkInPaymentMethod('cash');
+    setWalkInPaymentStatus('deposit_paid');
+    setWalkInDeposit(availableOrFirst?.deposit || 500000);
+    setWalkInNote('');
+    setWalkInModalOpen(true);
   };
 
-  const updateContractCreatedLocal = (bookingId: string, contract: any) => {
-    setLocalContractCreatedMap(prev => {
-      const next = { ...prev, [bookingId]: contract };
-      if (typeof window !== 'undefined') {
-        try { localStorage.setItem('xtbike_local_contracts', JSON.stringify(next)); } catch {}
-      }
-      return next;
-    });
-  };
+  useEffect(() => {
+    if (!walkInModalOpen) return;
+    if (!walkInVehicleId && vehiclesList.length > 0) {
+      const firstAvail = vehiclesList.find((v: any) => v.status === 'available') || vehiclesList[0];
+      setWalkInVehicleId(firstAvail._id);
+      setWalkInDeposit(firstAvail.deposit || 500000);
+    }
+    if (!walkInCustomerId && customersList.length > 0) {
+      setWalkInCustomerId(customersList[0]._id);
+    }
+  }, [walkInModalOpen, vehiclesList, customersList, walkInVehicleId, walkInCustomerId]);
 
-  // Combined bookings list with live optimistic updates
+  // Clear legacy local override caches if present so reload always reflects real MongoDB data
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.removeItem('xtbike_local_contracts');
+        localStorage.removeItem('xtbike_local_booking_status');
+        localStorage.removeItem('xtbike_local_handover_data');
+      } catch {}
+    }
+  }, []);
+
+  // Real bookings combined strictly with live MongoDB contracts
   const allBookings = useMemo(() => {
-    const base = bookingsData && bookingsData.length > 0 ? bookingsData : fallbackBookings;
+    const base = Array.isArray(bookingsData) ? bookingsData : [];
+    const liveContracts = Array.isArray(contractsData) ? contractsData : [];
     return base.map((b: any) => {
-      const localHandover = localHandoverDataMap[b._id];
-      const checkInImages = (b.checkInImages && b.checkInImages.length > 0)
-        ? b.checkInImages
-        : (localHandover?.checkInImages || []);
-      const checkInSignature = b.checkInSignature || localHandover?.checkInSignature || '';
-      const checkInTime = b.checkInTime || localHandover?.checkInTime;
-      const checkInOdometer = b.checkInOdometer || localHandover?.checkInOdometer || 0;
-      const checkInNote = b.checkInNote || localHandover?.checkInNote || '';
+      const checkInImages = Array.isArray(b.checkInImages) ? b.checkInImages : [];
+      const checkInSignature = b.checkInSignature || '';
+      const checkInTime = b.checkInTime;
+      const checkInOdometer = b.checkInOdometer || b.vehicle?.odometer || 0;
+      const checkInNote = b.checkInNote || '';
 
       // Find linked contract from contractsData
-      const linkedContract = contractsData?.find((c: any) => {
+      const linkedContract = liveContracts.find((c: any) => {
         const cBookingId = typeof c.booking === 'object' ? c.booking?._id : c.booking;
         return (cBookingId && String(cBookingId) === String(b._id)) ||
                (b.contractCode && c.contractCode === b.contractCode) ||
                (b.contractId && String(c._id) === String(b.contractId));
       });
 
-      const contract = localContractCreatedMap[b._id] || linkedContract;
+      const contract = linkedContract || null;
 
       const hasContract = Boolean(
         b.contractCreated || 
         b.contractCode || 
-        contract || 
-        localContractCreatedMap[b._id]
+        contract
       );
 
-      // Check if booking or contract is completed/returned
       const isCompleted = Boolean(
-        localBookingStatusMap[b._id] === 'completed' ||
         b.status === 'completed' ||
         contract?.status === 'completed' ||
         Boolean(contract?.actualReturnDate) ||
@@ -357,13 +314,11 @@ export default function VehicleBookingSchedulePage() {
         Boolean(b.checkOutTime)
       );
 
-      // Determine if vehicle handover is done:
       const isHandoverDone = Boolean(
         b.status === 'active' ||
-        localBookingStatusMap[b._id] === 'active' ||
         Boolean(checkInTime) ||
         Boolean(checkInSignature) ||
-        (checkInImages && checkInImages.length > 0) ||
+        checkInImages.length > 0 ||
         (contract && (
           contract.status === 'active' ||
           Boolean(contract.checkInTime) ||
@@ -373,10 +328,12 @@ export default function VehicleBookingSchedulePage() {
         ))
       );
 
-      let updatedStatus = localBookingStatusMap[b._id] || b.status;
+      let updatedStatus = b.status;
       if (isCompleted) {
         updatedStatus = 'completed';
-      } else if (isHandoverDone && updatedStatus !== 'cancelled') {
+      } else if (updatedStatus === 'cancelled' || contract?.status === 'cancelled' || contract?.status === 'terminated') {
+        updatedStatus = 'cancelled';
+      } else if (isHandoverDone) {
         updatedStatus = 'active';
       } else if (hasContract && updatedStatus === 'pending') {
         updatedStatus = 'confirmed';
@@ -397,7 +354,7 @@ export default function VehicleBookingSchedulePage() {
         checkInNote,
       };
     });
-  }, [bookingsData, contractsData, fallbackBookings, localBookingStatusMap, localContractCreatedMap, localHandoverDataMap]);
+  }, [bookingsData, contractsData]);
 
   // Count pending bookings for alert badge
   const pendingCount = useMemo(() => {
@@ -482,33 +439,106 @@ export default function VehicleBookingSchedulePage() {
   }, [allBookings, bookingListStatus, bookingListSearch]);
 
   // ================= MUTATIONS =================
-  // 1. DUYỆT ĐƠN ĐẶT XE & KÝ SỐ (Khách đặt xong phải duyệt và ký đã mới thành công duyệt)
-  const approveBookingMutation = useMutation({
-    mutationFn: async ({ bookingId, staffSignature, note }: { bookingId: string; staffSignature?: string; note?: string }) => {
-      try {
-        const res = await api.put(`/bookings/${bookingId}/status`, { 
-          status: 'confirmed', 
-          note: note || 'Đã kiểm tra và ký duyệt đơn',
-          staffSignature 
-        });
-        // Find if contract exists or sign it
-        const b = allBookings.find((item: any) => item._id === bookingId);
-        const contractId = b?.contractId || b?.contract?._id;
-        if (contractId && staffSignature) {
-          await api.put(`/contracts/${contractId}/sign`, { staffSignature }).catch(() => {});
-        }
-        return { success: true, bookingId, staffSignature, data: res.data };
-      } catch (e) {
-        return { success: true, bookingId, staffSignature };
+  // 0. ĐẶT XE TẠI CỬA HÀNG (KHÁCH ĐẾN THUÊ TRỰC TIẾP)
+  const walkInBookingMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const res = await api.post('/bookings', payload);
+      return res.data?.data;
+    },
+    onSuccess: (createdBooking) => {
+      toast.success(`Đã tạo đơn đặt xe tại cửa hàng ${createdBooking?.bookingCode || ''} thành công!`);
+      queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['customers-list'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setWalkInModalOpen(false);
+      setBookingListStatus('all');
+      if (createdBooking && createdBooking.paymentMethod === 'qr' && createdBooking.paymentStatus === 'unpaid') {
+        setBookingQrMode('full');
+        setBookingQrModal(createdBooking);
       }
     },
-    onSuccess: ({ bookingId }) => {
-      updateBookingStatusLocal(bookingId, 'confirmed');
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.message || 'Không thể tạo đơn đặt xe tại cửa hàng.');
+    }
+  });
+
+  const handleWalkInSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!walkInVehicleId) {
+      toast.error('Vui lòng chọn xe cho khách!');
+      return;
+    }
+    if (walkInCustomerMode === 'existing' && !walkInCustomerId) {
+      toast.error('Vui lòng chọn khách hàng hoặc chuyển sang "Khách mới tại quầy"!');
+      return;
+    }
+    if (walkInCustomerMode === 'walkin' && (!walkInName.trim() || !walkInPhone.trim())) {
+      toast.error('Vui lòng nhập họ tên và số điện thoại khách thuê!');
+      return;
+    }
+
+    const start = new Date(walkInStartDate);
+    const end = new Date(walkInEndDate);
+    if (!walkInStartDate || !walkInEndDate || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end.getTime() <= start.getTime()) {
+      toast.error('Thời gian trả xe dự kiến phải sau thời gian nhận xe!');
+      return;
+    }
+
+    const selectedAccessoryObjs = WALKIN_ACCESSORY_OPTIONS
+      .filter((acc) => walkInAccessories.includes(acc.id))
+      .map((acc) => ({ name: acc.name, price: acc.price }));
+
+    walkInBookingMutation.mutate({
+      bookingSource: 'walk_in',
+      vehicleId: walkInVehicleId,
+      customerId: walkInCustomerMode === 'existing' ? walkInCustomerId : undefined,
+      customerName: walkInCustomerMode === 'walkin' ? walkInName.trim() : undefined,
+      customerPhone: walkInCustomerMode === 'walkin' ? walkInPhone.trim() : undefined,
+      customerCccd: walkInCccd.trim() || undefined,
+      customerLicense: walkInLicense.trim() || undefined,
+      customerAddress: walkInAddress.trim() || undefined,
+      startDate: start.toISOString(),
+      endDate: end.toISOString(),
+      rentalType: walkInRentalType,
+      accessories: selectedAccessoryObjs,
+      paymentMethod: walkInPaymentMethod,
+      paymentStatus: walkInPaymentStatus,
+      deposit: Math.max(0, Number(walkInDeposit) || 0),
+      pickupLocation: '128 Bạch Đằng, Hải Châu (Tại cửa hàng)',
+      returnLocation: '128 Bạch Đằng, Hải Châu',
+      customerNote: walkInNote.trim(),
+      staffNote: 'Khách đến cửa hàng đặt thuê trực tiếp',
+    });
+  };
+
+  // 1. DUYỆT ĐƠN ĐẶT XE & KÝ SỐ
+  const approveBookingMutation = useMutation({
+    mutationFn: async ({ bookingId, staffSignature, note }: { bookingId: string; staffSignature?: string; note?: string }) => {
+      const res = await api.put(`/bookings/${bookingId}/status`, {
+        status: 'confirmed',
+        note: note || 'Đã kiểm tra và ký duyệt đơn',
+        staffSignature
+      });
+      const b = allBookings.find((item: any) => item._id === bookingId);
+      const contractId = b?.contractId || b?.contract?._id;
+      if (contractId && staffSignature) {
+        await api.put(`/contracts/${contractId}/sign`, { staffSignature }).catch(() => {});
+      }
+      return { success: true, bookingId, staffSignature, data: res.data };
+    },
+    onSuccess: () => {
       toast.success('Đã ký số và duyệt đơn đặt xe thành công! Đơn chuyển sang trạng thái Đã đặt (Chờ giao xe).');
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-bookings'] });
       setApproveSignModal(null);
       setHasDrawnStaffApprove(false);
     },
@@ -520,17 +550,16 @@ export default function VehicleBookingSchedulePage() {
   // 2. TỪ CHỐI ĐƠN
   const rejectBookingMutation = useMutation({
     mutationFn: async ({ bookingId, reason }: { bookingId: string; reason: string }) => {
-      try {
-        const res = await api.put(`/bookings/${bookingId}/status`, { status: 'cancelled', cancelReason: reason });
-        return { success: true, bookingId, data: res.data };
-      } catch (e) {
-        return { success: true, bookingId };
-      }
+      const res = await api.put(`/bookings/${bookingId}/status`, { status: 'cancelled', cancelReason: reason });
+      return { success: true, bookingId, data: res.data };
     },
-    onSuccess: ({ bookingId }) => {
-      updateBookingStatusLocal(bookingId, 'cancelled');
+    onSuccess: () => {
       toast.success('Đã từ chối đơn đặt xe.');
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-pending-bookings'] });
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Lỗi khi hủy đơn');
@@ -542,18 +571,18 @@ export default function VehicleBookingSchedulePage() {
     mutationFn: async (booking: any) => {
       const payload = {
         bookingId: booking._id,
-        customerId: booking.customer?._id || booking.customer || 'cust-auto',
-        vehicleId: booking.vehicle?._id || booking.vehicle || 'veh-auto',
+        customerId: booking.customer?._id || booking.customer,
+        vehicleId: booking.vehicle?._id || booking.vehicle,
         customerInfo: {
           fullName: booking.customer?.fullName || 'Khách hàng',
-          phone: booking.customer?.phone || '0901234567',
+          phone: booking.customer?.phone || '',
           cccd: booking.customer?.cccd || '',
           email: booking.customer?.email || '',
           address: booking.customer?.address || '',
         },
         vehicleInfo: {
           name: booking.vehicle?.name || 'Xe thuê',
-          licensePlate: booking.vehicle?.licensePlate || '51K-123.45',
+          licensePlate: booking.vehicle?.licensePlate || '',
           brand: booking.vehicle?.brand || '',
           model: booking.vehicle?.model || '',
           color: booking.vehicle?.color || '',
@@ -566,33 +595,15 @@ export default function VehicleBookingSchedulePage() {
         depositAmount: booking.deposit || 0,
         totalPayable: booking.finalPrice || booking.totalPrice || 0,
         paidAmount: 0,
-        status: 'pending_signature', // Chờ ký điện tử và bàn giao xe
+        termsAndConditions: buildStandardContractTerms(mapContractToStandardData({}, booking)),
+        status: 'pending_signature',
       };
 
-      try {
-        const res = await api.post('/contracts', payload);
-        return { contract: res.data?.data, bookingId: booking._id };
-      } catch (err: any) {
-        // Fallback optimistic contract
-        const newCode = `HD${Date.now().toString().slice(-4)}`;
-        const localContract = {
-          _id: `contract-${booking._id}`,
-          contractCode: newCode,
-          booking: booking._id,
-          customerInfo: payload.customerInfo,
-          vehicleInfo: payload.vehicleInfo,
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          totalPayable: payload.totalPayable,
-          depositAmount: payload.depositAmount,
-          status: 'pending_signature',
-        };
-        return { contract: localContract, bookingId: booking._id };
-      }
+      const res = await api.post('/contracts', payload);
+      return { contract: res.data?.data, bookingId: booking._id };
     },
-    onSuccess: ({ contract, bookingId }) => {
-      updateContractCreatedLocal(bookingId, contract);
-      toast.success(`Đã tạo hợp đồng ${contract?.contractCode || ''} thành công! Hãy tiến hành bàn giao xe (chụp ảnh và 2 bên ký xác nhận).`);
+    onSuccess: ({ contract }) => {
+      toast.success(`Đã tạo hợp đồng ${contract?.contractCode || ''} thành công! Hãy tiến hành bàn giao xe.`);
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
@@ -606,38 +617,26 @@ export default function VehicleBookingSchedulePage() {
   // 4. HOÀN TẤT BÀN GIAO XE (Check-in với ảnh & chữ ký 2 bên)
   const handoverMutation = useMutation({
     mutationFn: async (payload: any) => {
-      try {
+      const hasRealContract = payload.contractId && payload.contractId !== payload.bookingId;
+      let resData: any = null;
+      if (hasRealContract) {
         const res = await api.put(`/contracts/${payload.contractId}/handover`, payload);
-        if (payload.bookingId) {
-          try {
-            await api.put(`/bookings/${payload.bookingId}/status`, { status: 'active' });
-          } catch {}
-        }
-        return { success: true, data: res.data, contractId: payload.contractId, bookingId: payload.bookingId, payload };
-      } catch (e) {
-        if (payload.bookingId) {
-          try {
-            await api.put(`/bookings/${payload.bookingId}/status`, { status: 'active' });
-          } catch {}
-        }
-        return { success: true, contractId: payload.contractId, bookingId: payload.bookingId, payload };
+        resData = res.data;
+      } else if (payload.bookingId) {
+        const res = await api.put(`/bookings/${payload.bookingId}/status`, { status: 'active' });
+        resData = res.data;
       }
+      return { success: true, data: resData, contractId: payload.contractId, bookingId: payload.bookingId, payload };
     },
-    onSuccess: ({ bookingId, payload }: any) => {
-      if (bookingId) {
-        updateBookingStatusLocal(bookingId, 'active');
-        updateHandoverDataLocal(bookingId, {
-          checkInImages: payload?.checkInImages || [],
-          checkInOdometer: payload?.checkInOdometer || 0,
-          checkInNote: payload?.checkInNote || '',
-          checkInSignature: payload?.checkInStaffSignature || payload?.checkInCustomerSignature || '',
-          checkInTime: new Date().toISOString()
-        });
-      }
+    onSuccess: () => {
       toast.success('Bàn giao xe thành công! Ảnh xe và chữ ký xác nhận của 2 bên đã được lưu. Xe chính thức lăn bánh.');
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setHandoverModal(null);
     },
@@ -649,23 +648,15 @@ export default function VehicleBookingSchedulePage() {
   // 5. HOÀN TẤT NHẬN TRẢ XE (Check-out với ảnh & chữ ký 2 bên)
   const returnMutation = useMutation({
     mutationFn: async (payload: any) => {
+      const hasRealContract = payload.contractId && payload.contractId !== payload.bookingId;
       let contractRes = null;
-      try {
+      if (hasRealContract) {
         contractRes = await api.put(`/contracts/${payload.contractId}/return`, payload);
-      } catch (e) {
-        // Fallback
-      }
-
-      // Đảm bảo đơn đặt xe được cập nhật trạng thái sang completed ở backend
-      if (payload.bookingId) {
-        try {
-          await api.put(`/bookings/${payload.bookingId}/status`, {
-            status: 'completed',
-            note: payload.checkOutNote || 'Khách đã trả xe hoàn tất'
-          });
-        } catch (e) {
-          // Fallback
-        }
+      } else if (payload.bookingId) {
+        contractRes = await api.put(`/bookings/${payload.bookingId}/status`, {
+          status: 'completed',
+          note: payload.checkOutNote || 'Khách đã trả xe hoàn tất'
+        });
       }
 
       return {
@@ -676,23 +667,14 @@ export default function VehicleBookingSchedulePage() {
         payload
       };
     },
-    onSuccess: ({ bookingId, contractId, payload }: any) => {
-      if (bookingId) {
-        updateBookingStatusLocal(bookingId, 'completed');
-        const existing = localContractCreatedMap[bookingId] || {};
-        updateContractCreatedLocal(bookingId, {
-          ...existing,
-          status: 'completed',
-          actualReturnDate: new Date().toISOString(),
-          checkOutImages: payload?.checkOutImages || [],
-          checkOutOdometer: payload?.checkOutOdometer,
-          checkOutNote: payload?.checkOutNote,
-        });
-      }
+    onSuccess: () => {
       toast.success('Nhận trả xe và thanh lý hợp đồng thành công! Xe đã trống và sẵn sàng tiếp tục cho thuê tiếp.');
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setReturnModal(null);
@@ -715,10 +697,12 @@ export default function VehicleBookingSchedulePage() {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / (rect.width || canvas.width);
+      const scaleY = canvas.height / (rect.height || canvas.height);
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       ctx.beginPath();
-      ctx.moveTo(clientX - rect.left, clientY - rect.top);
+      ctx.moveTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
       setIsDrawingState(true);
       setHasDrawnState(true);
     },
@@ -729,12 +713,14 @@ export default function VehicleBookingSchedulePage() {
       const ctx = canvas.getContext('2d');
       if (!ctx) return;
       const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / (rect.width || canvas.width);
+      const scaleY = canvas.height / (rect.height || canvas.height);
       const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       ctx.lineWidth = 2.5;
       ctx.lineCap = 'round';
       ctx.strokeStyle = '#0f172a';
-      ctx.lineTo(clientX - rect.left, clientY - rect.top);
+      ctx.lineTo((clientX - rect.left) * scaleX, (clientY - rect.top) * scaleY);
       ctx.stroke();
     },
     stop: () => setIsDrawingState(false),
@@ -753,6 +739,7 @@ export default function VehicleBookingSchedulePage() {
   const returnCustDraw = createDrawingHandlers(returnCustCanvasRef, isDrawingReturnCust, setIsDrawingReturnCust, setHasDrawnReturnCust);
   const returnStaffDraw = createDrawingHandlers(returnStaffCanvasRef, isDrawingReturnStaff, setIsDrawingReturnStaff, setHasDrawnReturnStaff);
   const contractStaffDraw = createDrawingHandlers(contractStaffCanvasRef, isDrawingContractStaff, setIsDrawingContractStaff, setHasDrawnContractStaff);
+  const contractCustDraw = createDrawingHandlers(contractCustCanvasRef, isDrawingContractCust, setIsDrawingContractCust, setHasDrawnContractCust);
 
   const generateCustomerSignature = (name: string, code: string) => {
     const safeName = (name || 'Khách hàng').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -787,47 +774,63 @@ export default function VehicleBookingSchedulePage() {
              (booking.contractId && String(c._id) === String(booking.contractId));
     });
 
-    const contract = localContractCreatedMap[booking._id] || linkedContract || booking.contractObj;
-
-    const customerName = booking.customer?.fullName || booking.customerInfo?.fullName || 'Khách hàng';
-    const customerSig = contract?.customerSignature || booking.customerSignature || booking.checkInCustomerSignature || generateCustomerSignature(customerName, booking.bookingCode || booking._id);
+    const contract = linkedContract || booking.contractObj;
+    const realCustomerSig = contract?.customerSignature || booking.customerSignature || booking.checkInCustomerSignature || null;
 
     setContractModal({
       booking,
       contract,
-      customerSignature: customerSig,
-      customerSignedAt: contract?.customerSignedAt || booking.createdAt || new Date().toISOString(),
+      customerSignature: realCustomerSig,
+      customerSignedAt: realCustomerSig ? (contract?.customerSignedAt || booking.createdAt || new Date().toISOString()) : null,
       staffSignature: contract?.staffSignature || null,
       staffSignedAt: contract?.staffSignedAt || null,
     });
     setHasDrawnContractStaff(Boolean(contract?.staffSignature));
+    setHasDrawnContractCust(Boolean(realCustomerSig));
+    setContractError(null);
   };
 
   const handleSignAndConfirmContract = async () => {
     if (!contractModal) return;
     const { booking, contract, customerSignature, customerSignedAt } = contractModal;
+    setContractError(null);
+
+    let staffSig = contractModal.staffSignature;
+    if (!staffSig) {
+      if (hasDrawnContractStaff && contractStaffCanvasRef.current) {
+        staffSig = contractStaffCanvasRef.current.toDataURL('image/png');
+      } else {
+        const msg = 'Vui lòng ký xác nhận Đại diện cửa hàng (Bên A) hoặc chọn "Dùng chữ ký số mặc định"!';
+        setContractError(msg);
+        toast.error(msg);
+        return;
+      }
+    }
+
+    let custSig = customerSignature || null;
+    if (!custSig) {
+      if (hasDrawnContractCust && contractCustCanvasRef.current) {
+        custSig = contractCustCanvasRef.current.toDataURL('image/png');
+      } else {
+        const msg = 'Vui lòng yêu cầu Khách hàng (Bên B) ký xác nhận vào khung chữ ký trước khi hoàn tất hợp đồng!';
+        setContractError(msg);
+        toast.error(msg);
+        return;
+      }
+    }
 
     setIsSubmittingContract(true);
     try {
-      let staffSig = contractModal.staffSignature;
-      if (!staffSig) {
-        if (hasDrawnContractStaff && contractStaffCanvasRef.current) {
-          staffSig = contractStaffCanvasRef.current.toDataURL('image/png');
-        } else {
-          staffSig = generateStaffSignature('Đại diện XTBike');
-        }
-      }
-
-      const custSig = customerSignature || generateCustomerSignature(booking.customer?.fullName || 'Khách hàng', booking.bookingCode || booking._id);
-
       const payload = {
         bookingId: booking._id,
-        customerId: booking.customer?._id || booking.customer || 'cust-auto',
-        vehicleId: booking.vehicle?._id || booking.vehicle || 'veh-auto',
+        customerId: booking.customer?._id || booking.customer,
+        vehicleId: booking.vehicle?._id || booking.vehicle,
         customerInfo: {
           fullName: booking.customer?.fullName || booking.customerInfo?.fullName || 'Khách hàng',
           phone: booking.customer?.phone || booking.customerInfo?.phone || '0901234567',
           cccd: booking.customer?.cccd || booking.customerInfo?.cccd || '',
+          drivingLicense: booking.customer?.drivingLicense || booking.customerInfo?.drivingLicense || '',
+          drivingLicenseClass: booking.customer?.drivingLicenseClass || booking.customerInfo?.drivingLicenseClass || '',
           email: booking.customer?.email || booking.customerInfo?.email || '',
           address: booking.customer?.address || booking.customerInfo?.address || 'TP. Đà Nẵng',
         },
@@ -836,7 +839,9 @@ export default function VehicleBookingSchedulePage() {
           licensePlate: booking.vehicle?.licensePlate || booking.vehicleInfo?.licensePlate || '43A-123.45',
           brand: booking.vehicle?.brand || booking.vehicleInfo?.brand || '',
           model: booking.vehicle?.model || booking.vehicleInfo?.model || '',
+          type: booking.vehicle?.type || booking.vehicleInfo?.type || '',
           color: booking.vehicle?.color || booking.vehicleInfo?.color || '',
+          engineNumber: booking.vehicle?.engineCC ? `${booking.vehicle.engineCC}cc` : (booking.vehicleInfo?.engineNumber || ''),
         },
         startDate: booking.startDate,
         endDate: booking.endDate,
@@ -845,55 +850,47 @@ export default function VehicleBookingSchedulePage() {
         totalRentalFee: booking.finalPrice || booking.totalPrice || 0,
         depositAmount: booking.deposit || 0,
         totalPayable: booking.finalPrice || booking.totalPrice || 0,
-        paidAmount: booking.deposit || 0,
+        paidAmount: booking.paymentStatus === 'fully_paid'
+          ? (booking.finalPrice || booking.totalPrice || 0)
+          : (booking.paymentStatus === 'deposit_paid' ? (booking.deposit || 0) : 0),
+        paymentMethod: booking.paymentMethod || 'cash',
         customerSignature: custSig,
         customerSignedAt: customerSignedAt || new Date().toISOString(),
         staffSignature: staffSig,
         staffSignedAt: new Date().toISOString(),
+        termsAndConditions: buildStandardContractTerms(mapContractToStandardData({}, booking)),
         status: 'confirmed',
       };
 
       let resultContract: any = null;
 
       if (contract?._id && !String(contract._id).startsWith('contract-')) {
-        try {
-          const res = await api.put(`/contracts/${contract._id}/sign`, {
-            staffSignature: staffSig,
-            customerSignature: custSig,
-          });
-          resultContract = res.data?.data;
-        } catch {
-          // ignore
-        }
+        const res = await api.put(`/contracts/${contract._id}/sign`, {
+          staffSignature: staffSig,
+          customerSignature: custSig,
+        });
+        resultContract = res.data?.data;
       }
 
       if (!resultContract) {
-        try {
-          const res = await api.post('/contracts', payload);
-          resultContract = res.data?.data;
-        } catch {
-          const newCode = contract?.contractCode || `HD${Date.now().toString().slice(-4)}`;
-          resultContract = {
-            _id: contract?._id || `contract-${booking._id}`,
-            contractCode: newCode,
-            booking: booking._id,
-            ...payload,
-          };
-        }
+        const res = await api.post('/contracts', payload);
+        resultContract = res.data?.data;
       }
-
-      updateContractCreatedLocal(booking._id, resultContract);
 
       toast.success(`Đã ký xác nhận hợp đồng ${resultContract?.contractCode || ''} thành công! Đã sẵn sàng bàn giao xe.`);
 
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
 
       setContractModal(null);
     } catch (error: any) {
-      toast.error(error?.message || 'Có lỗi khi ký hợp đồng');
+      const errMsg = error?.response?.data?.message || error?.message || 'Có lỗi khi xác nhận hợp đồng';
+      setContractError(errMsg);
+      toast.error(errMsg);
     } finally {
       setIsSubmittingContract(false);
     }
@@ -928,8 +925,31 @@ export default function VehicleBookingSchedulePage() {
           </div>
         </div>
 
-        {/* View Switcher Tabs */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '4px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+        {/* Actions & View Switcher Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => openWalkInBookingModal()}
+            style={{
+              padding: '8px 16px',
+              fontSize: '13px',
+              fontWeight: 700,
+              borderRadius: '8px',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: '#2563eb',
+              color: '#ffffff',
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+            }}
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            <span>Đặt xe tại cửa hàng</span>
+          </button>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: '#ffffff', padding: '4px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
           <button
             type="button"
             onClick={() => setViewMode('list')}
@@ -976,6 +996,7 @@ export default function VehicleBookingSchedulePage() {
             <Calendar style={{ width: '15px', height: '15px' }} />
             <span>Lịch timeline</span>
           </button>
+          </div>
         </div>
       </div>
 
@@ -1063,6 +1084,7 @@ export default function VehicleBookingSchedulePage() {
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                    <th style={{ padding: '14px 12px', textAlign: 'center', width: '52px' }}>STT</th>
                     <th style={{ padding: '14px 18px' }}>Mã đặt xe</th>
                     <th style={{ padding: '14px 18px' }}>Khách hàng</th>
                     <th style={{ padding: '14px 18px' }}>Xe thuê</th>
@@ -1076,13 +1098,13 @@ export default function VehicleBookingSchedulePage() {
                 <tbody>
                   {displayedBookingsList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} style={{ padding: '50px 20px', textAlign: 'center', color: '#64748b' }}>
+                      <td colSpan={9} style={{ padding: '50px 20px', textAlign: 'center', color: '#64748b' }}>
                         <FileText style={{ width: '36px', height: '36px', color: '#cbd5e1', margin: '0 auto 8px' }} />
                         <div>Không có đơn đặt xe nào.</div>
                       </td>
                     </tr>
                   ) : (
-                    displayedBookingsList.map((booking: any) => {
+                    displayedBookingsList.map((booking: any, idx: number) => {
                       const isPending = booking.status === 'pending';
                       const isConfirmed = booking.status === 'confirmed';
                       const isActive = booking.status === 'active';
@@ -1096,6 +1118,11 @@ export default function VehicleBookingSchedulePage() {
                           onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
                           onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
                         >
+                          {/* STT */}
+                          <td style={{ padding: '14px 12px', verticalAlign: 'top', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                            {idx + 1}
+                          </td>
+
                           {/* Mã đơn */}
                           <td style={{ padding: '14px 18px', verticalAlign: 'top' }}>
                             <div style={{ fontWeight: 800, color: '#0f172a' }}>
@@ -1173,6 +1200,34 @@ export default function VehicleBookingSchedulePage() {
                                 Đã hủy
                               </span>
                             )}
+                            <div style={{ marginTop: '5px' }}>
+                              <span
+                                style={{
+                                  padding: '2px 8px',
+                                  borderRadius: '9999px',
+                                  fontSize: '10.5px',
+                                  fontWeight: 700,
+                                  background:
+                                    booking.paymentStatus === 'fully_paid'
+                                      ? '#dcfce7'
+                                      : booking.paymentStatus === 'deposit_paid'
+                                        ? '#dbeafe'
+                                        : '#fff7ed',
+                                  color:
+                                    booking.paymentStatus === 'fully_paid'
+                                      ? '#15803d'
+                                      : booking.paymentStatus === 'deposit_paid'
+                                        ? '#1d4ed8'
+                                        : '#c2410c',
+                                }}
+                              >
+                                {booking.paymentStatus === 'fully_paid'
+                                  ? 'Đã thanh toán đủ'
+                                  : booking.paymentStatus === 'deposit_paid'
+                                    ? 'Đã cọc'
+                                    : 'Chưa thanh toán'}
+                              </span>
+                            </div>
                           </td>
 
                           {/* Hợp đồng & Biên bản */}
@@ -1341,13 +1396,10 @@ export default function VehicleBookingSchedulePage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setHandoverImages([
-                                      'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
-                                      'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=600&auto=format&fit=crop&q=80'
-                                    ]);
+                                    setHandoverImages(booking.vehicle?.mainImage ? [booking.vehicle.mainImage] : []);
                                     setHasDrawnHandoverCust(false);
                                     setHasDrawnHandoverStaff(false);
-                                    setHandoverOdo(15200);
+                                    setHandoverOdo(Number(booking.vehicle?.odometer || 0));
                                     setHandoverFuel('full');
                                     setHandoverNote('Xe sạch sẽ, phanh tốt, xăng đầy vạch, kèm 2 mũ bảo hiểm');
                                     setHandoverModal({
@@ -1385,7 +1437,7 @@ export default function VehicleBookingSchedulePage() {
                                   onClick={() => {
                                     // Reset return form state
                                     setReturnImages([]);
-                                    setReturnOdo(Number(booking.checkInOdometer || 15000) + 50);
+                                    setReturnOdo(Number(booking.checkInOdometer || booking.vehicle?.odometer || 0));
                                     setReturnFuel('full');
                                     setReturnNote('Khách trả xe đúng hẹn, xe nguyên vẹn không trầy xước.');
                                     setLateFee(0);
@@ -1403,16 +1455,9 @@ export default function VehicleBookingSchedulePage() {
                                       customerPhone: booking.customer?.phone || '',
                                       totalPayable: booking.finalPrice || booking.totalPrice || 0,
                                       deposit: Number(booking.deposit || 0),
-                                      checkInOdometer: Number(booking.checkInOdometer || booking.checkInImages?.[0]?.odometer || 15000),
+                                      checkInOdometer: Number(booking.checkInOdometer || booking.vehicle?.odometer || 0),
                                       checkInNote: booking.checkInNote || '',
-                                      checkInImages: (booking.checkInImages && booking.checkInImages.length > 0)
-                                        ? booking.checkInImages
-                                        : (localHandoverDataMap[booking._id]?.checkInImages?.length > 0
-                                            ? localHandoverDataMap[booking._id].checkInImages
-                                            : [
-                                                'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
-                                                'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=600&auto=format&fit=crop&q=80'
-                                              ]),
+                                      checkInImages: Array.isArray(booking.checkInImages) ? booking.checkInImages : [],
                                     });
                                   }}
                                   style={{
@@ -1525,10 +1570,11 @@ export default function VehicleBookingSchedulePage() {
 
           <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px' }}>
             <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', minWidth: `${180 + daysList.length * 36}px` }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', tableLayout: 'fixed', minWidth: `${228 + daysList.length * 36}px` }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                    <th rowSpan={2} style={{ width: '180px', padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 800, color: '#1e293b', borderRight: '1px solid #e2e8f0', background: '#ffffff', position: 'sticky', left: 0, zIndex: 2 }}>Xe</th>
+                    <th rowSpan={2} style={{ width: '48px', padding: '12px 6px', textAlign: 'center', fontSize: '12px', fontWeight: 800, color: '#64748b', borderRight: '1px solid #e2e8f0', background: '#f8fafc', position: 'sticky', left: 0, zIndex: 2 }}>STT</th>
+                    <th rowSpan={2} style={{ width: '180px', padding: '12px 16px', textAlign: 'left', fontSize: '13px', fontWeight: 800, color: '#1e293b', borderRight: '1px solid #e2e8f0', background: '#ffffff', position: 'sticky', left: '48px', zIndex: 2 }}>Xe</th>
                     {daysList.map((d) => (
                       <th
                         key={`dow-${d.key}`}
@@ -1552,9 +1598,12 @@ export default function VehicleBookingSchedulePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {displayedVehicles.map((vehicle: any) => (
+                  {displayedVehicles.map((vehicle: any, idx: number) => (
                     <tr key={vehicle._id} style={{ borderBottom: '1px solid #f1f5f9', height: '52px' }}>
-                      <td style={{ padding: '10px 16px', borderRight: '1px solid #e2e8f0', background: '#ffffff', position: 'sticky', left: 0, zIndex: 1 }}>
+                      <td style={{ padding: '10px 6px', textAlign: 'center', fontWeight: 700, color: '#64748b', borderRight: '1px solid #e2e8f0', background: '#ffffff', position: 'sticky', left: 0, zIndex: 1 }}>
+                        {idx + 1}
+                      </td>
+                      <td style={{ padding: '10px 16px', borderRight: '1px solid #e2e8f0', background: '#ffffff', position: 'sticky', left: '48px', zIndex: 1 }}>
                         <div style={{ fontWeight: 800, fontSize: '13px', color: '#0f172a', lineHeight: 1.2 }}>{vehicle.licensePlate}</div>
                         <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '3px' }}>{vehicle.name}</div>
                       </td>
@@ -1570,12 +1619,8 @@ export default function VehicleBookingSchedulePage() {
                               />
                             ) : (
                               <div
-                                onClick={() => {
-                                  setQuickCreateModal({ vehicleId: vehicle._id, vehiclePlate: vehicle.licensePlate, vehicleName: vehicle.name, startDate: d.key });
-                                  const nextDay = new Date(d.date); nextDay.setDate(nextDay.getDate() + 2);
-                                  setNewEndDate(nextDay.toISOString().slice(0, 10));
-                                  setNewPricePerDay(vehicle.pricePerDay || 800000);
-                                }}
+                                onClick={() => openWalkInBookingModal({ vehicleId: vehicle._id, startDateKey: d.key })}
+                                title={`Đặt xe tại cửa hàng cho ${vehicle.licensePlate} từ ${d.dateLabel}`}
                                 style={{ width: '100%', height: '38px', cursor: 'pointer', border: isSelectedDay ? '2px solid #2563eb' : 'none', borderRadius: '2px' }}
                               />
                             )}
@@ -1733,7 +1778,7 @@ export default function VehicleBookingSchedulePage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.75)',
-            zIndex: 9999,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1832,244 +1877,144 @@ export default function VehicleBookingSchedulePage() {
             <div style={{
               flex: 1,
               overflowY: 'auto',
-              padding: '28px 36px',
+              padding: '24px 32px',
               background: '#f8fafc'
             }}>
-              {/* Paper View */}
-              <div style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '8px',
-                padding: '36px 42px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
-                fontFamily: 'Times New Roman, Georgia, serif',
-                fontSize: '14px',
-                lineHeight: 1.8,
-                color: '#0f172a'
-              }}>
-                {/* National Header */}
-                <div style={{ textAlign: 'center', marginBottom: '22px' }}>
-                  <div style={{ fontWeight: 800, fontSize: '14px', letterSpacing: '1px', textTransform: 'uppercase' }}>
-                    CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
-                  </div>
-                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: '#475569' }}>
-                    Độc lập – Tự do – Hạnh phúc
-                  </div>
-                  <div style={{ width: '160px', height: '1.5px', background: '#0f172a', margin: '8px auto 16px' }} />
-                  <div style={{ fontSize: '20px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                    HỢP ĐỒNG CHO THUÊ PHƯƠNG TIỆN XE MÁY
-                  </div>
-                  <div style={{ fontSize: '12.5px', color: '#64748b', fontStyle: 'italic', marginTop: '4px' }}>
-                    Số: {contractModal.contract?.contractCode || contractModal.booking?.contractCode || 'HD-AUTO'} / HĐTX-XTBIKE
-                  </div>
-                </div>
-
-                {/* Legal basis */}
-                <div style={{
-                  fontSize: '12.5px',
-                  color: '#64748b',
-                  fontStyle: 'italic',
-                  paddingLeft: '14px',
-                  borderLeft: '3px solid #cbd5e1',
-                  marginBottom: '20px',
-                  lineHeight: 1.6
-                }}>
-                  - Căn cứ Bộ Luật Dân sự số 91/2015/QH13 của Quốc hội nước Cộng hòa Xã hội Chủ nghĩa Việt Nam;<br />
-                  - Căn cứ Luật Giao thông Đường bộ và các quy định pháp luật hiện hành;<br />
-                  - Căn cứ vào thỏa thuận và nhu cầu thực tế của hai bên khi tiến hành thuê phương tiện.
-                </div>
-
-                <p style={{ margin: '0 0 16px 0' }}>
-                  Hôm nay, ngày {new Date(contractModal.booking?.startDate || Date.now()).getDate()} tháng {new Date(contractModal.booking?.startDate || Date.now()).getMonth() + 1} năm {new Date(contractModal.booking?.startDate || Date.now()).getFullYear()}, tại văn phòng XTBike Đà Nẵng, hai bên chúng tôi gồm có:
-                </p>
-
-                {/* Parties info */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                  {/* Party A */}
-                  <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontWeight: 800, color: '#1e3a8a', marginBottom: '4px' }}>
-                      BÊN CHO THUÊ (BÊN A)
-                    </div>
-                    <div><strong>Công ty:</strong> CÔNG TY CHO THUÊ XE MÁY XTBike ĐÀ NẴNG</div>
-                    <div><strong>Địa chỉ:</strong> 08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng</div>
-                    <div><strong>Hotline:</strong> 0905 123 456 - 0905 888 999</div>
-                    <div><strong>Đại diện:</strong> Ban Điều hành & Bàn giao phương tiện XTBike</div>
-                  </div>
-
-                  {/* Party B */}
-                  <div style={{ background: '#f8fafc', padding: '14px 16px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontWeight: 800, color: '#1e3a8a', marginBottom: '4px' }}>
-                      BÊN THUÊ XE (BÊN B)
-                    </div>
-                    <div><strong>Họ và tên:</strong> {contractModal.booking?.customer?.fullName || contractModal.booking?.customerInfo?.fullName || 'Khách hàng'}</div>
-                    <div><strong>Số điện thoại:</strong> {contractModal.booking?.customer?.phone || contractModal.booking?.customerInfo?.phone || '---'}</div>
-                    <div><strong>CCCD / Hộ chiếu:</strong> {contractModal.booking?.customer?.cccd || contractModal.booking?.customerInfo?.cccd || 'Đã đối chiếu ảnh chụp'}</div>
-                    <div><strong>Địa chỉ:</strong> {contractModal.booking?.customer?.address || contractModal.booking?.customerInfo?.address || 'Du khách lưu trú tại TP. Đà Nẵng'}</div>
-                  </div>
-                </div>
-
-                {/* Article 1 */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 800, fontSize: '14.5px', color: '#0f172a', marginBottom: '4px' }}>
-                    ĐIỀU 1. THÔNG TIN PHƯƠNG TIỆN VÀ THỜI HẠN THUÊ XE
-                  </div>
-                  <ul style={{ paddingLeft: '22px', margin: '4px 0' }}>
-                    <li>Phương tiện thuê: <strong>{contractModal.booking?.vehicle?.name || contractModal.booking?.vehicleInfo?.name || 'Xe máy'}</strong></li>
-                    <li>Biển kiểm soát: <strong style={{ color: '#1d4ed8' }}>{contractModal.booking?.vehicle?.licensePlate || contractModal.booking?.vehicleInfo?.licensePlate || 'Chưa cập nhật'}</strong></li>
-                    <li>Nhãn hiệu / Dòng xe: <strong>{contractModal.booking?.vehicle?.brand || 'Honda / Yamaha'}</strong> - Màu sơn: <strong>{contractModal.booking?.vehicle?.color || 'Tiêu chuẩn'}</strong></li>
-                    <li>Thời gian nhận xe: <strong>{new Date(contractModal.booking?.startDate).toLocaleDateString('vi-VN')}</strong></li>
-                    <li>Thời gian trả xe dự kiến: <strong>{new Date(contractModal.booking?.endDate).toLocaleDateString('vi-VN')}</strong></li>
-                    <li>Tổng thời hạn thuê: <strong>{contractModal.booking?.totalDays || 1} ngày</strong></li>
-                  </ul>
-                </div>
-
-                {/* Article 2 */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 800, fontSize: '14.5px', color: '#0f172a', marginBottom: '4px' }}>
-                    ĐIỀU 2. ĐƠN GIÁ, CHI PHÍ THUÊ VÀ TIỀN ĐẶT CỌC
-                  </div>
-                  <ul style={{ paddingLeft: '22px', margin: '4px 0' }}>
-                    <li>Đơn giá thuê theo ngày: <strong>{Number(contractModal.booking?.pricePerDay || contractModal.booking?.vehicle?.pricePerDay || 0).toLocaleString('vi-VN')} đ/ngày</strong></li>
-                    <li>Tổng giá trị hợp đồng thuê: <strong>{Number(contractModal.booking?.finalPrice || contractModal.booking?.totalPrice || 0).toLocaleString('vi-VN')} đ</strong></li>
-                    <li>Tiền đặt cọc theo quy định: <strong style={{ color: '#059669' }}>{Number(contractModal.booking?.deposit || 0).toLocaleString('vi-VN')} đ</strong></li>
-                    <li>Tình trạng tiền cọc: <span style={{ color: '#059669', fontWeight: 700 }}>✓ Đã xác nhận nộp cọc khi đặt xe trực tuyến</span></li>
-                    <li>Số tiền còn lại thanh toán khi nhận xe: <strong style={{ color: '#dc2626' }}>{Number(Math.max(0, (contractModal.booking?.finalPrice || contractModal.booking?.totalPrice || 0) - Number(contractModal.booking?.deposit || 0))).toLocaleString('vi-VN')} đ</strong></li>
-                  </ul>
-                </div>
-
-                {/* Article 3 */}
-                <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontWeight: 800, fontSize: '14.5px', color: '#0f172a', marginBottom: '4px' }}>
-                    ĐIỀU 3. QUYỀN VÀ TRÁCH NHIỆM CỦA CÁC BÊN
-                  </div>
-                  <p style={{ margin: '0 0 8px 0', fontSize: '13px' }}>
-                    <strong>1. Bên A (Bên cho thuê):</strong> Bàn giao phương tiện đúng chủng loại, đảm bảo an toàn kỹ thuật (phanh, lốp, đèn, còi), kèm giấy chứng nhận đăng ký xe (bản sao công chứng), bảo hiểm TNDS còn hiệu lực và 02 mũ bảo hiểm đạt chuẩn.
-                  </p>
-                  <p style={{ margin: '0', fontSize: '13px' }}>
-                    <strong>2. Bên B (Bên thuê xe):</strong> Tự điều khiển phương tiện, tuân thủ Luật Giao thông đường bộ. Không sử dụng xe vào mục đích vi phạm pháp luật hoặc cho bên thứ ba thuê lại; chịu hoàn toàn trách nhiệm đối với các khoản phạt nguội (nếu có) phát sinh trong suốt thời gian thuê.
-                  </p>
-                </div>
-
-                {/* Article 4 */}
-                <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontWeight: 800, fontSize: '14.5px', color: '#0f172a', marginBottom: '4px' }}>
-                    ĐIỀU 4. HIỆU LỰC HỢP ĐỒNG & CHỮ KÝ ĐIỆN TỬ
-                  </div>
-                  <p style={{ margin: 0, fontSize: '13px' }}>
-                    Hợp đồng điện tử này có đầy đủ giá trị pháp lý tương đương văn bản giấy kể từ thời điểm hai bên hoàn tất xác thực ký điện tử. Mọi tranh chấp nếu có sẽ được hai bên giải quyết trên tinh thần thương lượng thiện chí.
-                  </p>
-                </div>
-
-                {/* Signatures Area */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr',
-                  gap: '32px',
-                  textAlign: 'center',
-                  paddingTop: '20px',
-                  borderTop: '2px dashed #cbd5e1'
-                }}>
-                  {/* Party A (Staff / Store) Signature */}
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '13.5px', textTransform: 'uppercase', color: '#0f172a' }}>
-                      ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', marginBottom: '8px' }}>
-                      (Bên mình ký xác nhận)
-                    </div>
-
-                    {contractModal.staffSignature ? (
-                      <div style={{ padding: '8px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                        <img src={contractModal.staffSignature} alt="Chữ ký Bên A" style={{ height: '58px', margin: '0 auto', display: 'block', objectFit: 'contain' }} />
-                        <div style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
-                          ✓ ĐÃ XÁC THỰC KÝ SỐ ĐẠI DIỆN CỬA HÀNG
-                        </div>
-                        <div style={{ fontSize: '10.5px', color: '#64748b' }}>
-                          Thời gian: {new Date(contractModal.staffSignedAt || Date.now()).toLocaleString('vi-VN')}
-                        </div>
+              <StandardRentalContractDocument
+                mode="populated"
+                data={mapContractToStandardData(contractModal.contract || contractModal, contractModal.booking)}
+                staffSignatureSlot={
+                  contractModal.staffSignature ? (
+                    <div style={{ padding: '8px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', minHeight: '110px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src={contractModal.staffSignature} alt="Chữ ký Bên A" style={{ height: '58px', margin: '0 auto', display: 'block', objectFit: 'contain' }} />
+                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
+                        ✓ ĐÃ XÁC THỰC KÝ SỐ ĐẠI DIỆN CỬA HÀNG
                       </div>
-                    ) : (
-                      <div style={{ marginTop: '6px' }}>
-                        <div style={{ border: '2px dashed #3b82f6', borderRadius: '8px', background: '#f0f9ff', padding: '4px', position: 'relative' }}>
-                          <canvas
-                            ref={contractStaffCanvasRef}
-                            width={320}
-                            height={110}
-                            onMouseDown={contractStaffDraw.start}
-                            onMouseMove={contractStaffDraw.draw}
-                            onMouseUp={contractStaffDraw.stop}
-                            onMouseLeave={contractStaffDraw.stop}
-                            onTouchStart={contractStaffDraw.start}
-                            onTouchMove={contractStaffDraw.draw}
-                            onTouchEnd={contractStaffDraw.stop}
-                            style={{ display: 'block', width: '100%', height: '110px', cursor: 'crosshair', background: '#ffffff', borderRadius: '6px' }}
-                          />
-                          {!hasDrawnContractStaff && (
-                            <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>
-                              Ký tên tại đây (chuột hoặc cảm ứng)
-                            </div>
-                          )}
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '11px' }}>
-                          <button
-                            type="button"
-                            onClick={contractStaffDraw.clear}
-                            style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 600, padding: 0 }}
-                          >
-                            Xóa ký lại
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const quickSig = generateStaffSignature('Đại diện XTBike Đà Nẵng');
-                              setContractModal(prev => prev ? ({ ...prev, staffSignature: quickSig, staffSignedAt: new Date().toISOString() }) : null);
-                              setHasDrawnContractStaff(true);
-                            }}
-                            style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
-                          >
-                            Dùng chữ ký số mặc định
-                          </button>
-                        </div>
+                      <div style={{ fontSize: '10.5px', color: '#64748b' }}>
+                        Thời gian: {new Date(contractModal.staffSignedAt || Date.now()).toLocaleString('vi-VN')}
                       </div>
-                    )}
-                    <div style={{ fontWeight: 700, marginTop: '12px', fontSize: '13px' }}>
-                      CÔNG TY XTBike ĐÀ NẴNG
                     </div>
-                  </div>
-
-                  {/* Party B (Customer) Signature */}
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: '13.5px', textTransform: 'uppercase', color: '#0f172a' }}>
-                      ĐẠI DIỆN BÊN THUÊ XE (BÊN B)
-                    </div>
-                    <div style={{ fontSize: '12px', color: '#64748b', fontStyle: 'italic', marginBottom: '8px' }}>
-                      (Khách hàng đã ký khi đặt xe)
-                    </div>
-
-                    <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', minHeight: '120px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                      {contractModal.customerSignature && (
-                        <img
-                          src={contractModal.customerSignature}
-                          alt="Chữ ký khách hàng"
-                          style={{ height: '58px', margin: '0 auto', display: 'block', objectFit: 'contain' }}
+                  ) : (
+                    <div style={{ marginTop: '6px' }}>
+                      <div style={{ border: '2px dashed #3b82f6', borderRadius: '8px', background: '#f0f9ff', padding: '4px', position: 'relative' }}>
+                        <canvas
+                          ref={contractStaffCanvasRef}
+                          width={320}
+                          height={110}
+                          onMouseDown={contractStaffDraw.start}
+                          onMouseMove={contractStaffDraw.draw}
+                          onMouseUp={contractStaffDraw.stop}
+                          onMouseLeave={contractStaffDraw.stop}
+                          onTouchStart={contractStaffDraw.start}
+                          onTouchMove={contractStaffDraw.draw}
+                          onTouchEnd={contractStaffDraw.stop}
+                          style={{ display: 'block', width: '100%', height: '110px', cursor: 'crosshair', background: '#ffffff', borderRadius: '6px' }}
                         />
-                      )}
+                        {!hasDrawnContractStaff && (
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#94a3b8', fontSize: '12px', fontStyle: 'italic' }}>
+                            Ký tên tại đây (chuột hoặc cảm ứng)
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '11px' }}>
+                        <button
+                          type="button"
+                          onClick={contractStaffDraw.clear}
+                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                        >
+                          Xóa ký lại
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const quickSig = generateStaffSignature('Đại diện XTBike Đà Nẵng');
+                            setContractModal(prev => prev ? ({ ...prev, staffSignature: quickSig, staffSignedAt: new Date().toISOString() }) : null);
+                            setHasDrawnContractStaff(true);
+                          }}
+                          style={{ background: 'none', border: 'none', color: '#2563eb', cursor: 'pointer', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+                        >
+                          Dùng chữ ký số mặc định
+                        </button>
+                      </div>
+                    </div>
+                  )
+                }
+                customerSignatureSlot={
+                  contractModal.customerSignature ? (
+                    <div style={{ padding: '8px', background: '#f0fdf4', borderRadius: '8px', border: '1px solid #bbf7d0', minHeight: '110px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <img
+                        src={contractModal.customerSignature}
+                        alt="Chữ ký khách hàng"
+                        style={{ height: '58px', margin: '0 auto', display: 'block', objectFit: 'contain' }}
+                      />
                       <div style={{ fontSize: '11px', color: '#15803d', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <CheckCircle style={{ width: '13px', height: '13px' }} />
-                        <span>ĐÃ KÝ SỐ ĐIỆN TỬ KHI ĐẶT XE ONLINE</span>
+                        <span>
+                          {contractModal.booking?.bookingSource === 'walk_in'
+                            ? 'KHÁCH HÀNG ĐÃ KÝ TẠI CỬA HÀNG'
+                            : 'ĐÃ KÝ SỐ ĐIỆN TỬ KHI ĐẶT XE ONLINE'}
+                        </span>
                       </div>
                       <div style={{ fontSize: '10.5px', color: '#166534', marginTop: '2px' }}>
-                        Xác thực cọc OTP • {new Date(contractModal.customerSignedAt || Date.now()).toLocaleDateString('vi-VN')}
+                        {new Date(contractModal.customerSignedAt || Date.now()).toLocaleDateString('vi-VN')}
+                      </div>
+                      {!contractModal.staffSignature && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setContractModal(prev => prev ? ({ ...prev, customerSignature: null, customerSignedAt: null }) : null);
+                            setHasDrawnContractCust(false);
+                          }}
+                          style={{ marginTop: '4px', background: 'none', border: 'none', color: '#dc2626', fontSize: '11px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', padding: 0 }}
+                        >
+                          Khách ký lại
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: '6px' }}>
+                      <div style={{ border: '2px dashed #10b981', borderRadius: '8px', background: '#f0fdf4', padding: '4px', position: 'relative' }}>
+                        <canvas
+                          ref={contractCustCanvasRef}
+                          width={320}
+                          height={110}
+                          onMouseDown={contractCustDraw.start}
+                          onMouseMove={contractCustDraw.draw}
+                          onMouseUp={contractCustDraw.stop}
+                          onMouseLeave={contractCustDraw.stop}
+                          onTouchStart={contractCustDraw.start}
+                          onTouchMove={contractCustDraw.draw}
+                          onTouchEnd={contractCustDraw.stop}
+                          style={{ display: 'block', width: '100%', height: '110px', cursor: 'crosshair', background: '#ffffff', borderRadius: '6px', touchAction: 'none' }}
+                        />
+                        {!hasDrawnContractCust && (
+                          <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', color: '#64748b', fontSize: '12px', fontStyle: 'italic', padding: '0 12px' }}>
+                            Khách hàng (Bên B) ký tên tại đây
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px', fontSize: '11px' }}>
+                        <button
+                          type="button"
+                          onClick={contractCustDraw.clear}
+                          style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontWeight: 600, padding: 0 }}
+                        >
+                          Xóa ký lại
+                        </button>
+                        <span style={{ color: '#059669', fontWeight: 600 }}>Bắt buộc khách ký</span>
                       </div>
                     </div>
-
-                    <div style={{ fontWeight: 700, marginTop: '12px', fontSize: '13px' }}>
-                      {contractModal.booking?.customer?.fullName || contractModal.booking?.customerInfo?.fullName || 'Khách hàng'}
-                    </div>
-                  </div>
-                </div>
-              </div>
+                  )
+                }
+              />
             </div>
+
+            {contractError && (
+              <div style={{ padding: '10px 24px', background: '#fef2f2', borderTop: '1px solid #fecaca', color: '#b91c1c', fontSize: '12.5px', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle style={{ width: '16px', height: '16px', flexShrink: 0 }} />
+                <span>{contractError}</span>
+              </div>
+            )}
 
             {/* Modal Bottom Action Bar */}
             <div style={{
@@ -2078,11 +2023,17 @@ export default function VehicleBookingSchedulePage() {
               borderTop: '1px solid #e2e8f0',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
             }}>
               <div style={{ fontSize: '12.5px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <CheckCircle style={{ width: '16px', height: '16px', color: '#059669' }} />
-                <span>Khách đã ký khi đặt xe online. Giờ bên mình ký xác nhận để hoàn tất hợp đồng.</span>
+                <CheckCircle style={{ width: '16px', height: '16px', color: contractModal.customerSignature || hasDrawnContractCust ? '#059669' : '#d97706' }} />
+                <span>
+                  {contractModal.customerSignature
+                    ? 'Khách đã ký xác nhận. Giờ bên mình ký xác nhận để hoàn tất hợp đồng.'
+                    : 'Yêu cầu Khách hàng (Bên B) và Đại diện cửa hàng (Bên A) cùng ký trước khi xác nhận.'}
+                </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -2114,7 +2065,8 @@ export default function VehicleBookingSchedulePage() {
                     color: '#ffffff',
                     border: 'none',
                     borderRadius: '6px',
-                    cursor: 'pointer',
+                    cursor: isSubmittingContract ? 'wait' : 'pointer',
+                    opacity: isSubmittingContract ? 0.7 : 1,
                     display: 'inline-flex',
                     alignItems: 'center',
                     gap: '6px',
@@ -2122,7 +2074,7 @@ export default function VehicleBookingSchedulePage() {
                   }}
                 >
                   <Check style={{ width: '15px', height: '15px' }} />
-                  <span>{isSubmittingContract ? 'Đang lưu hợp đồng...' : (contractModal.staffSignature ? 'Xác nhận & Cập nhật HĐ' : 'Bên mình ký xác nhận & Hoàn tất HĐ')}</span>
+                  <span>{isSubmittingContract ? 'Đang lưu hợp đồng...' : (contractModal.staffSignature ? 'Xác nhận & Cập nhật HĐ' : 'Xác nhận ký 2 bên & Hoàn tất HĐ')}</span>
                 </button>
               </div>
             </div>
@@ -2704,9 +2656,30 @@ export default function VehicleBookingSchedulePage() {
         const fullAmount = Number(bookingQrModal.finalPrice || bookingQrModal.totalPrice || 0);
         const depositAmount = Number(bookingQrModal.deposit || 0);
         const currentPayAmount = bookingQrMode === 'full' ? fullAmount : depositAmount;
-        const qrUrl = `https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${currentPayAmount}&addInfo=${encodeURIComponent(`XTBike ${bookingQrModal.bookingCode || 'DAT XE'}`)}&accountName=XTBike`;
         const accessoriesList = Array.isArray(bookingQrModal.accessories) ? bookingQrModal.accessories : [];
         const accessoryTotal = accessoriesList.reduce((sum: number, item: any) => sum + Number(item.price || 0), 0);
+
+        const handleBookingQrConfirm = async (qrSession: QrSessionData) => {
+          try {
+            await api.post('/payments', {
+              bookingId: bookingQrModal._id,
+              customerId: bookingQrModal.customer?._id || bookingQrModal.customer,
+              type: bookingQrMode === 'full' ? 'rental_fee' : 'deposit',
+              amount: qrSession.amount,
+              method: 'qr',
+              qrSessionId: qrSession._id,
+              qrSessionCode: qrSession.sessionCode,
+              referenceNumber: qrSession.transferContent,
+              note: `Thanh toán ${bookingQrMode === 'full' ? 'toàn bộ' : 'cọc'} đơn ${bookingQrModal.bookingCode} (${qrSession.sessionCode})`,
+            });
+            queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+            setBookingQrModal(null);
+            toast.success('Đã xác nhận khách chuyển khoản VietQR thành công!');
+          } catch (err: any) {
+            toast.error(err?.response?.data?.message || 'Xác nhận thanh toán thất bại.');
+            throw err;
+          }
+        };
 
         return (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -2767,56 +2740,54 @@ export default function VehicleBookingSchedulePage() {
                 </button>
               </div>
 
-              {/* QR Image Box */}
-              <div style={{ textAlign: 'center', background: '#f8fafc', padding: '18px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px' }}>
-                <div style={{ display: 'inline-block', padding: '6px', background: '#fff', borderRadius: '10px', border: '1px solid #cbd5e1' }}>
-                  <img src={qrUrl} alt="VietQR" style={{ width: '230px', height: '230px', objectFit: 'contain', display: 'block' }} />
-                </div>
-                <div style={{ fontSize: '26px', fontWeight: 900, color: bookingQrMode === 'full' ? '#059669' : '#2563eb', marginTop: '12px' }}>
-                  {currentPayAmount.toLocaleString('vi-VN')} đ
-                </div>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-                  MBBank • STK: <strong>0905888999</strong> • XTBike
-                </div>
-              </div>
-
-              {/* Breakdown including Accessories */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12.5px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>Chi tiết đơn đặt xe:</div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', marginBottom: '4px' }}>
-                  <span>Xe: {bookingQrModal.vehicle?.name} ({bookingQrModal.vehicle?.licensePlate})</span>
-                  <span>{bookingQrModal.totalDays || 1} ngày</span>
-                </div>
-
-                {accessoriesList.length > 0 && (
-                  <div style={{ padding: '6px 10px', background: '#eff6ff', borderRadius: '6px', margin: '6px 0', border: '1px solid #dbeafe' }}>
-                    <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '4px' }}>
-                      Phụ kiện đã đặt ({accessoriesList.length} món):
+              <VietQrPaymentBox
+                bookingId={bookingQrModal._id}
+                bookingCode={bookingQrModal.bookingCode}
+                amount={currentPayAmount}
+                type={bookingQrMode === 'full' ? 'rental_fee' : 'deposit'}
+                accentColor={bookingQrMode === 'full' ? '#059669' : '#2563eb'}
+                qrSize={220}
+                confirmLabel={`Xác nhận đã nhận ${currentPayAmount.toLocaleString('vi-VN')} đ`}
+                onConfirmPayment={handleBookingQrConfirm}
+                extraContentAfterCard={
+                  <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '8px', border: '1px solid #e2e8f0', fontSize: '12.5px', marginBottom: '14px' }}>
+                    <div style={{ fontWeight: 700, color: '#0f172a', marginBottom: '6px' }}>Chi tiết đơn đặt xe:</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569', marginBottom: '4px' }}>
+                      <span>Xe: {bookingQrModal.vehicle?.name} ({bookingQrModal.vehicle?.licensePlate})</span>
+                      <span>{bookingQrModal.totalDays || 1} ngày</span>
                     </div>
-                    {accessoriesList.map((acc: any, i: number) => (
-                      <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', fontSize: '12px' }}>
-                        <span>+ {acc.name}:</span>
-                        <strong>+{Number(acc.price || 0).toLocaleString('vi-VN')} đ</strong>
+
+                    {accessoriesList.length > 0 && (
+                      <div style={{ padding: '6px 10px', background: '#eff6ff', borderRadius: '6px', margin: '6px 0', border: '1px solid #dbeafe' }}>
+                        <div style={{ fontWeight: 700, color: '#1e40af', marginBottom: '4px' }}>
+                          Phụ kiện đã đặt ({accessoriesList.length} món):
+                        </div>
+                        {accessoriesList.map((acc: any, i: number) => (
+                          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', color: '#334155', fontSize: '12px' }}>
+                            <span>+ {acc.name}:</span>
+                            <strong>+{Number(acc.price || 0).toLocaleString('vi-VN')} đ</strong>
+                          </div>
+                        ))}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#1e40af', borderTop: '1px dashed #bfdbfe', marginTop: '4px', paddingTop: '2px' }}>
+                          <span>Tổng phụ kiện:</span>
+                          <span>+{accessoryTotal.toLocaleString('vi-VN')} đ</span>
+                        </div>
                       </div>
-                    ))}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#1e40af', borderTop: '1px dashed #bfdbfe', marginTop: '4px', paddingTop: '2px' }}>
-                      <span>Tổng phụ kiện:</span>
-                      <span>+{accessoryTotal.toLocaleString('vi-VN')} đ</span>
+                    )}
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '6px', fontWeight: 800, fontSize: '13.5px' }}>
+                      <span>Tổng tiền đơn (gồm phụ kiện):</span>
+                      <span style={{ color: '#059669' }}>{fullAmount.toLocaleString('vi-VN')} đ</span>
                     </div>
                   </div>
-                )}
+                }
+              />
 
-                <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '8px', marginTop: '6px', fontWeight: 800, fontSize: '13.5px' }}>
-                  <span>Tổng tiền đơn (gồm phụ kiện):</span>
-                  <span style={{ color: '#059669' }}>{fullAmount.toLocaleString('vi-VN')} đ</span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '10px' }}>
                 <button
                   type="button"
                   onClick={() => setBookingQrModal(null)}
-                  style={{ padding: '8px 18px', background: '#0f172a', color: '#ffffff', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
+                  style={{ padding: '8px 18px', background: '#f1f5f9', color: '#334155', borderRadius: '6px', border: '1px solid #cbd5e1', cursor: 'pointer', fontWeight: 600, fontSize: '13px' }}
                 >
                   Đóng
                 </button>
@@ -2872,6 +2843,374 @@ export default function VehicleBookingSchedulePage() {
           </div>
         </div>
       )}
+
+      {/* ========================================================
+          MODAL: ĐẶT XE TẠI CỬA HÀNG (KHÁCH ĐẾN THUÊ TRỰC TIẾP)
+          ======================================================== */}
+      {walkInModalOpen && (() => {
+        const selectedVeh = vehiclesList.find((v: any) => v._id === walkInVehicleId);
+        const startDt = walkInStartDate ? new Date(walkInStartDate) : null;
+        const endDt = walkInEndDate ? new Date(walkInEndDate) : null;
+        const diffDays = startDt && endDt && !Number.isNaN(startDt.getTime()) && !Number.isNaN(endDt.getTime()) && endDt > startDt
+          ? Math.max(1, Math.ceil((endDt.getTime() - startDt.getTime()) / 86400000))
+          : 1;
+        const dailyPrice = Number(selectedVeh?.pricePerDay || 0);
+        const monthlyPrice = Math.round(dailyPrice * 26 * 0.8);
+        const rentalMonths = walkInRentalType === 'monthly' ? Math.max(1, Math.ceil(diffDays / 30)) : 0;
+        const baseRental = walkInRentalType === 'monthly' ? rentalMonths * monthlyPrice : dailyPrice * diffDays;
+        const accessorySum = WALKIN_ACCESSORY_OPTIONS
+          .filter((a) => walkInAccessories.includes(a.id))
+          .reduce((sum, a) => sum + a.price, 0);
+        const estimatedTotal = baseRental + accessorySum;
+
+        return (
+          <div
+            style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.65)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}
+            onClick={() => setWalkInModalOpen(false)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{ background: '#ffffff', borderRadius: '12px', width: '100%', maxWidth: '720px', maxHeight: '92vh', overflowY: 'auto', padding: '24px 28px', boxShadow: '0 24px 50px rgba(15, 23, 42, 0.25)' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+                <div>
+                  <h2 style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Đặt xe tại cửa hàng (Khách đến thuê trực tiếp)
+                  </h2>
+                  <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>
+                    Đơn tạo tại quầy sẽ tự động xác nhận (Đã duyệt) để tiến hành lập hợp đồng &amp; bàn giao xe ngay.
+                  </div>
+                </div>
+                <button type="button" onClick={() => setWalkInModalOpen(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}>
+                  <X style={{ width: '20px', height: '20px', color: '#64748b' }} />
+                </button>
+              </div>
+
+              <form onSubmit={handleWalkInSubmit}>
+                {/* 1. Customer Section */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '8px' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>1. Thông tin khách thuê</span>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        onClick={() => setWalkInCustomerMode('walkin')}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: walkInCustomerMode === 'walkin' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                          background: walkInCustomerMode === 'walkin' ? '#eff6ff' : '#ffffff',
+                          color: walkInCustomerMode === 'walkin' ? '#1d4ed8' : '#475569',
+                        }}
+                      >
+                        + Khách mới tại quầy
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWalkInCustomerMode('existing')}
+                        style={{
+                          padding: '5px 11px',
+                          borderRadius: '6px',
+                          fontSize: '12px',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: walkInCustomerMode === 'existing' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                          background: walkInCustomerMode === 'existing' ? '#eff6ff' : '#ffffff',
+                          color: walkInCustomerMode === 'existing' ? '#1d4ed8' : '#475569',
+                        }}
+                      >
+                        Khách đã có hồ sơ ({customersList.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {walkInCustomerMode === 'existing' ? (
+                    <div style={{ marginBottom: '10px' }}>
+                      <select
+                        value={walkInCustomerId}
+                        onChange={(e) => setWalkInCustomerId(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        <option value="">-- Chọn khách hàng có sẵn --</option>
+                        {customersList.map((c: any) => (
+                          <option key={c._id} value={c._id}>
+                            {c.fullName} • {c.phone} {c.cccd ? `• CCCD: ${c.cccd}` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '10px' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Họ và tên khách *</label>
+                        <input
+                          type="text"
+                          value={walkInName}
+                          onChange={(e) => setWalkInName(e.target.value)}
+                          placeholder="Nguyễn Văn A"
+                          required
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Số điện thoại *</label>
+                        <input
+                          type="text"
+                          value={walkInPhone}
+                          onChange={(e) => setWalkInPhone(e.target.value)}
+                          placeholder="0905xxxxxx"
+                          required
+                          style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>CCCD / Hộ chiếu</label>
+                      <input
+                        type="text"
+                        value={walkInCccd}
+                        onChange={(e) => setWalkInCccd(e.target.value)}
+                        placeholder="048xxxxxxxxx"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Số GPLX</label>
+                      <input
+                        type="text"
+                        value={walkInLicense}
+                        onChange={(e) => setWalkInLicense(e.target.value)}
+                        placeholder="Số bằng lái"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#475569', marginBottom: '4px' }}>Địa chỉ</label>
+                      <input
+                        type="text"
+                        value={walkInAddress}
+                        onChange={(e) => setWalkInAddress(e.target.value)}
+                        placeholder="Địa chỉ thường trú"
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '12.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Vehicle & Schedule */}
+                <div style={{ marginBottom: '16px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>2. Chọn xe &amp; Thời gian thuê</div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Xe cho thuê *</label>
+                      <select
+                        value={walkInVehicleId}
+                        onChange={(e) => {
+                          const vId = e.target.value;
+                          setWalkInVehicleId(vId);
+                          const v = vehiclesList.find((item: any) => item._id === vId);
+                          if (v) setWalkInDeposit(v.deposit || 500000);
+                        }}
+                        required
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        <option value="">-- Chọn xe --</option>
+                        {vehiclesList.map((v: any) => (
+                          <option key={v._id} value={v._id}>
+                            {v.licensePlate} - {v.name} ({Number(v.pricePerDay || 0).toLocaleString('vi-VN')}đ/ngày){v.status === 'available' ? ' ✓ Sẵn sàng' : ` [${v.status}]`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Hình thức thuê</label>
+                      <select
+                        value={walkInRentalType}
+                        onChange={(e) => setWalkInRentalType(e.target.value === 'monthly' ? 'monthly' : 'daily')}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        <option value="daily">Thuê theo ngày</option>
+                        <option value="monthly">Thuê theo tháng</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Thời gian nhận xe *</label>
+                      <input
+                        type="datetime-local"
+                        value={walkInStartDate}
+                        onChange={(e) => setWalkInStartDate(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Thời gian trả dự kiến *</label>
+                      <input
+                        type="datetime-local"
+                        value={walkInEndDate}
+                        onChange={(e) => setWalkInEndDate(e.target.value)}
+                        required
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '6px' }}>Phụ kiện kèm theo (nếu có)</label>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      {WALKIN_ACCESSORY_OPTIONS.map((acc) => {
+                        const checked = walkInAccessories.includes(acc.id);
+                        return (
+                          <label
+                            key={acc.id}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              padding: '6px 10px',
+                              borderRadius: '6px',
+                              border: checked ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                              background: checked ? '#eff6ff' : '#ffffff',
+                              fontSize: '12.5px',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => {
+                                setWalkInAccessories((prev) =>
+                                  e.target.checked ? [...prev, acc.id] : prev.filter((x) => x !== acc.id)
+                                );
+                              }}
+                            />
+                            <span>{acc.name} (+{acc.price.toLocaleString('vi-VN')}đ)</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Payment & Summary */}
+                <div style={{ marginBottom: '16px', paddingTop: '14px', borderTop: '1px solid #e2e8f0' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginBottom: '10px' }}>3. Thanh toán tại cửa hàng</div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Hình thức</label>
+                      <select
+                        value={walkInPaymentMethod}
+                        onChange={(e) => setWalkInPaymentMethod(e.target.value as 'cash' | 'qr' | 'bank_transfer')}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        <option value="cash">Tiền mặt tại quầy</option>
+                        <option value="qr">Chuyển khoản VietQR</option>
+                        <option value="bank_transfer">Chuyển khoản ngân hàng</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Trạng thái thu tiền</label>
+                      <select
+                        value={walkInPaymentStatus}
+                        onChange={(e) => setWalkInPaymentStatus(e.target.value as 'unpaid' | 'deposit_paid' | 'fully_paid')}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                      >
+                        <option value="deposit_paid">Đã thu tiền cọc</option>
+                        <option value="fully_paid">Đã thu đủ toàn bộ</option>
+                        <option value="unpaid">Chưa thu (Thu sau / Tạo mã QR)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Tiền cọc giữ xe (đ)</label>
+                      <input
+                        type="number"
+                        value={walkInDeposit}
+                        onChange={(e) => setWalkInDeposit(Number(e.target.value))}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>Ghi chú thêm</label>
+                    <input
+                      type="text"
+                      value={walkInNote}
+                      onChange={(e) => setWalkInNote(e.target.value)}
+                      placeholder="Khách giữ lại CCCD gốc, bàn giao ngay tại quầy..."
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px', boxSizing: 'border-box' }}
+                    />
+                  </div>
+
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px 14px', fontSize: '13px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>Thời lượng ước tính:</span>
+                      <strong>{diffDays} ngày {walkInRentalType === 'monthly' ? `(${rentalMonths} tháng)` : ''}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                      <span>Tiền thuê xe ({walkInRentalType === 'monthly' ? `${monthlyPrice.toLocaleString('vi-VN')}đ/tháng` : `${dailyPrice.toLocaleString('vi-VN')}đ/ngày`}):</span>
+                      <strong>{baseRental.toLocaleString('vi-VN')} đ</strong>
+                    </div>
+                    {accessorySum > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <span>Phụ kiện kèm theo:</span>
+                        <strong>+{accessorySum.toLocaleString('vi-VN')} đ</strong>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #cbd5e1', paddingTop: '6px', marginTop: '6px', fontSize: '14.5px', fontWeight: 800 }}>
+                      <span>Tổng tiền đơn dự kiến:</span>
+                      <span style={{ color: '#059669' }}>{estimatedTotal.toLocaleString('vi-VN')} đ</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setWalkInModalOpen(false)}
+                    style={{ padding: '9px 18px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#475569', fontWeight: 600, cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    Đóng
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={walkInBookingMutation.isPending}
+                    style={{
+                      padding: '9px 22px',
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      fontSize: '13px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                    }}
+                  >
+                    <Check style={{ width: '15px', height: '15px' }} />
+                    <span>{walkInBookingMutation.isPending ? 'Đang lưu...' : 'Xác nhận đặt xe tại cửa hàng'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

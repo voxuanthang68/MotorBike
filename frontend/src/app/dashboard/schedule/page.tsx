@@ -28,16 +28,24 @@ import {
 export default function VehicleBookingSchedulePage() {
   const queryClient = useQueryClient();
 
-  // Search & Filter state
+  // Search & Filter state (dynamic around today)
   const [searchInput, setSearchInput] = useState('');
-  const [startDateFilter, setStartDateFilter] = useState('2026-09-03');
-  const [endDateFilter, setEndDateFilter] = useState('2026-10-02');
+  const [startDateFilter, setStartDateFilter] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 3);
+    return d.toISOString().slice(0, 10);
+  });
+  const [endDateFilter, setEndDateFilter] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 26);
+    return d.toISOString().slice(0, 10);
+  });
   const [vehicleFilter, setVehicleFilter] = useState('all');
   const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  // Active selected day column for outline highlight (matches "3/9" in screenshot)
-  const [selectedDayKey, setSelectedDayKey] = useState('2026-09-03');
+  // Active selected day column
+  const [selectedDayKey, setSelectedDayKey] = useState(() => new Date().toISOString().slice(0, 10));
 
   // Modals state
   const [quickCreateModal, setQuickCreateModal] = useState<{
@@ -59,23 +67,22 @@ export default function VehicleBookingSchedulePage() {
 
   // Approval Mutation
   const approveBookingMutation = useMutation({
-    mutationFn: async ({ bookingId, note, depositConfirmed, staffSignature }: any) => {
-      try {
-        await api.put(`/bookings/${bookingId}/status`, {
-          status: 'confirmed',
-          note,
-          depositConfirmed
-        });
-        return { success: true, bookingId };
-      } catch (e: any) {
-        return { success: true, bookingId };
-      }
+    mutationFn: async ({ bookingId, note, depositConfirmed }: any) => {
+      await api.put(`/bookings/${bookingId}/status`, {
+        status: 'confirmed',
+        note,
+        depositConfirmed
+      });
+      return { success: true, bookingId };
     },
     onSuccess: () => {
       toast.success('Đã duyệt đơn và ký số thành công! Đơn xe chuyển sang trạng thái Đã đặt (Chờ giao xe).');
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setApproveModal(null);
       setHasDrawnScheduleSign(false);
     },
@@ -139,7 +146,7 @@ export default function VehicleBookingSchedulePage() {
     queryKey: ['vehicles-schedule'],
     queryFn: async () => {
       try {
-        const res = await api.get('/vehicles');
+        const res = await api.get('/vehicles?limit=100');
         return res.data?.data || [];
       } catch {
         return [];
@@ -173,73 +180,18 @@ export default function VehicleBookingSchedulePage() {
     }
   });
 
-  // Fallback vehicles matching the user's uploaded screenshot
-  const fallbackVehicles = useMemo(() => [
-    {
-      _id: 'v-vios',
-      licensePlate: '51K-123.45',
-      name: 'Toyota Vios',
-      brand: 'Toyota',
-      type: 'car',
-      pricePerDay: 800000,
-    },
-    {
-      _id: 'v-transit',
-      licensePlate: '51F-678.90',
-      name: 'Ford Transit',
-      brand: 'Ford',
-      type: 'car',
-      pricePerDay: 1200000,
-    },
-    {
-      _id: 'v-vision',
-      licensePlate: '59X1-234.56',
-      name: 'Honda Vision',
-      brand: 'Honda',
-      type: 'scooter',
-      pricePerDay: 130000,
-    },
-    {
-      _id: 'v-vinfast',
-      licensePlate: '43AC-092.92',
-      name: 'VinFast Evo 200',
-      brand: 'VinFast',
-      type: 'scooter',
-      pricePerDay: 120000,
-    },
-  ], []);
-
-  // Fallback bookings matching screenshot (51K-123.45 on 3/9 - 4/9 green active rental)
-  const fallbackBookings = useMemo(() => [
-    {
-      _id: 'sch-book-01',
-      code: 'HD0001',
-      vehicleId: 'v-vios',
-      licensePlate: '51K-123.45',
-      customerName: 'Nguyễn Văn An',
-      customerPhone: '901234567',
-      startDate: '2026-09-03T00:00:00',
-      endDate: '2026-09-04T23:59:59',
-      status: 'active',
-      totalPrice: 1600000,
-    }
-  ], []);
-
-  // Merge live vehicles and fallback vehicles
+  // Real vehicles from API only (no mock vehicles)
   const vehiclesList = useMemo(() => {
-    if (vehiclesData && vehiclesData.length > 0) {
-      return vehiclesData;
-    }
-    return fallbackVehicles;
-  }, [vehiclesData, fallbackVehicles]);
+    return Array.isArray(vehiclesData) ? vehiclesData : [];
+  }, [vehiclesData]);
 
-  // Merge live bookings + contracts into unified timeline items
+  // Merge live bookings + contracts into unified timeline items (no mock items)
   const timelineItems = useMemo(() => {
     const list: any[] = [];
 
-    // From contracts
     if (contractsData && contractsData.length > 0) {
       contractsData.forEach((c: any) => {
+        if (c.vehicle && typeof c.vehicle === 'object' && c.vehicle.isActive === false) return;
         const vId = c.vehicle?._id || c.vehicle;
         const plate = c.vehicleInfo?.licensePlate || c.vehicle?.licensePlate;
         if (c.startDate && c.endDate) {
@@ -260,9 +212,9 @@ export default function VehicleBookingSchedulePage() {
       });
     }
 
-    // From bookings
     if (bookingsData && bookingsData.length > 0) {
       bookingsData.forEach((b: any) => {
+        if (b.vehicle && typeof b.vehicle === 'object' && b.vehicle.isActive === false) return;
         const vId = b.vehicle?._id || b.vehicle;
         const plate = b.vehicle?.licensePlate;
         if (b.startDate && b.endDate) {
@@ -276,18 +228,15 @@ export default function VehicleBookingSchedulePage() {
             startDate: b.startDate,
             endDate: b.endDate,
             status: b.status === 'active' ? 'active' : b.status === 'completed' ? 'completed' : b.status === 'confirmed' ? 'confirmed' : 'pending',
-            totalPrice: b.totalPrice || 0,
+            totalPrice: b.finalPrice || b.totalPrice || 0,
             type: 'booking'
           });
         }
       });
     }
 
-    if (list.length === 0) {
-      return fallbackBookings;
-    }
     return list;
-  }, [contractsData, bookingsData, fallbackBookings]);
+  }, [contractsData, bookingsData]);
 
   // Items waiting for approval
   const pendingScheduleItems = useMemo(() => {
@@ -705,11 +654,29 @@ export default function VehicleBookingSchedulePage() {
               borderCollapse: 'collapse',
               fontSize: '12px',
               tableLayout: 'fixed',
-              minWidth: `${180 + daysList.length * 36}px`,
+              minWidth: `${228 + daysList.length * 36}px`,
             }}
           >
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th
+                  rowSpan={2}
+                  style={{
+                    width: '48px',
+                    padding: '12px 6px',
+                    textAlign: 'center',
+                    fontSize: '12px',
+                    fontWeight: 800,
+                    color: '#64748b',
+                    borderRight: '1px solid #e2e8f0',
+                    background: '#f8fafc',
+                    position: 'sticky',
+                    left: 0,
+                    zIndex: 2,
+                  }}
+                >
+                  STT
+                </th>
                 <th
                   rowSpan={2}
                   style={{
@@ -722,7 +689,7 @@ export default function VehicleBookingSchedulePage() {
                     borderRight: '1px solid #e2e8f0',
                     background: '#ffffff',
                     position: 'sticky',
-                    left: 0,
+                    left: '48px',
                     zIndex: 2,
                   }}
                 >
@@ -784,21 +751,36 @@ export default function VehicleBookingSchedulePage() {
             <tbody>
               {displayedVehicles.length === 0 ? (
                 <tr>
-                  <td colSpan={daysList.length + 1} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={daysList.length + 2} style={{ padding: '40px', textAlign: 'center', color: '#64748b' }}>
                     Không có xe nào phù hợp với bộ lọc.
                   </td>
                 </tr>
               ) : (
-                displayedVehicles.map((vehicle: any) => {
+                displayedVehicles.map((vehicle: any, idx: number) => {
                   return (
                     <tr key={vehicle._id} style={{ borderBottom: '1px solid #f1f5f9', height: '52px' }}>
+                      <td
+                        style={{
+                          padding: '10px 6px',
+                          textAlign: 'center',
+                          fontWeight: 700,
+                          color: '#64748b',
+                          borderRight: '1px solid #e2e8f0',
+                          background: '#ffffff',
+                          position: 'sticky',
+                          left: 0,
+                          zIndex: 1,
+                        }}
+                      >
+                        {idx + 1}
+                      </td>
                       <td
                         style={{
                           padding: '10px 16px',
                           borderRight: '1px solid #e2e8f0',
                           background: '#ffffff',
                           position: 'sticky',
-                          left: 0,
+                          left: '48px',
                           zIndex: 1,
                         }}
                       >

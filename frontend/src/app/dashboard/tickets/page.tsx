@@ -310,6 +310,7 @@ export default function TicketsPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '52px', textAlign: 'center' }}>STT</th>
                   <th>Mã Sự Cố</th>
                   <th>Khách Hàng</th>
                   <th>Tiêu Đề & Nội Dung</th>
@@ -321,7 +322,7 @@ export default function TicketsPage() {
                 </tr>
               </thead>
               <tbody>
-                {tickets.map((t: any) => {
+                {tickets.map((t: any, idx: number) => {
                   const pri = PRIORITY_BADGES[t.priority] || { label: t.priority, class: 'tag' };
                   const sta = STATUS_BADGES[t.status] || { label: t.status, class: 'badge-pending' };
                   const hasNewMsg = t.hasUnreadCustomerMessage;
@@ -333,6 +334,7 @@ export default function TicketsPage() {
                         borderLeft: hasNewMsg ? '4px solid #f59e0b' : undefined,
                       }}
                     >
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                       <td>
                         <span style={{ fontFamily: 'monospace', fontWeight: 700, color: 'var(--brand-primary)' }}>
                           #{t._id?.slice(-6).toUpperCase()}

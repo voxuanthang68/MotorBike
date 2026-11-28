@@ -6,6 +6,8 @@ import Link from 'next/link';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
+import VietQrPaymentBox, { QrSessionData } from '@/components/payment/VietQrPaymentBox';
+import StandardRentalContractDocument, { mapContractToStandardData } from '@/components/contract/StandardRentalContractDocument';
 
 function playNotificationSound() {
   try {
@@ -71,9 +73,18 @@ const getBookingDisplay = (b: any, relatedContract?: any) => {
     return { label: 'Đã đặt (Chờ nhận xe)', color: '#1d4ed8', bg: '#eff6ff', step: 2 };
   }
 
-  // Newly placed booking waiting for approval
+  // Newly placed booking waiting for approval or payment
+  if (b.bookingSource === 'online' && b.paymentStatus === 'unpaid') {
+    return {
+      label: 'Chờ thanh toán',
+      color: '#dc2626',
+      bg: '#fee2e2',
+      step: 0
+    };
+  }
+
   return {
-    label: b.paymentStatus === 'deposit_paid' ? 'Đã cọc - Chờ duyệt' : 'Chờ duyệt',
+    label: b.paymentStatus === 'fully_paid' ? 'Đã thanh toán - Chờ duyệt' : b.paymentStatus === 'deposit_paid' ? 'Đã cọc - Chờ duyệt' : 'Chờ duyệt',
     color: '#b45309',
     bg: '#fef3c7',
     step: 1
@@ -104,9 +115,14 @@ export default function CustomerPortalPage() {
   const [signModal, setSignModal] = useState<any | null>(null);
   const [rescueModal, setRescueModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
+  const [showPortalNotifs, setShowPortalNotifs] = useState(false);
+  const portalNotifRef = useRef<HTMLDivElement | null>(null);
   const [returnModalBooking, setReturnModalBooking] = useState<any | null>(null);
   const [customerReturnNote, setCustomerReturnNote] = useState('Khách xác nhận trả xe đúng hẹn tại cửa hàng');
   const [customerReturnOdo, setCustomerReturnOdo] = useState<string>('');
+  const [qrPayBooking, setQrPayBooking] = useState<any | null>(null);
+  const [qrPayMode, setQrPayMode] = useState<'full' | 'deposit'>('full');
+  const [qrPayLoading, setQrPayLoading] = useState(false);
 
   // Canvas for Customer Digital Signature
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -137,6 +153,17 @@ export default function CustomerPortalPage() {
       if (saved) setFavoriteIds(JSON.parse(saved));
     } catch (e) {}
   }, []);
+
+  useEffect(() => {
+    if (!showPortalNotifs) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (portalNotifRef.current && !portalNotifRef.current.contains(e.target as Node)) {
+        setShowPortalNotifs(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [showPortalNotifs]);
 
   // Protect route
   useEffect(() => {
@@ -272,10 +299,38 @@ export default function CustomerPortalPage() {
       {notifications.length === 0 ? (
         <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9e9e9e' }}><div style={{ fontSize: '48px' }}>🔔</div><div style={{ fontWeight: 700, color: '#424242' }}>Không có thông báo mới</div><p style={{ fontSize: '14px' }}>Bạn sẽ nhận thông báo khi đơn thuê xe được tạo hoặc cập nhật.</p></div>
       ) : (
-        <div style={{ display: 'grid', gap: '10px' }}>{notifications.map((item: any) => <button key={item._id} onClick={() => markNotificationRead(item._id)} style={{ textAlign: 'left', border: '1px solid #e8edf4', borderRadius: '14px', padding: '15px', background: item.isRead ? '#fff' : '#eff8ff', cursor: 'pointer' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}><strong style={{ color: '#172033' }}>{item.title}</strong>{!item.isRead && <span style={{ color: TEAL, fontSize: '12px', fontWeight: 700 }}>MỚI</span>}</div><div style={{ color: '#5f6b7a', fontSize: '14px', marginTop: '5px' }}>{item.message}</div><div style={{ color: '#9aa5b5', fontSize: '12px', marginTop: '8px' }}>{new Date(item.createdAt).toLocaleString('vi-VN')}</div></button>)}</div>
+        <div style={{ display: 'grid', gap: '10px' }}>{notifications.map((item: any, idx: number) => <button key={item._id} onClick={() => markNotificationRead(item._id)} style={{ textAlign: 'left', border: '1px solid #e8edf4', borderRadius: '14px', padding: '15px', background: item.isRead ? '#fff' : '#eff8ff', cursor: 'pointer' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px' }}><strong style={{ color: '#172033' }}>#{idx + 1} • {item.title}</strong>{!item.isRead && <span style={{ color: TEAL, fontSize: '12px', fontWeight: 700 }}>MỚI</span>}</div><div style={{ color: '#5f6b7a', fontSize: '14px', marginTop: '5px' }}>{item.message}</div><div style={{ color: '#9aa5b5', fontSize: '12px', marginTop: '8px' }}>{new Date(item.createdAt).toLocaleString('vi-VN')}</div></button>)}</div>
       )}
     </div>
   );
+
+  const handlePortalQrPaymentConfirm = async (qrSession: QrSessionData) => {
+    if (!qrPayBooking) return;
+    setQrPayLoading(true);
+    try {
+      const paymentType = qrPayMode === 'deposit' ? 'deposit' : 'rental_fee';
+      await api.post('/payments', {
+        bookingId: qrPayBooking._id,
+        type: paymentType,
+        amount: qrSession.amount,
+        method: 'qr',
+        qrSessionId: qrSession._id,
+        qrSessionCode: qrSession.sessionCode,
+        referenceNumber: qrSession.transferContent,
+        note: `Khách thanh toán ${qrPayMode === 'deposit' ? 'tiền cọc' : 'đơn thuê'} qua VietQR (${qrSession.sessionCode})`,
+      });
+      await queryClient.invalidateQueries({ queryKey: ['my-bookings'] });
+      await queryClient.invalidateQueries({ queryKey: ['my-contracts'] });
+      setQrPayBooking(null);
+      toast.success('Thanh toán QR thành công!');
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      toast.error(msg || 'Thanh toán chưa thành công.');
+      throw err;
+    } finally {
+      setQrPayLoading(false);
+    }
+  };
 
   // Sign contract mutation
   const signMutation = useMutation({
@@ -748,6 +803,118 @@ export default function CustomerPortalPage() {
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div ref={portalNotifRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                aria-label="Mở thông báo"
+                onClick={() => setShowPortalNotifs(v => !v)}
+                style={{
+                  position: 'relative',
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  border: showPortalNotifs ? `1px solid ${TEAL}` : '1px solid #e2e8f0',
+                  background: showPortalNotifs ? '#eff8ff' : '#f8fafc',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '18px',
+                  cursor: 'pointer',
+                }}
+              >
+                <span>🔔</span>
+                {unreadNotifications > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-5px',
+                      right: '-5px',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '999px',
+                      background: '#dc2626',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                    }}
+                  >
+                    {unreadNotifications}
+                  </span>
+                )}
+              </button>
+
+              {showPortalNotifs && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '48px',
+                    right: 0,
+                    width: '340px',
+                    maxWidth: 'calc(100vw - 24px)',
+                    background: '#ffffff',
+                    borderRadius: '14px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 18px 40px rgba(15, 23, 42, 0.16)',
+                    zIndex: 90,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '13.5px', color: '#172033' }}>Thông báo ({unreadNotifications} mới)</strong>
+                    {unreadNotifications > 0 && (
+                      <button type="button" onClick={markAllNotificationsRead} style={{ border: 'none', background: 'none', color: TEAL, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}>
+                        Đọc tất cả
+                      </button>
+                    )}
+                  </div>
+                  <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '8px', display: 'grid', gap: '6px' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '22px 12px', textAlign: 'center', color: '#64748b', fontSize: '13px' }}>
+                        Hiện chưa có thông báo mới.
+                      </div>
+                    ) : notifications.slice(0, 8).map((item: any) => (
+                      <button
+                        key={item._id}
+                        type="button"
+                        onClick={async () => {
+                          await markNotificationRead(item._id);
+                          setShowPortalNotifs(false);
+                        }}
+                        style={{
+                          textAlign: 'left',
+                          border: item.isRead ? '1px solid #f1f5f9' : '1px solid #bfdbfe',
+                          background: item.isRead ? '#f8fafc' : '#eff8ff',
+                          borderRadius: '10px',
+                          padding: '10px 12px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ fontSize: '12.5px', fontWeight: item.isRead ? 600 : 800, color: '#172033' }}>{item.title}</div>
+                        {item.message && <div style={{ fontSize: '11.5px', color: '#5f6b7a', marginTop: '2px' }}>{item.message}</div>}
+                        <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>{new Date(item.createdAt).toLocaleString('vi-VN')}</div>
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ padding: '10px 14px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPortalNotifs(false);
+                        setActiveMenu('notifications');
+                      }}
+                      style={{ border: 'none', background: 'none', color: TEAL, fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Xem tất cả thông báo ({notifications.length}) →
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <Link
               href="/"
               style={{
@@ -932,7 +1099,7 @@ export default function CustomerPortalPage() {
                   </div>
                 ) : (
                   <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '20px' }}>
-                    {activeBookings.map((b: any) => {
+                    {activeBookings.map((b: any, idx: number) => {
                       const relatedContract = contracts.find((c: any) => c.booking === b._id || c.booking?._id === b._id);
                       return (
                         <div
@@ -962,7 +1129,7 @@ export default function CustomerPortalPage() {
                                   letterSpacing: '0.5px',
                                 }}
                               >
-                                ĐANG LƯU HÀNH
+                                #{idx + 1} • ĐANG LƯU HÀNH
                               </span>
                               <h3 style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a', margin: 0 }}>{b.vehicle?.name || 'Xe Máy'}</h3>
                               <div style={{ fontSize: '13px', color: TEAL, fontWeight: 700, marginTop: '2px' }}>
@@ -1020,6 +1187,26 @@ export default function CustomerPortalPage() {
                                   }}
                                 >
                                   📄 Xem
+                                </button>
+                              )}
+                              {b.status !== 'cancelled' && b.paymentStatus !== 'fully_paid' && (
+                                <button
+                                  onClick={() => {
+                                    setQrPayMode(b.paymentStatus === 'deposit_paid' ? 'full' : 'deposit');
+                                    setQrPayBooking(b);
+                                  }}
+                                  style={{
+                                    padding: '6px 14px',
+                                    borderRadius: '10px',
+                                    border: 'none',
+                                    background: '#059669',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    fontSize: '12px',
+                                    cursor: 'pointer',
+                                  }}
+                                >
+                                  📱 Thanh toán QR
                                 </button>
                               )}
                               {relatedContract && !relatedContract.customerSignature && (
@@ -1089,6 +1276,7 @@ export default function CustomerPortalPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                       <thead>
                         <tr style={{ background: '#fafafa' }}>
+                          <th style={{ padding: '12px 14px', textAlign: 'center', width: '50px', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>STT</th>
                           <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Mã đơn</th>
                           <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Xe thuê</th>
                           <th style={{ padding: '12px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thời gian</th>
@@ -1097,13 +1285,15 @@ export default function CustomerPortalPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {bookings.slice(0, 5).map((b: any) => {
-                          const sta = STATUS_LABELS[b.status] || { label: b.status, color: '#757575', bg: '#f5f5f5' };
+                        {bookings.slice(0, 5).map((b: any, idx: number) => {
+                          const relatedContract = contracts.find((c: any) => c.booking === b._id || c.booking?._id === b._id);
+                          const sta = b.status === 'pending' ? getBookingDisplay(b, relatedContract) : (STATUS_LABELS[b.status] || { label: b.status, color: '#757575', bg: '#f5f5f5' });
                           return (
                             <tr key={b._id} style={{ borderBottom: '1px solid #f5f5f5', transition: 'background 0.15s ease' }}
                               onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                             >
+                              <td style={{ padding: '14px 14px', textAlign: 'center', fontWeight: 700, color: '#757575', fontSize: '13px' }}>{idx + 1}</td>
                               <td style={{ padding: '14px 20px' }}>
                                 <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL, fontSize: '13px' }}>{b.bookingCode}</span>
                               </td>
@@ -1149,13 +1339,13 @@ export default function CustomerPortalPage() {
             <div style={{ background: '#fff', borderRadius: 20, border: '1px solid #e0e0e0', overflow: 'hidden' }}>
               <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0' }}><h2 style={{ fontSize: 18, fontWeight: 800, color: '#172033', margin: 0 }}>📋 Toàn Bộ Lịch Sử Thuê Xe</h2><div style={{ fontSize: 12, color: '#9e9e9e', marginTop: 4 }}>Danh sách các lần thuê xe máy tại XTBike</div></div>
               {loadingBookings ? <div style={{ padding: 60, textAlign: 'center', color: '#9e9e9e' }}>Đang tải lịch sử...</div> : bookings.length === 0 ? <div style={{ padding: 60, textAlign: 'center', color: '#9e9e9e' }}>Bạn chưa có đơn thuê xe nào</div> : <div style={{ padding: 12, display: 'grid', gap: 12 }}>
-                {bookings.map((b: any) => {
+                {bookings.map((b: any, idx: number) => {
                   const relatedContract = contracts.find((c: any) => c.booking === b._id || c.booking?._id === b._id);
                   const sta = getBookingDisplay(b, relatedContract);
                   const image = b.vehicle?.mainImage || b.vehicle?.images?.[0]?.url || '/placeholder-bike.jpg';
                   return <div key={b._id} style={{ border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f7', fontSize: 13 }}>
-                      <strong style={{ fontFamily: 'monospace', color: '#172033' }}>{b.bookingCode}</strong>
+                      <strong style={{ fontFamily: 'monospace', color: '#172033' }}>STT #{idx + 1} • {b.bookingCode}</strong>
                       <span style={{ color: '#64748b' }}>
                         ◷ Đặt ngày: {new Date(b.createdAt || b.startDate).toLocaleString('vi-VN')}
                         <b style={{ marginLeft: 14, color: sta.color, background: sta.bg, borderRadius: 20, padding: '6px 14px', fontWeight: 800 }}>
@@ -1169,6 +1359,17 @@ export default function CustomerPortalPage() {
                       <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 20, fontSize: 13 }}><div style={{ color: '#64748b' }}>Tổng tiền thuê:</div><strong>{(b.finalPrice || b.totalPrice || 0).toLocaleString('vi-VN')} đ</strong><div style={{ color: '#64748b', marginTop: 8 }}>Tiền cọc quy định:</div><strong>{(b.deposit || 0).toLocaleString('vi-VN')} đ</strong></div>
                       <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 20, fontSize: 13 }}><div style={{ color: '#64748b' }}>Tình trạng cọc:</div><strong style={{ color: b.paymentStatus === 'deposit_paid' || b.paymentStatus === 'fully_paid' ? '#059669' : '#d97706' }}>{b.paymentStatus === 'deposit_paid' || b.paymentStatus === 'fully_paid' ? '✓ Đã cọc' : 'Chưa thanh toán'}</strong><div style={{ color: '#64748b', marginTop: 8 }}>Điểm nhận:</div><span>{b.pickupLocation || 'Tại cửa hàng'}</span></div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        {b.status !== 'cancelled' && b.paymentStatus !== 'fully_paid' && (
+                          <button
+                            onClick={() => {
+                              setQrPayMode(b.paymentStatus === 'deposit_paid' ? 'full' : 'deposit');
+                              setQrPayBooking(b);
+                            }}
+                            style={{ minWidth: 150, padding: '10px 14px', borderRadius: 10, border: 'none', background: '#059669', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
+                          >
+                            📱 {b.paymentStatus === 'deposit_paid' ? 'Thanh toán phần còn lại' : 'Thanh toán QR'}
+                          </button>
+                        )}
                         {relatedContract ? <button onClick={() => setContractModal(relatedContract)} style={{ minWidth: 150, padding: '10px 14px', borderRadius: 10, border: '1px solid #bfdbfe', background: '#fff', color: '#1463ff', fontWeight: 700, cursor: 'pointer' }}>▣ Hợp Đồng Điện Tử</button> : <span style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center' }}>Chưa có hợp đồng</span>}
                         {b.status === 'active' && (!b.returnStatus || b.returnStatus === 'not_returned') && (
                           <button
@@ -1264,6 +1465,7 @@ export default function CustomerPortalPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                     <thead>
                       <tr style={{ background: '#fafafa' }}>
+                        <th style={{ padding: '14px 14px', textAlign: 'center', width: '50px', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>STT</th>
                         <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Mã Đơn</th>
                         <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Xe Thuê</th>
                         <th style={{ padding: '14px 20px', textAlign: 'left', fontSize: '12px', fontWeight: 700, color: '#9e9e9e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Thời Gian</th>
@@ -1273,13 +1475,14 @@ export default function CustomerPortalPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {bookings.map((b: any) => {
+                      {bookings.map((b: any, idx: number) => {
                         const sta = STATUS_LABELS[b.status] || { label: b.status, color: '#757575', bg: '#f5f5f5' };
                         return (
                           <tr key={b._id} style={{ borderBottom: '1px solid #f5f5f5' }}
                             onMouseEnter={(e) => { e.currentTarget.style.background = '#fafafa'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
                           >
+                            <td style={{ padding: '14px 14px', textAlign: 'center', fontWeight: 700, color: '#757575', fontSize: '13px' }}>{idx + 1}</td>
                             <td style={{ padding: '14px 20px' }}>
                               <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL }}>{b.bookingCode}</span>
                             </td>
@@ -1334,7 +1537,7 @@ export default function CustomerPortalPage() {
                 </div>
               ) : (
                 <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '16px' }}>
-                  {contracts.map((c: any) => (
+                  {contracts.map((c: any, idx: number) => (
                     <div
                       key={c._id}
                       style={{
@@ -1347,7 +1550,7 @@ export default function CustomerPortalPage() {
                       onMouseLeave={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL }}>#{c.contractCode || c.contractNumber}</span>
+                        <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL }}>STT #{idx + 1} • #{c.contractCode || c.contractNumber}</span>
                         {c.customerSignature ? (
                           <span style={{ padding: '3px 10px', borderRadius: '20px', background: '#d1fae5', color: '#059669', fontSize: '11px', fontWeight: 700 }}>✅ Đã ký</span>
                         ) : (
@@ -1554,7 +1757,7 @@ export default function CustomerPortalPage() {
                 </div>
               ) : (
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
-                  {tickets.map((t: any) => {
+                  {tickets.map((t: any, idx: number) => {
                     const hasStaffReply = t.hasUnreadStaffMessage;
                     return (
                       <div
@@ -1571,7 +1774,7 @@ export default function CustomerPortalPage() {
                         onMouseLeave={(e) => { e.currentTarget.style.boxShadow = hasStaffReply ? `0 4px 16px ${TEAL}25` : 'none'; }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '10px' }}>
-                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL, fontSize: '12px' }}>#{t._id?.slice(-6).toUpperCase()}</span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: TEAL, fontSize: '12px' }}>STT #{idx + 1} • #{t._id?.slice(-6).toUpperCase()}</span>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
                             {hasStaffReply && (
                               <span
@@ -1891,81 +2094,34 @@ export default function CustomerPortalPage() {
             }}
           >
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #f0f0f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: '#fff', zIndex: 1 }}>
-              <div style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a' }}>📄 Hợp Đồng #{contractModal.contractNumber}</div>
+              <div style={{ fontSize: '17px', fontWeight: 800, color: '#1a1a1a' }}>📄 Hợp Đồng #{contractModal.contractCode || contractModal.contractNumber}</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button onClick={() => window.print()} style={{ padding: '6px 14px', borderRadius: '10px', border: '1px solid #e0e0e0', background: '#fff', color: '#616161', fontWeight: 600, fontSize: '12px', cursor: 'pointer' }}>🖨️ In</button>
                 <button onClick={() => setContractModal(null)} style={{ background: 'none', border: 'none', color: '#9e9e9e', fontSize: '20px', cursor: 'pointer' }}>✕</button>
               </div>
             </div>
 
-            <div style={{ padding: '24px', fontSize: '13px', lineHeight: 1.7 }}>
-              <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-                <div style={{ fontWeight: 800, fontSize: '14px' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style={{ fontSize: '12px', fontStyle: 'italic', color: '#616161' }}>Độc lập - Tự do - Hạnh phúc</div>
-                <div style={{ fontSize: '17px', fontWeight: 800, color: TEAL, marginTop: '10px' }}>HỢP ĐỒNG CHO THUÊ XE MÁY ĐIỆN TỬ</div>
-              </div>
-
-              <div style={{ background: '#fafafa', border: '1px solid #e8e8e8', padding: '16px', borderRadius: '14px', marginBottom: '16px' }}>
-                <div><strong>Bên Cho Thuê:</strong> Cửa hàng XTBike - 128 Bạch Đằng, Đà Nẵng</div>
-                <div><strong>Bên Thuê:</strong> {contractModal.customerInfo?.fullName || user?.fullName} ({contractModal.customerInfo?.phone})</div>
-                <div><strong>Xe thuê:</strong> {contractModal.vehicleInfo?.name} - Biển số: <span style={{ color: TEAL, fontWeight: 700 }}>{contractModal.vehicleInfo?.licensePlate}</span></div>
-                <div><strong>Thời hạn:</strong> {new Date(contractModal.startDate).toLocaleDateString('vi-VN')} đến {new Date(contractModal.endDate).toLocaleDateString('vi-VN')} ({contractModal.rentalDays} ngày)</div>
-                <div><strong>Tổng tiền:</strong> {contractModal.totalPayable?.toLocaleString('vi-VN')} đ (Cọc: {contractModal.depositAmount?.toLocaleString('vi-VN')} đ)</div>
-              </div>
-
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px', marginTop: '18px', background: '#fff' }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#0f172a' }}>I. Thông tin định danh và tài sản thuê</h3>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', color: '#475569' }}>
-                  <div><strong>CCCD:</strong> {contractModal.customerInfo?.cccd || 'Chưa cập nhật'}</div>
-                  <div><strong>GPLX:</strong> {contractModal.customerInfo?.drivingLicense || 'Chưa cập nhật'}</div>
-                  <div><strong>Hãng xe:</strong> {contractModal.vehicleInfo?.brand || '—'}</div>
-                  <div><strong>Model/Màu:</strong> {contractModal.vehicleInfo?.model || '—'} / {contractModal.vehicleInfo?.color || '—'}</div>
-                  <div><strong>Đơn giá/ngày:</strong> {contractModal.pricePerDay?.toLocaleString('vi-VN') || 0} đ</div>
-                  <div><strong>Hình thức:</strong> {contractModal.rentalType === 'monthly' ? `Theo tháng (${contractModal.rentalMonths || 1} tháng)` : 'Theo ngày'}</div>
-                </div>
-              </div>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '18px', marginTop: '14px', background: '#f8fafc' }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#0f172a' }}>II. Chi phí và dịch vụ</h3>
-                <div><strong>Tiền thuê:</strong> {contractModal.totalRentalFee?.toLocaleString('vi-VN') || 0} đ</div>
-                <div><strong>Phí dịch vụ:</strong> {contractModal.serviceFee?.toLocaleString('vi-VN') || 0} đ</div>
-                <div><strong>Phụ kiện:</strong> {contractModal.accessories?.length ? contractModal.accessories.map((item: any) => `${item.name} (${item.price?.toLocaleString('vi-VN')} đ)`).join(', ') : 'Không chọn'}</div>
-                <div><strong>Mã giảm giá:</strong> {contractModal.couponCode || 'Không có'}</div>
-                <div><strong>Giảm giá:</strong> {contractModal.discountAmount?.toLocaleString('vi-VN') || 0} đ</div>
-                <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #cbd5e1', fontSize: '16px' }}><strong>Tổng phải trả:</strong> <strong style={{ float: 'right', color: TEAL }}>{contractModal.totalPayable?.toLocaleString('vi-VN')} đ</strong></div>
-                <div><strong>Tiền cọc:</strong> <span style={{ float: 'right' }}>{contractModal.depositAmount?.toLocaleString('vi-VN')} đ</span></div>
-              </div>
-              <div style={{ marginTop: '18px', padding: '20px', borderRadius: '14px', background: '#fffdf5', border: '1px solid #fde68a', whiteSpace: 'pre-line', lineHeight: 1.75, color: '#334155' }}>
-                <h3 style={{ margin: '0 0 12px', fontSize: '15px', color: '#0f172a' }}>III. Điều khoản hợp đồng</h3>
-                {contractModal.termsAndConditions || 'Hợp đồng tuân thủ các quy định về giao nhận, sử dụng, bảo quản, trả xe, bồi thường thiệt hại, phạt vi phạm và giải quyết tranh chấp theo pháp luật Việt Nam.'}
-              </div>
-
-              {/* Signatures */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '24px', textAlign: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '12px', color: '#616161', marginBottom: '10px', textTransform: 'uppercase' }}>Đại diện cửa hàng (Bên A)</div>
-                  {contractModal.staffSignature ? (
-                    <img src={contractModal.staffSignature} alt="Staff signature" style={{ height: '60px', margin: '0 auto' }} />
-                  ) : (
-                    <div style={{ color: '#10b981', fontWeight: 600 }}>✓ Đã xác nhận hệ thống</div>
-                  )}
-                </div>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '12px', color: '#616161', marginBottom: '10px', textTransform: 'uppercase' }}>Khách hàng (Bên B)</div>
-                  {contractModal.customerSignature ? (
+            <div style={{ padding: '20px 24px', background: '#f8fafc' }}>
+              <StandardRentalContractDocument
+                mode="populated"
+                data={mapContractToStandardData(contractModal, undefined, user)}
+                compact
+                customerSignatureSlot={
+                  contractModal.customerSignature ? (
                     <div>
-                      <img src={contractModal.customerSignature} alt="Customer signature" style={{ height: '60px', margin: '0 auto' }} />
-                      <div style={{ fontSize: '11px', color: '#10b981', marginTop: '4px' }}>✓ Đã ký số điện tử</div>
+                      <img src={contractModal.customerSignature} alt="Customer signature" style={{ height: '60px', margin: '0 auto', display: 'block', objectFit: 'contain' }} />
+                      <div style={{ fontSize: '11px', color: '#10b981', fontWeight: 700, marginTop: '4px' }}>✓ Đã ký số điện tử Bên B</div>
                     </div>
                   ) : (
                     <button
                       onClick={() => { setContractModal(null); setSignModal(contractModal); }}
-                      style={{ padding: '8px 20px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})`, color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer' }}
+                      style={{ padding: '8px 20px', borderRadius: '12px', border: 'none', background: `linear-gradient(135deg, ${TEAL}, ${TEAL_DARK})`, color: '#fff', fontWeight: 700, fontSize: '13px', cursor: 'pointer', marginTop: '8px' }}
                     >
                       ✍️ Ký Ngay
                     </button>
-                  )}
-                </div>
-              </div>
+                  )
+                }
+              />
             </div>
           </div>
         </div>
@@ -2324,6 +2480,118 @@ export default function CustomerPortalPage() {
           </div>
         </div>
       )}
+
+      {/* MODAL: VIETQR PAYMENT WITH 30S EXPIRY */}
+      {qrPayBooking && (() => {
+        const fullAmount = Number(qrPayBooking.finalPrice || qrPayBooking.totalPrice || 0);
+        const depositAmount = Number(qrPayBooking.deposit || 0);
+        const remainingAfterDeposit = Math.max(0, fullAmount - depositAmount);
+        const isDepositPaid = qrPayBooking.paymentStatus === 'deposit_paid';
+        const payAmount = isDepositPaid
+          ? (remainingAfterDeposit > 0 ? remainingAfterDeposit : fullAmount)
+          : (qrPayMode === 'full' ? fullAmount : depositAmount);
+
+        return (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.7)',
+              zIndex: 9999,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '20px',
+            }}
+            onClick={() => setQrPayBooking(null)}
+          >
+            <div
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                background: '#ffffff',
+                borderRadius: '20px',
+                padding: '24px',
+                maxWidth: '520px',
+                width: '100%',
+                maxHeight: '92vh',
+                overflowY: 'auto',
+                boxShadow: '0 24px 60px rgba(0,0,0,0.24)',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>
+                    📱 Quét Mã VietQR Thanh Toán
+                  </h3>
+                  <div style={{ fontSize: '12.5px', color: '#64748b', marginTop: '2px' }}>
+                    Đơn <strong>{qrPayBooking.bookingCode}</strong> • {qrPayBooking.vehicle?.name}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQrPayBooking(null)}
+                  style={{ border: 'none', background: 'none', fontSize: '20px', color: '#64748b', cursor: 'pointer' }}
+                >
+                  ✕
+                </button>
+              </div>
+
+              {!isDepositPaid && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '14px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setQrPayMode('full')}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: qrPayMode === 'full' ? '2px solid #059669' : '1px solid #cbd5e1',
+                      background: qrPayMode === 'full' ? '#ecfdf5' : '#ffffff',
+                      color: qrPayMode === 'full' ? '#047857' : '#475569',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700 }}>Thanh toán trọn gói</div>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: '#059669', marginTop: '2px' }}>
+                      {fullAmount.toLocaleString('vi-VN')} đ
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setQrPayMode('deposit')}
+                    style={{
+                      padding: '10px 12px',
+                      borderRadius: '10px',
+                      border: qrPayMode === 'deposit' ? '2px solid #2563eb' : '1px solid #cbd5e1',
+                      background: qrPayMode === 'deposit' ? '#eff6ff' : '#ffffff',
+                      color: qrPayMode === 'deposit' ? '#1d4ed8' : '#475569',
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <div style={{ fontSize: '12px', fontWeight: 700 }}>Đặt cọc giữ xe</div>
+                    <div style={{ fontSize: '16px', fontWeight: 900, color: '#2563eb', marginTop: '2px' }}>
+                      {depositAmount.toLocaleString('vi-VN')} đ
+                    </div>
+                  </button>
+                </div>
+              )}
+
+              <VietQrPaymentBox
+                bookingId={qrPayBooking._id}
+                bookingCode={qrPayBooking.bookingCode}
+                amount={payAmount}
+                type={isDepositPaid || qrPayMode === 'full' ? 'rental_fee' : 'deposit'}
+                accentColor={qrPayMode === 'full' ? '#059669' : '#2563eb'}
+                qrSize={230}
+                confirmLabel={`Tôi Đã Chuyển Khoản ${payAmount.toLocaleString('vi-VN')} đ`}
+                confirmLoading={qrPayLoading}
+                onConfirmPayment={handlePortalQrPaymentConfirm}
+              />
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Customer Return Modal */}
       {returnModalBooking && (

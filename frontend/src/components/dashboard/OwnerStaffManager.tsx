@@ -255,6 +255,7 @@ export default function OwnerStaffManager() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <th style={{ padding: '12px 12px', fontSize: '12px', fontWeight: 700, color: '#475569', textAlign: 'center', width: '52px' }}>STT</th>
                   <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>NHÂN VIÊN</th>
                   <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>CHỨC VỤ</th>
                   <th style={{ padding: '12px 16px', fontSize: '12px', fontWeight: 700, color: '#475569' }}>LIÊN HỆ</th>
@@ -264,11 +265,14 @@ export default function OwnerStaffManager() {
                 </tr>
               </thead>
               <tbody>
-                {staffList.map((u: any) => {
+                {staffList.map((u: any, idx: number) => {
                   const roleConfig = ROLE_CONFIG[u.role] || { label: u.role, color: '#64748b' };
                   const isActive = u.isActive !== false;
                   return (
                     <tr key={u._id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b', fontSize: '13px' }}>
+                        {idx + 1}
+                      </td>
                       <td style={{ padding: '12px 16px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                           <div

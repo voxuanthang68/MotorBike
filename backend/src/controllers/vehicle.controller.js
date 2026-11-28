@@ -6,21 +6,24 @@ const qrcode = require('qrcode');
 exports.getAll = async (req, res) => {
   try {
     const { status, type, search, page = 1, limit = 12, minPrice, maxPrice } = req.query;
-    const query = { isActive: true };
-    if (status) query.status = status;
-    if (type) query.type = type;
+    const baseQuery = { isActive: { $ne: false } };
+    if (type) baseQuery.type = type;
     if (minPrice || maxPrice) {
-      query.pricePerDay = {};
-      if (minPrice) query.pricePerDay.$gte = Number(minPrice);
-      if (maxPrice) query.pricePerDay.$lte = Number(maxPrice);
+      baseQuery.pricePerDay = {};
+      if (minPrice) baseQuery.pricePerDay.$gte = Number(minPrice);
+      if (maxPrice) baseQuery.pricePerDay.$lte = Number(maxPrice);
     }
     if (search) {
-      query.$or = [
+      baseQuery.$or = [
         { name: { $regex: search, $options: 'i' } },
         { brand: { $regex: search, $options: 'i' } },
         { licensePlate: { $regex: search, $options: 'i' } }
       ];
     }
+
+    const query = { ...baseQuery };
+    if (status) query.status = status;
+
     const total = await Vehicle.countDocuments(query);
     const vehicles = await Vehicle.find(query)
       .populate('createdBy', 'fullName')
@@ -29,7 +32,22 @@ exports.getAll = async (req, res) => {
       .limit(Number(limit));
 
     const bookingSummaries = await Booking.aggregate([
-      { $match: { $or: [{ status: 'active' }, { status: { $in: ['pending', 'confirmed'] }, endDate: { $gte: new Date() } }] } },
+      {
+        $match: {
+          $or: [
+            { status: 'active' },
+            { status: 'confirmed', endDate: { $gte: new Date() } },
+            {
+              status: 'pending',
+              endDate: { $gte: new Date() },
+              $or: [
+                { bookingSource: { $ne: 'online' } },
+                { paymentStatus: { $in: ['deposit_paid', 'fully_paid'] } }
+              ]
+            }
+          ]
+        }
+      },
       { $group: {
         _id: '$vehicle',
         pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } },
@@ -49,6 +67,7 @@ exports.getAll = async (req, res) => {
     });
 
     const stats = await Vehicle.aggregate([
+      { $match: baseQuery },
       { $group: { _id: '$status', count: { $sum: 1 } } }
     ]);
 
@@ -66,9 +85,24 @@ exports.getAll = async (req, res) => {
 // Public catalog availability: customers only receive vehicles that can be safely offered for booking.
 exports.getPublicCatalog = async (req, res) => {
   try {
-    const vehicles = await Vehicle.find({ isActive: true }).select('_id name brand model year type engineCC pricePerDay pricePerMonth deposit description location images mainImage licensePlate status');
+    const vehicles = await Vehicle.find({ isActive: { $ne: false } }).select('_id name brand model year type engineCC pricePerDay pricePerMonth deposit description location images mainImage licensePlate status');
     const summaries = await Booking.aggregate([
-      { $match: { $or: [{ status: 'active' }, { status: { $in: ['pending', 'confirmed'] }, endDate: { $gte: new Date() } }] } },
+      {
+        $match: {
+          $or: [
+            { status: 'active' },
+            { status: 'confirmed', endDate: { $gte: new Date() } },
+            {
+              status: 'pending',
+              endDate: { $gte: new Date() },
+              $or: [
+                { bookingSource: { $ne: 'online' } },
+                { paymentStatus: { $in: ['deposit_paid', 'fully_paid'] } }
+              ]
+            }
+          ]
+        }
+      },
       { $group: { _id: '$vehicle', pending: { $sum: { $cond: [{ $eq: ['$status', 'pending'] }, 1, 0] } }, booked: { $sum: { $cond: [{ $eq: ['$status', 'confirmed'] }, 1, 0] } }, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } } } }
     ]);
     const summaryMap = new Map(summaries.map(item => [String(item._id), item]));

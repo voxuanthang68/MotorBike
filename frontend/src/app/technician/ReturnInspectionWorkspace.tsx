@@ -383,7 +383,7 @@ export default function ReturnInspectionWorkspace({
           flexWrap: 'wrap'
         }}
       >
-        {(filteredInspections.length > 0 ? filteredInspections : inspections).map(ins => {
+        {(filteredInspections.length > 0 ? filteredInspections : inspections).map((ins, idx) => {
           const isSelected = ins.id === activeIns.id;
           const badge = getStatusBadgeStyle(ins.status);
           return (
@@ -404,7 +404,7 @@ export default function ReturnInspectionWorkspace({
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
                 <span style={{ fontSize: '12.5px', fontWeight: 800, color: '#0f172a', fontFamily: 'monospace' }}>
-                  {ins.inspectionCode}
+                  #{idx + 1} • {ins.inspectionCode}
                 </span>
                 <span
                   style={{

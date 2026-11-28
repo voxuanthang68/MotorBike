@@ -36,9 +36,15 @@ export default function StaffNotificationsPage() {
       <div className="card" style={{ padding: 20 }}>
         {isLoading ? <div style={{ padding: 40, textAlign: 'center' }}>Đang tải thông báo...</div> : notifications.length === 0 ? (
           <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}><div style={{ fontSize: 48 }}>🔔</div><h3>Chưa có thông báo</h3><p>Thông báo đơn thuê mới sẽ hiển thị tại đây.</p></div>
-        ) : <div style={{ display: 'grid', gap: 12 }}>{notifications.map((item: any) => (
+        ) : <div style={{ display: 'grid', gap: 12 }}>{notifications.map((item: any, idx: number) => (
           <button key={item._id} onClick={() => !item.isRead && readMutation.mutate(item._id)} style={{ textAlign: 'left', border: '1px solid var(--border-color)', borderRadius: 14, padding: 18, background: item.isRead ? 'white' : '#eff8ff', cursor: item.isRead ? 'default' : 'pointer' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}><strong>{item.title}</strong>{!item.isRead && <span style={{ color: '#0ea5e9', fontSize: 12, fontWeight: 700 }}>CHƯA ĐỌC</span>}</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 24, height: 24, borderRadius: 6, background: '#e2e8f0', color: '#475569', fontSize: 11.5, fontWeight: 800 }}>#{idx + 1}</span>
+                <strong>{item.title}</strong>
+              </div>
+              {!item.isRead && <span style={{ color: '#0ea5e9', fontSize: 12, fontWeight: 700 }}>CHƯA ĐỌC</span>}
+            </div>
             <p style={{ margin: '8px 0', color: 'var(--text-secondary)' }}>{item.message}</p>
             <small style={{ color: 'var(--text-muted)' }}>{new Date(item.createdAt).toLocaleString('vi-VN')}</small>
           </button>

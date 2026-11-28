@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import VietQrPaymentBox, { QrSessionData } from '@/components/payment/VietQrPaymentBox';
 
 const TYPE_CONFIG: Record<string, { label: string; color: string; sign: string }> = {
   rental_fee: { label: 'Tiền thuê xe', color: '#10b981', sign: '+' },
@@ -30,6 +31,8 @@ export default function PaymentsPage() {
   // Modals
   const [createModal, setCreateModal] = useState(false);
   const [qrModal, setQrModal] = useState<any | null>(null);
+  const [qrDraftAmount, setQrDraftAmount] = useState<number>(500000);
+  const [qrDraftDesc, setQrDraftDesc] = useState<string>('Thanh toan tien thue xe XTBike');
 
   // Form states
   const [type, setType] = useState('rental_fee');
@@ -100,7 +103,14 @@ export default function PaymentsPage() {
           <p className="page-subtitle">Kiểm soát dòng tiền doanh thu thuê xe, đối soát cọc và xuất hóa đơn tại Hải Châu</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="btn btn-secondary" onClick={() => setQrModal({ amount: 500000, desc: 'Thanh toan tien thue xe XTBike' })}>
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              setQrDraftAmount(500000);
+              setQrDraftDesc('Thanh toan tien thue xe XTBike');
+              setQrModal({ amount: 500000, desc: 'Thanh toan tien thue xe XTBike' });
+            }}
+          >
             <span>📱</span> Tạo Mã VietQR Thanh Toán
           </button>
           <button className="btn btn-primary" onClick={() => setCreateModal(true)}>
@@ -212,6 +222,7 @@ export default function PaymentsPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th style={{ width: '52px', textAlign: 'center' }}>STT</th>
                   <th>Mã GD</th>
                   <th>Loại Thu / Chi</th>
                   <th>Số Tiền (VNĐ)</th>
@@ -222,10 +233,13 @@ export default function PaymentsPage() {
                 </tr>
               </thead>
               <tbody>
-                {payments.map((p: any) => {
+                {payments.map((p: any, idx: number) => {
                   const cfg = TYPE_CONFIG[p.type] || { label: p.type, color: 'var(--text-primary)', sign: '' };
                   return (
                     <tr key={p._id}>
+                      <td style={{ textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                        {(page - 1) * 12 + idx + 1}
+                      </td>
                       <td>
                         <span style={{ fontFamily: 'monospace', fontWeight: 600, color: 'var(--text-secondary)' }}>
                           {p.paymentCode || p.transactionCode || p._id?.slice(-8).toUpperCase()}
@@ -364,7 +378,7 @@ export default function PaymentsPage() {
       {/* VIETQR MODAL */}
       {qrModal && (
         <div className="modal-overlay" onClick={() => setQrModal(null)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '440px', textAlign: 'center' }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px', maxHeight: '92vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <div className="modal-title" style={{ width: '100%' }}>
                 📱 Quét Mã VietQR Chuyển Khoản
@@ -372,25 +386,66 @@ export default function PaymentsPage() {
               <button onClick={() => setQrModal(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '20px', cursor: 'pointer' }}>✕</button>
             </div>
 
-            <div style={{ background: 'white', padding: '16px', borderRadius: '16px', display: 'inline-block', margin: '16px auto', boxShadow: '0 8px 30px rgba(15,23,42,0.12)' }}>
-              {/* VietQR Dynamic API Image */}
-              <img
-                src={`https://img.vietqr.io/image/MB-0905888999-compact2.png?amount=${qrModal.amount}&addInfo=${encodeURIComponent(qrModal.desc)}&accountName=XTBike`}
-                alt="VietQR XTBike"
-                style={{ width: '280px', height: 'auto', display: 'block' }}
-              />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '10px', marginBottom: '14px', alignItems: 'end' }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '12px' }}>Số tiền (VNĐ)</label>
+                <input
+                  type="number"
+                  min={1000}
+                  step={10000}
+                  className="form-input"
+                  value={qrDraftAmount}
+                  onChange={e => setQrDraftAmount(Math.max(1000, Number(e.target.value) || 1000))}
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: '12px' }}>Nội dung</label>
+                <input
+                  type="text"
+                  className="form-input"
+                  value={qrDraftDesc}
+                  onChange={e => setQrDraftDesc(e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ height: '40px', padding: '0 12px', fontSize: '12px' }}
+                onClick={() => setQrModal({ amount: Math.max(1000, qrDraftAmount || 1000), desc: qrDraftDesc.trim() || 'Thanh toan XTBike' })}
+              >
+                Áp dụng
+              </button>
             </div>
 
-            <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '16px', textAlign: 'left', background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px 16px', borderRadius: '10px' }}>
-              <div>Ngân hàng: <strong>MBBank (Ngân hàng Quân Đội)</strong></div>
-              <div>Số tài khoản: <strong style={{ color: 'var(--brand-primary)' }}>0905 888 999</strong></div>
-              <div>Chủ TK: <strong>XTBike</strong></div>
-              <div>Số tiền: <strong style={{ color: 'var(--accent-green)' }}>{qrModal.amount.toLocaleString('vi-VN')} đ</strong></div>
-            </div>
-
-            <button onClick={() => setQrModal(null)} className="btn btn-primary w-full">
-              Đã Nhận Được Tiền
-            </button>
+            <VietQrPaymentBox
+              amount={Number(qrModal.amount || 500000)}
+              type="rental_fee"
+              description={qrModal.desc}
+              accentColor="#059669"
+              qrSize={230}
+              confirmLabel="Đã Nhận Được Tiền"
+              onConfirmPayment={async (qrSession: QrSessionData) => {
+                try {
+                  await api.post('/payments', {
+                    type: 'rental_fee',
+                    amount: qrSession.amount,
+                    method: 'qr',
+                    qrSessionId: qrSession._id,
+                    qrSessionCode: qrSession.sessionCode,
+                    referenceNumber: qrSession.transferContent,
+                    note: `${qrModal.desc} (${qrSession.sessionCode})`,
+                  });
+                  queryClient.invalidateQueries({ queryKey: ['payments'] });
+                  queryClient.invalidateQueries({ queryKey: ['payments-summary'] });
+                  setQrModal(null);
+                  toast.success('Đã ghi nhận giao dịch VietQR!');
+                } catch (err: unknown) {
+                  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+                  toast.error(msg || 'Ghi nhận thất bại.');
+                  throw err;
+                }
+              }}
+            />
           </div>
         </div>
       )}

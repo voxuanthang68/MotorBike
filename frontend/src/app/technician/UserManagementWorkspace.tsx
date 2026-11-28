@@ -356,6 +356,7 @@ export default function UserManagementWorkspace({
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+                  <th style={{ padding: '12px 12px', textAlign: 'center', width: '48px' }}>STT</th>
                   <th style={{ padding: '12px 16px' }}>Mã KH</th>
                   <th style={{ padding: '12px 16px' }}>Khách hàng & Liên hệ</th>
                   <th style={{ padding: '12px 16px' }}>CCCD / GPLX</th>
@@ -368,17 +369,20 @@ export default function UserManagementWorkspace({
               <tbody>
                 {filteredCustomers.length === 0 ? (
                   <tr>
-                    <td colSpan={7} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                    <td colSpan={8} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
                       Không tìm thấy khách hàng phù hợp.
                     </td>
                   </tr>
                 ) : (
-                  filteredCustomers.map(c => {
+                  filteredCustomers.map((c, idx) => {
                     const relIns = getCustomerRelatedInspections(c);
                     const relRep = getCustomerRelatedRepairs(c);
                     const isRisk = Boolean(c.isBlacklisted || c.customerType === 'high_risk');
                     return (
                       <tr key={c._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                        <td style={{ padding: '14px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                          {idx + 1}
+                        </td>
                         <td style={{ padding: '14px 16px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>
                           {c.customerCode}
                         </td>
@@ -449,7 +453,7 @@ export default function UserManagementWorkspace({
          ========================================== */}
       {subTab === 'technicians' && (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px' }}>
-          {techStaff.map(st => (
+          {techStaff.map((st, idx) => (
             <div key={st.id} style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '18px 20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -457,7 +461,10 @@ export default function UserManagementWorkspace({
                     {st.fullName.split(' ').slice(-1)[0]?.slice(0, 2).toUpperCase()}
                   </div>
                   <div>
-                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>{st.fullName}</div>
+                    <div style={{ fontSize: '15px', fontWeight: 800, color: '#0f172a' }}>
+                      <span style={{ fontSize: '12px', color: '#64748b', marginRight: '6px' }}>#{idx + 1}</span>
+                      {st.fullName}
+                    </div>
                     <div style={{ fontSize: '12px', color: '#2563eb', fontWeight: 700 }}>{st.roleTitle}</div>
                   </div>
                 </div>
@@ -546,10 +553,10 @@ export default function UserManagementWorkspace({
                 Phiếu kiểm tra trả xe & sửa chữa liên quan
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                {getCustomerRelatedInspections(detailCustomer).map(ins => (
+                {getCustomerRelatedInspections(detailCustomer).map((ins, idx) => (
                   <div key={ins.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '12.5px' }}>
                     <div>
-                      <strong><ClipboardCheck size={13} style={{ display: 'inline' }} /> {ins.inspectionCode}</strong> • {ins.vehicleName} ({ins.licensePlate})
+                      <strong>#{idx + 1} • <ClipboardCheck size={13} style={{ display: 'inline' }} /> {ins.inspectionCode}</strong> • {ins.vehicleName} ({ins.licensePlate})
                       <div style={{ fontSize: '11.5px', color: '#64748b' }}>Đơn: {ins.bookingCode} • Trả lúc: {ins.returnDate}</div>
                     </div>
                     {onJumpToInspection && (
@@ -567,10 +574,10 @@ export default function UserManagementWorkspace({
                   </div>
                 ))}
 
-                {getCustomerRelatedRepairs(detailCustomer).map(rep => (
+                {getCustomerRelatedRepairs(detailCustomer).map((rep, idx) => (
                   <div key={rep.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '9px', border: '1px solid #e2e8f0', background: '#fffbeb', fontSize: '12.5px' }}>
                     <div>
-                      <strong><Wrench size={13} style={{ display: 'inline' }} /> {rep.code}</strong> • {rep.vehicleName} ({rep.licensePlate})
+                      <strong>#{idx + 1} • <Wrench size={13} style={{ display: 'inline' }} /> {rep.code}</strong> • {rep.vehicleName} ({rep.licensePlate})
                       <div style={{ fontSize: '11.5px', color: '#64748b' }}>Chi phí: {rep.totalEstimatedCost.toLocaleString('vi-VN')} đ</div>
                     </div>
                     {onJumpToRepair && (

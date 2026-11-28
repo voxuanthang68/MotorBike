@@ -1,10 +1,14 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import StandardRentalContractDocument, {
+  buildStandardContractTerms,
+  mapContractToStandardData,
+} from '@/components/contract/StandardRentalContractDocument';
 import {
   Search,
   Plus,
@@ -25,7 +29,8 @@ import {
   DollarSign,
   PenTool,
   Check,
-  Copy
+  Copy,
+  Trash2
 } from 'lucide-react';
 
 export default function ContractsDashboardPage() {
@@ -53,6 +58,7 @@ export default function ContractsDashboardPage() {
   const [showEditModal, setShowEditModal] = useState<any | null>(null);
   const [showImagesModal, setShowImagesModal] = useState<any | null>(null);
   const [showSignModal, setShowSignModal] = useState<any | null>(null);
+  const [deleteTargetContract, setDeleteTargetContract] = useState<any | null>(null);
 
   // E-sign state
   const contractCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -61,11 +67,21 @@ export default function ContractsDashboardPage() {
   const [contractSignRole, setContractSignRole] = useState<'customer' | 'staff'>('customer');
 
   // Form states for creating a new contract
+  const toLocalDateTimeInput = (date: Date) => {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
+  const [createCustomerMode, setCreateCustomerMode] = useState<'existing' | 'walkin'>('existing');
   const [createCustomerId, setCreateCustomerId] = useState('');
+  const [walkInName, setWalkInName] = useState('');
+  const [walkInPhone, setWalkInPhone] = useState('');
+  const [walkInCccd, setWalkInCccd] = useState('');
+  const [walkInLicense, setWalkInLicense] = useState('');
+  const [walkInAddress, setWalkInAddress] = useState('');
   const [createVehicleId, setCreateVehicleId] = useState('');
   const [createDriverId, setCreateDriverId] = useState('');
-  const [createStartDate, setCreateStartDate] = useState(new Date().toISOString().slice(0, 16));
-  const [createEndDate, setCreateEndDate] = useState(new Date(Date.now() + 86400000).toISOString().slice(0, 16));
+  const [createStartDate, setCreateStartDate] = useState(() => toLocalDateTimeInput(new Date()));
+  const [createEndDate, setCreateEndDate] = useState(() => toLocalDateTimeInput(new Date(Date.now() + 86400000)));
   const [createPricePerDay, setCreatePricePerDay] = useState(130000);
   const [createDeposit, setCreateDeposit] = useState(500000);
   const [createPaidAmount, setCreatePaidAmount] = useState(0);
@@ -107,7 +123,7 @@ export default function ContractsDashboardPage() {
     queryKey: ['vehicles-list'],
     queryFn: async () => {
       try {
-        const res = await api.get('/vehicles');
+        const res = await api.get('/vehicles?limit=100');
         return res.data?.data || [];
       } catch {
         return [];
@@ -120,7 +136,7 @@ export default function ContractsDashboardPage() {
     queryKey: ['customers-list'],
     queryFn: async () => {
       try {
-        const res = await api.get('/users?role=customer');
+        const res = await api.get('/customers?limit=100');
         return res.data?.data || [];
       } catch {
         return [];
@@ -133,85 +149,65 @@ export default function ContractsDashboardPage() {
     queryKey: ['staff-list'],
     queryFn: async () => {
       try {
-        const res = await api.get('/users?role=staff');
-        return res.data?.data || [];
+        const res = await api.get('/users?limit=100');
+        const list = Array.isArray(res.data?.data) ? res.data.data : [];
+        return list.filter((u: any) => u.role && u.role !== 'customer');
       } catch {
         return [];
       }
     }
   });
 
-  const fallbackContracts = useMemo(() => [
-    {
-      _id: 'seed-hd0002',
-      contractCode: 'HD0002',
-      vehicleInfo: { licensePlate: '51K-123.45', name: 'Toyota Vios' },
-      customerInfo: { fullName: 'Nguyễn Văn An', phone: '901234567' },
-      startDate: '2026-08-29T18:00:00',
-      endDate: '2026-08-29T18:11:00',
-      actualReturnDate: '2026-08-29T18:11:00',
-      totalPayable: 140000,
-      paidAmount: 0,
-      depositAmount: 0,
-      remainingDebt: 140000,
-      status: 'completed',
-    },
-    {
-      _id: 'seed-hd0001',
-      contractCode: 'HD0001',
-      vehicleInfo: { licensePlate: '51K-123.45', name: 'Toyota Vios' },
-      customerInfo: { fullName: 'Nguyễn Văn An', phone: '901234567' },
-      startDate: '2026-08-25T00:00:00',
-      endDate: '2026-08-26T10:00:00',
-      totalPayable: 1600000,
-      paidAmount: 0,
-      depositAmount: 0,
-      remainingDebt: 1600000,
-      status: 'active',
-      isOverdue: true,
-    },
-  ], []);
+  const vehicles = useMemo(() => (Array.isArray(vehiclesData) ? vehiclesData : []), [vehiclesData]);
+  const customers = useMemo(() => (Array.isArray(customersData) ? customersData : []), [customersData]);
+  const staffDrivers = useMemo(() => (Array.isArray(staffData) ? staffData : []), [staffData]);
 
-  const fallbackVehicles = useMemo(() => [
-    { _id: 'v1', licensePlate: '51K-123.45', name: 'Toyota Vios', brand: 'Toyota', pricePerDay: 800000, deposit: 5000000 },
-    { _id: 'v2', licensePlate: '43AC-092.92', name: 'VinFast Evo 200', brand: 'VinFast', pricePerDay: 120000, deposit: 1000000 },
-    { _id: 'v3', licensePlate: '59X1-234.56', name: 'Honda Vision 2024', brand: 'Honda', pricePerDay: 130000, deposit: 1000000 },
-    { _id: 'v4', licensePlate: '43B1-123.45', name: 'Honda Air Blade 125', brand: 'Honda', pricePerDay: 150000, deposit: 1000000 },
-  ], []);
+  const contracts = useMemo(() => (Array.isArray(contractsData) ? contractsData : []), [contractsData]);
 
-  const fallbackCustomers = useMemo(() => [
-    { _id: 'c1', fullName: 'Nguyễn Văn An', phone: '0901234567', email: 'an.nguyen@gmail.com', cccd: '048200001234' },
-    { _id: 'c2', fullName: 'Lê Thị Mai', phone: '0908765432', email: 'mai.le@gmail.com', cccd: '048200005544' },
-    { _id: 'c3', fullName: 'Trần Minh Đức', phone: '0912345678', email: 'duc.tran@gmail.com', cccd: '048200009988' },
-    { _id: 'c4', fullName: 'Phạm Thu Trang', phone: '0987654321', email: 'trang.pham@gmail.com', cccd: '048200006677' },
-  ], []);
+  const openCreateContractModal = () => {
+    const now = new Date();
+    const tomorrow = new Date(now.getTime() + 86400000);
+    setCreateStartDate(toLocalDateTimeInput(now));
+    setCreateEndDate(toLocalDateTimeInput(tomorrow));
+    if (vehicles.length > 0) {
+      setCreateVehicleId(vehicles[0]._id);
+      setCreatePricePerDay(vehicles[0].pricePerDay || 130000);
+      setCreateDeposit(vehicles[0].deposit || 500000);
+    }
+    if (customers.length > 0) {
+      setCreateCustomerMode('existing');
+      setCreateCustomerId(customers[0]._id);
+    } else {
+      setCreateCustomerMode('walkin');
+      setCreateCustomerId('');
+    }
+    setShowCreateModal(true);
+  };
 
-  const fallbackStaff = useMemo(() => [
-    { _id: 'd1', fullName: 'Lê Văn Tài Xế', phone: '0907654321' },
-  ], []);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('create') === '1') {
+      setShowCreateModal(true);
+      window.history.replaceState({}, '', '/dashboard/contracts');
+    }
+  }, []);
 
-  const vehicles = vehiclesData && vehiclesData.length > 0 ? vehiclesData : fallbackVehicles;
-  const customers = customersData && customersData.length > 0 ? customersData : fallbackCustomers;
-  const staffDrivers = staffData && staffData.length > 0 ? staffData : fallbackStaff;
-
-  // Local extra contracts for instant optimistic reactivity
-  const [extraContracts, setExtraContracts] = useState<any[]>([]);
-  // Local signature & status overrides map so UI immediately reflects actions
-  const [signatureOverrides, setSignatureOverrides] = useState<Record<string, any>>({});
-
-  const baseContracts = contractsData && contractsData.length > 0 
-    ? contractsData 
-    : (Object.keys(appliedFilters).length === 0 ? fallbackContracts : (contractsData || []));
-
-  const contracts = useMemo(() => {
-    const existingCodes = new Set(baseContracts.map((c: any) => c.contractCode || c._id));
-    const uniqueExtras = extraContracts.filter((c: any) => !existingCodes.has(c.contractCode) && !existingCodes.has(c._id));
-    const merged = [...uniqueExtras, ...baseContracts];
-    return merged.map(c => {
-      const override = signatureOverrides[c._id] || (c.contractCode && signatureOverrides[c.contractCode]);
-      return override ? { ...c, ...override } : c;
-    });
-  }, [baseContracts, extraContracts, signatureOverrides]);
+  useEffect(() => {
+    if (!showCreateModal) return;
+    if (!createVehicleId && vehicles.length > 0) {
+      setCreateVehicleId(vehicles[0]._id);
+      setCreatePricePerDay(vehicles[0].pricePerDay || 130000);
+      setCreateDeposit(vehicles[0].deposit || 500000);
+    }
+    if (customersData !== undefined) {
+      if (customers.length > 0 && createCustomerMode === 'existing' && !createCustomerId) {
+        setCreateCustomerId(customers[0]._id);
+      } else if (customers.length === 0 && createCustomerMode === 'existing') {
+        setCreateCustomerMode('walkin');
+      }
+    }
+  }, [showCreateModal, vehicles, customers, customersData, createVehicleId, createCustomerId, createCustomerMode]);
 
   // Handle filter submit
   const handleApplyFilter = (e?: React.FormEvent) => {
@@ -248,41 +244,22 @@ export default function ContractsDashboardPage() {
   // Create contract mutation
   const createMutation = useMutation({
     mutationFn: async (payload: any) => {
-      try {
-        const res = await api.post('/contracts', payload);
-        return res.data?.data;
-      } catch (err: any) {
-        // Optimistic fallback so admin operations never block
-        const newCode = `HD${String(contracts.length + 1).padStart(4, '0')}`;
-        const newContract = {
-          _id: `contract-${Date.now()}`,
-          contractCode: newCode,
-          vehicle: payload.vehicleId,
-          vehicleInfo: payload.vehicleInfo || { licensePlate: '51K-123.45', name: 'Toyota Vios' },
-          customer: payload.customerId,
-          customerInfo: payload.customerInfo || { fullName: 'Nguyễn Văn An', phone: '0901234567' },
-          startDate: payload.startDate,
-          endDate: payload.endDate,
-          rentalDays: payload.rentalDays,
-          pricePerDay: payload.pricePerDay,
-          totalPayable: payload.totalPayable,
-          paidAmount: payload.paidAmount || 0,
-          depositAmount: payload.depositAmount || 0,
-          remainingDebt: Math.max(0, (payload.totalPayable || 0) - (payload.paidAmount || 0)),
-          status: 'pending_signature',
-          notes: payload.notes || '',
-          createdAt: new Date().toISOString(),
-        };
-        return newContract;
-      }
+      const res = await api.post('/contracts', payload);
+      return res.data?.data;
     },
-    onSuccess: (data: any) => {
-      if (data) {
-        setExtraContracts(prev => [data, ...prev]);
-      }
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setShowCreateModal(false);
+      setWalkInName('');
+      setWalkInPhone('');
+      setWalkInCccd('');
+      setWalkInLicense('');
+      setWalkInAddress('');
+      setCreateNotes('');
       toast.success('Tạo hợp đồng thành công! Hợp đồng mới đã được thêm vào danh sách.');
     },
     onError: (err: any) => {
@@ -296,16 +273,13 @@ export default function ContractsDashboardPage() {
       const res = await api.put(`/contracts/${id}/return`, data);
       return res.data;
     },
-    onSuccess: (resData, variables) => {
-      setSignatureOverrides(prev => ({
-        ...prev,
-        [variables.id]: {
-          ...(prev[variables.id] || {}),
-          status: 'completed',
-          actualReturnDate: variables.data?.actualReturnDate || new Date().toISOString()
-        }
-      }));
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setShowReturnModal(null);
       toast.success('Xác nhận trả xe và hoàn tất hợp đồng thành công!');
@@ -321,17 +295,37 @@ export default function ContractsDashboardPage() {
       const res = await api.delete(`/contracts/${id}`);
       return res.data;
     },
-    onSuccess: (resData, id) => {
-      setSignatureOverrides(prev => ({
-        ...prev,
-        [id]: { ...(prev[id] || {}), status: 'cancelled' }
-      }));
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success('Đã hủy hợp đồng.');
     },
     onError: (err: any) => {
       toast.error(err.response?.data?.message || 'Hủy hợp đồng thất bại.');
+    }
+  });
+
+  // Delete contract permanently mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.delete(`/contracts/${id}?permanent=true`);
+      return res.data;
+    },
+    onSuccess: (_, id) => {
+      if (showDetailModal?._id === id) setShowDetailModal(null);
+      setDeleteTargetContract(null);
+      queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Đã xóa hợp đồng thành công!');
+    },
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Xóa hợp đồng thất bại.');
     }
   });
 
@@ -345,40 +339,19 @@ export default function ContractsDashboardPage() {
       const res = await api.put(`/contracts/${idToUse}/sign`, payload);
       return res.data;
     },
-    onSuccess: (data: any, variables: any) => {
+    onSuccess: () => {
       toast.success('Ký hợp đồng điện tử thành công! Hợp đồng chính thức có hiệu lực.');
-      const update = {
-        ...(variables.role === 'customer' 
-          ? { customerSignature: variables.signature, customerSignedAt: new Date().toISOString() } 
-          : { staffSignature: variables.signature, staffSignedAt: new Date().toISOString() }),
-        status: 'confirmed'
-      };
-      setSignatureOverrides(prev => ({
-        ...prev,
-        [variables.contractId]: { ...(prev[variables.contractId] || {}), ...update },
-        ...(variables.contractCode ? { [variables.contractCode]: { ...(prev[variables.contractCode] || {}), ...update } } : {})
-      }));
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
+      queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setShowSignModal(null);
       setHasDrawnContract(false);
     },
-    onError: (err: any, variables: any) => {
-      // Optimistic fallback update so user is not blocked
-      const update = {
-        ...(variables.role === 'customer' 
-          ? { customerSignature: variables.signature, customerSignedAt: new Date().toISOString() } 
-          : { staffSignature: variables.signature, staffSignedAt: new Date().toISOString() }),
-        status: 'confirmed'
-      };
-      setSignatureOverrides(prev => ({
-        ...prev,
-        [variables.contractId]: { ...(prev[variables.contractId] || {}), ...update },
-        ...(variables.contractCode ? { [variables.contractCode]: { ...(prev[variables.contractCode] || {}), ...update } } : {})
-      }));
-      toast.success('Đã lưu chữ ký điện tử hợp đồng thành công!');
-      setShowSignModal(null);
-      setHasDrawnContract(false);
+    onError: (err: any) => {
+      toast.error(err.response?.data?.message || 'Lưu chữ ký hợp đồng thất bại.');
     }
   });
 
@@ -440,43 +413,95 @@ export default function ContractsDashboardPage() {
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!createCustomerId || !createVehicleId) {
-      toast.error('Vui lòng chọn khách hàng và xe!');
+    if (!createVehicleId) {
+      toast.error('Vui lòng chọn xe thuê!');
       return;
     }
+    if (createCustomerMode === 'existing' && !createCustomerId) {
+      toast.error('Vui lòng chọn khách hàng hoặc chuyển sang "Khách mới"!');
+      return;
+    }
+    if (createCustomerMode === 'walkin' && (!walkInName.trim() || !walkInPhone.trim())) {
+      toast.error('Vui lòng nhập họ tên và số điện thoại khách thuê!');
+      return;
+    }
+
     const start = new Date(createStartDate);
     const end = new Date(createEndDate);
-    const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-    const total = diffDays * createPricePerDay;
+    if (!createStartDate || !createEndDate || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      toast.error('Vui lòng chọn thời gian nhận và trả xe hợp lệ!');
+      return;
+    }
+    if (end.getTime() <= start.getTime()) {
+      toast.error('Thời gian trả xe dự kiến phải sau thời gian nhận xe!');
+      return;
+    }
 
-    const selCust = customers.find((c: any) => c._id === createCustomerId);
+    const diffDays = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    const safeDailyPrice = Math.max(0, Number(createPricePerDay) || 0);
+    const safeDeposit = Math.max(0, Number(createDeposit) || 0);
+    const safePaidAmount = Math.max(0, Number(createPaidAmount) || 0);
+    const total = diffDays * safeDailyPrice;
+
+    const selCust = createCustomerMode === 'existing' ? customers.find((c: any) => c._id === createCustomerId) : null;
     const selVeh = vehicles.find((v: any) => v._id === createVehicleId);
 
+    const customerInfoPayload = createCustomerMode === 'existing'
+      ? {
+          fullName: selCust?.fullName || 'Khách hàng',
+          phone: selCust?.phone || '0901234567',
+          email: selCust?.email || '',
+          cccd: selCust?.cccd || '',
+          drivingLicense: selCust?.drivingLicense || '',
+          drivingLicenseClass: selCust?.drivingLicenseClass || '',
+          address: selCust?.address || '',
+        }
+      : {
+          fullName: walkInName.trim(),
+          phone: walkInPhone.trim(),
+          email: '',
+          cccd: walkInCccd.trim(),
+          drivingLicense: walkInLicense.trim(),
+          drivingLicenseClass: 'A1',
+          address: walkInAddress.trim(),
+        };
+
+    const vehicleInfoPayload = {
+      name: selVeh?.name || 'Xe thuê',
+      licensePlate: selVeh?.licensePlate || '',
+      brand: selVeh?.brand || '',
+      model: selVeh?.model || '',
+      type: selVeh?.type || '',
+      color: selVeh?.color || '',
+      engineNumber: selVeh?.engineCC ? `${selVeh.engineCC}cc` : '',
+    };
+
     createMutation.mutate({
-      customerId: createCustomerId,
+      customerId: createCustomerMode === 'existing' ? createCustomerId : undefined,
       vehicleId: createVehicleId,
-      customerInfo: {
-        fullName: selCust?.fullName || 'Khách hàng',
-        phone: selCust?.phone || '0901234567',
-        email: selCust?.email || '',
-        cccd: selCust?.cccd || '',
-        address: selCust?.address || '',
-      },
-      vehicleInfo: {
-        name: selVeh?.name || 'Xe thuê',
-        licensePlate: selVeh?.licensePlate || '51K-123.45',
-        brand: selVeh?.brand || '',
-        model: selVeh?.model || '',
-        color: selVeh?.color || '',
-      },
+      customerInfo: customerInfoPayload,
+      vehicleInfo: vehicleInfoPayload,
       driverId: createDriverId || undefined,
       startDate: start.toISOString(),
       endDate: end.toISOString(),
       rentalDays: diffDays,
-      pricePerDay: createPricePerDay,
-      depositAmount: createDeposit,
+      pricePerDay: safeDailyPrice,
+      depositAmount: safeDeposit,
       totalPayable: total,
-      paidAmount: createPaidAmount,
+      paidAmount: safePaidAmount,
+      termsAndConditions: buildStandardContractTerms(
+        mapContractToStandardData({
+          customerInfo: customerInfoPayload,
+          vehicleInfo: vehicleInfoPayload,
+          startDate: start.toISOString(),
+          endDate: end.toISOString(),
+          rentalDays: diffDays,
+          pricePerDay: safeDailyPrice,
+          depositAmount: safeDeposit,
+          totalPayable: total,
+          paidAmount: safePaidAmount,
+        })
+      ),
       notes: createNotes
     });
   };
@@ -526,17 +551,7 @@ export default function ContractsDashboardPage() {
 
           <button
             type="button"
-            onClick={() => {
-              if (vehicles.length > 0) {
-                setCreateVehicleId(vehicles[0]._id);
-                setCreatePricePerDay(vehicles[0].pricePerDay || 130000);
-                setCreateDeposit(vehicles[0].deposit || 500000);
-              }
-              if (customers.length > 0) {
-                setCreateCustomerId(customers[0]._id);
-              }
-              setShowCreateModal(true);
-            }}
+            onClick={openCreateContractModal}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -844,6 +859,7 @@ export default function ContractsDashboardPage() {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                  <th style={{ padding: '14px 12px', textAlign: 'center', width: '52px' }}>STT</th>
                   <th style={{ padding: '14px 18px' }}>Mã HĐ</th>
                   <th style={{ padding: '14px 18px' }}>Xe</th>
                   <th style={{ padding: '14px 18px' }}>Khách hàng</th>
@@ -856,7 +872,7 @@ export default function ContractsDashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {contracts.map((c: any) => {
+                {contracts.map((c: any, idx: number) => {
                   const isOverdue = c.isOverdue || (c.status === 'active' && new Date(c.endDate) < new Date());
                   const remainingDebt = Number(c.remainingDebt ?? Math.max(0, (c.totalPayable || 0) - ((c.depositAmount || 0) + (c.paidAmount || 0))));
 
@@ -870,6 +886,11 @@ export default function ContractsDashboardPage() {
                       onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                       onMouseLeave={e => e.currentTarget.style.background = '#ffffff'}
                     >
+                      {/* 0. STT */}
+                      <td style={{ padding: '14px 12px', verticalAlign: 'top', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                        {idx + 1}
+                      </td>
+
                       {/* 1. Mã HĐ */}
                       <td style={{ padding: '14px 18px', verticalAlign: 'top' }}>
                         <div style={{ fontWeight: 800, color: '#0f172a' }}>
@@ -1085,6 +1106,30 @@ export default function ContractsDashboardPage() {
                             Ảnh
                           </button>
 
+                          {/* Xóa */}
+                          <button
+                            type="button"
+                            onClick={() => setDeleteTargetContract(c)}
+                            disabled={deleteMutation.isPending}
+                            title={`Xóa hợp đồng ${c.contractCode}`}
+                            style={{
+                              background: '#fef2f2',
+                              border: '1px solid #fecaca',
+                              color: '#dc2626',
+                              cursor: 'pointer',
+                              padding: '3px 8px',
+                              borderRadius: '4px',
+                              fontWeight: 700,
+                              fontSize: '11.5px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px'
+                            }}
+                          >
+                            <Trash2 style={{ width: '12px', height: '12px' }} />
+                            <span>Xóa</span>
+                          </button>
+
                         </div>
                       </td>
                     </tr>
@@ -1105,7 +1150,7 @@ export default function ContractsDashboardPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.6)',
-            zIndex: 50,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1137,25 +1182,76 @@ export default function ContractsDashboardPage() {
             </div>
 
             <form onSubmit={handleCreateSubmit}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                <button
+                  type="button"
+                  onClick={() => setCreateCustomerMode('existing')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: createCustomerMode === 'existing' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                    background: createCustomerMode === 'existing' ? '#eff6ff' : '#ffffff',
+                    color: createCustomerMode === 'existing' ? '#1d4ed8' : '#475569',
+                  }}
+                >
+                  Khách hàng có sẵn ({customers.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCreateCustomerMode('walkin')}
+                  style={{
+                    padding: '6px 12px',
+                    borderRadius: '6px',
+                    fontSize: '12.5px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    border: createCustomerMode === 'walkin' ? '1px solid #2563eb' : '1px solid #cbd5e1',
+                    background: createCustomerMode === 'walkin' ? '#eff6ff' : '#ffffff',
+                    color: createCustomerMode === 'walkin' ? '#1d4ed8' : '#475569',
+                  }}
+                >
+                  + Nhập khách mới trực tiếp
+                </button>
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
-                    Khách hàng thuê xe *
-                  </label>
-                  <select
-                    value={createCustomerId}
-                    onChange={e => setCreateCustomerId(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
-                  >
-                    <option value="">-- Chọn khách hàng --</option>
-                    {customers.map((cust: any) => (
-                      <option key={cust._id} value={cust._id}>
-                        {cust.fullName} - {cust.phone}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {createCustomerMode === 'existing' ? (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+                      Khách hàng thuê xe *
+                    </label>
+                    <select
+                      value={createCustomerId}
+                      onChange={e => setCreateCustomerId(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    >
+                      <option value="">-- Chọn khách hàng --</option>
+                      {customers.map((cust: any) => (
+                        <option key={cust._id} value={cust._id}>
+                          {cust.fullName} - {cust.phone}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
+                      Họ và tên khách thuê *
+                    </label>
+                    <input
+                      type="text"
+                      value={walkInName}
+                      onChange={e => setWalkInName(e.target.value)}
+                      placeholder="Nguyễn Văn A"
+                      required
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+                )}
 
                 <div>
                   <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
@@ -1184,6 +1280,60 @@ export default function ContractsDashboardPage() {
                   </select>
                 </div>
               </div>
+
+              {createCustomerMode === 'walkin' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px', padding: '12px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
+                      Số điện thoại *
+                    </label>
+                    <input
+                      type="text"
+                      value={walkInPhone}
+                      onChange={e => setWalkInPhone(e.target.value)}
+                      placeholder="0905xxxxxx"
+                      required
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
+                      Số CCCD / Hộ chiếu
+                    </label>
+                    <input
+                      type="text"
+                      value={walkInCccd}
+                      onChange={e => setWalkInCccd(e.target.value)}
+                      placeholder="048xxxxxxxxx"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
+                      Số GPLX
+                    </label>
+                    <input
+                      type="text"
+                      value={walkInLicense}
+                      onChange={e => setWalkInLicense(e.target.value)}
+                      placeholder="Số giấy phép lái xe"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, marginBottom: '4px' }}>
+                      Địa chỉ thường trú
+                    </label>
+                    <input
+                      type="text"
+                      value={walkInAddress}
+                      onChange={e => setWalkInAddress(e.target.value)}
+                      placeholder="Quận/Huyện, Tỉnh/TP"
+                      style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    />
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
                 <div>
@@ -1294,7 +1444,7 @@ export default function ContractsDashboardPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.6)',
-            zIndex: 50,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1396,7 +1546,7 @@ export default function ContractsDashboardPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.7)',
-            zIndex: 60,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1430,6 +1580,14 @@ export default function ContractsDashboardPage() {
               <div style={{ display: 'flex', gap: '10px' }}>
                 <button
                   type="button"
+                  onClick={() => setDeleteTargetContract(showDetailModal)}
+                  style={{ padding: '8px 14px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <Trash2 style={{ width: '15px', height: '15px' }} />
+                  <span>Xóa hợp đồng</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => window.print()}
                   style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: '6px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
                 >
@@ -1448,82 +1606,10 @@ export default function ContractsDashboardPage() {
             </div>
 
             {/* Formal Contract Paper Body */}
-            <div style={{ fontFamily: 'Times New Roman, serif', fontSize: '14.5px', lineHeight: 1.8 }}>
-              <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-                <div style={{ fontWeight: 700, fontSize: '14px', letterSpacing: '1px' }}>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                <div style={{ fontSize: '13px', fontStyle: 'italic' }}>Độc lập – Tự do – Hạnh phúc</div>
-                <div style={{ width: '140px', height: '1px', background: '#0f172a', margin: '8px auto 16px' }} />
-                <div style={{ fontSize: '20px', fontWeight: 900, textTransform: 'uppercase' }}>HỢP ĐỒNG CHO THUÊ XE MÁY</div>
-                <div style={{ fontSize: '13px', color: '#64748b' }}>Số: {showDetailModal.contractCode} / HĐTX-XTBIKE</div>
-              </div>
-
-              <p style={{ margin: '0 0 16px 0' }}>
-                Hôm nay, ngày {new Date(showDetailModal.startDate || new Date()).getDate()} tháng {new Date(showDetailModal.startDate || new Date()).getMonth() + 1} năm {new Date(showDetailModal.startDate || new Date()).getFullYear()}, tại TP Đà Nẵng, chúng tôi gồm:
-              </p>
-
-              {/* Bên A */}
-              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '6px', marginBottom: '14px' }}>
-                <div style={{ fontWeight: 800 }}>BÊN CHO THUÊ (BÊN A): XTBike Đà Nẵng</div>
-                <div>Địa chỉ: 08 Phan Chu Trinh, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng</div>
-                <div>Hotline: 0905 123 456</div>
-              </div>
-
-              {/* Bên B */}
-              <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '6px', marginBottom: '16px' }}>
-                <div style={{ fontWeight: 800 }}>BÊN THUÊ (BÊN B): {showDetailModal.customerInfo?.fullName || showDetailModal.customer?.fullName}</div>
-                <div>Số điện thoại: {showDetailModal.customerInfo?.phone || showDetailModal.customer?.phone}</div>
-                <div>CCCD / Hộ chiếu: {showDetailModal.customerInfo?.cccd || 'Đã đối chiếu ảnh chụp'}</div>
-                <div>Địa chỉ: {showDetailModal.customerInfo?.address || 'Du khách tại Đà Nẵng'}</div>
-              </div>
-
-              <div style={{ fontWeight: 700, marginBottom: '6px' }}>Điều 1: Thông tin xe và thời hạn thuê</div>
-              <ul style={{ paddingLeft: '22px', margin: '0 0 16px 0' }}>
-                <li>Tên xe: <strong>{showDetailModal.vehicleInfo?.name || showDetailModal.vehicle?.name}</strong></li>
-                <li>Biển số: <strong>{showDetailModal.vehicleInfo?.licensePlate || showDetailModal.vehicle?.licensePlate}</strong></li>
-                <li>Thời gian nhận: <strong>{formatDate(showDetailModal.startDate)}</strong></li>
-                <li>Thời gian trả dự kiến: <strong>{formatDate(showDetailModal.endDate)}</strong></li>
-                {showDetailModal.actualReturnDate && (
-                  <li>Thời gian trả thực tế: <strong>{formatDate(showDetailModal.actualReturnDate)}</strong></li>
-                )}
-              </ul>
-
-              <div style={{ fontWeight: 700, marginBottom: '6px' }}>Điều 2: Chi phí và phương thức thanh toán</div>
-              <ul style={{ paddingLeft: '22px', margin: '0 0 24px 0' }}>
-                <li>Đơn giá ngày: <strong>{formatMoney(showDetailModal.pricePerDay)} đ/ngày</strong></li>
-                <li>Tổng giá trị hợp đồng: <strong>{formatMoney(showDetailModal.totalPayable)} đ</strong></li>
-                <li>Tiền đặt cọc: <strong>{formatMoney(showDetailModal.depositAmount)} đ</strong></li>
-                <li>Đã thanh toán: <strong>{formatMoney(showDetailModal.paidAmount)} đ</strong></li>
-                <li>Còn lại cần thanh toán: <strong style={{ color: '#dc2626' }}>{formatMoney(Math.max(0, (showDetailModal.totalPayable || 0) - ((showDetailModal.depositAmount || 0) + (showDetailModal.paidAmount || 0))))} đ</strong></li>
-              </ul>
-
-              {/* Signatures */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px', textAlign: 'center', marginTop: '30px' }}>
-                <div>
-                  <div style={{ fontWeight: 800 }}>ĐẠI DIỆN BÊN A</div>
-                  {showDetailModal.staffSignature ? (
-                    <div style={{ margin: '10px 0' }}>
-                      <img src={showDetailModal.staffSignature} alt="Chữ ký bên A" style={{ height: '50px', margin: '0 auto', display: 'block' }} />
-                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>Đã xác thực ký số</div>
-                    </div>
-                  ) : (
-                    <div style={{ fontStyle: 'italic', fontSize: '12px', color: '#64748b', marginBottom: '40px' }}>(Ký và đóng dấu)</div>
-                  )}
-                  <div style={{ fontWeight: 700 }}>XTBike Đà Nẵng</div>
-                </div>
-                <div>
-                  <div style={{ fontWeight: 800 }}>ĐẠI DIỆN BÊN B</div>
-                  {showDetailModal.customerSignature ? (
-                    <div style={{ margin: '10px 0' }}>
-                      <img src={showDetailModal.customerSignature} alt="Chữ ký khách hàng" style={{ height: '50px', margin: '0 auto', display: 'block' }} />
-                      <div style={{ fontSize: '11px', color: '#059669', fontWeight: 600 }}>Đã ký số điện tử</div>
-                    </div>
-                  ) : (
-                    <div style={{ fontStyle: 'italic', fontSize: '12px', color: '#64748b', marginBottom: '40px' }}>(Chưa ký điện tử)</div>
-                  )}
-                  <div style={{ fontWeight: 700 }}>{showDetailModal.customerInfo?.fullName || showDetailModal.customer?.fullName}</div>
-                </div>
-              </div>
-            </div>
+            <StandardRentalContractDocument
+              mode="populated"
+              data={mapContractToStandardData(showDetailModal)}
+            />
           </div>
         </div>
       )}
@@ -1537,7 +1623,7 @@ export default function ContractsDashboardPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.7)',
-            zIndex: 60,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1635,7 +1721,7 @@ export default function ContractsDashboardPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.6)',
-            zIndex: 50,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1748,7 +1834,7 @@ export default function ContractsDashboardPage() {
             position: 'fixed',
             inset: 0,
             background: 'rgba(15, 23, 42, 0.55)',
-            zIndex: 70,
+            zIndex: 1000,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -1949,6 +2035,83 @@ export default function ContractsDashboardPage() {
                 }}
               >
                 {signContractMutation.isPending ? 'Đang lưu...' : 'Xác nhận ký số'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================
+          MODAL: XÁC NHẬN XÓA HỢP ĐỒNG
+          ======================================================== */}
+      {deleteTargetContract && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.65)',
+            zIndex: 1000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '20px'
+          }}
+          onClick={() => setDeleteTargetContract(null)}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              background: '#ffffff',
+              borderRadius: '10px',
+              maxWidth: '440px',
+              width: '100%',
+              padding: '24px',
+              boxShadow: '0 20px 45px rgba(15, 23, 42, 0.2)'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: '#fef2f2', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Trash2 style={{ width: '18px', height: '18px' }} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '16.5px', fontWeight: 800, color: '#0f172a' }}>
+                  Xác nhận xóa hợp đồng
+                </h3>
+                <div style={{ fontSize: '12px', color: '#64748b' }}>
+                  Mã hợp đồng: <strong style={{ color: '#0f172a' }}>{deleteTargetContract.contractCode}</strong>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', fontSize: '13px', color: '#334155', marginBottom: '14px' }}>
+              <div>Khách thuê: <strong>{deleteTargetContract.customerInfo?.fullName || deleteTargetContract.customer?.fullName || 'Khách hàng'}</strong></div>
+              <div style={{ marginTop: '4px' }}>
+                Phương tiện: <strong>{deleteTargetContract.vehicleInfo?.name || deleteTargetContract.vehicle?.name || 'Xe'}</strong>
+                {(deleteTargetContract.vehicleInfo?.licensePlate || deleteTargetContract.vehicle?.licensePlate) && (
+                  <span> ({deleteTargetContract.vehicleInfo?.licensePlate || deleteTargetContract.vehicle?.licensePlate})</span>
+                )}
+              </div>
+            </div>
+
+            <p style={{ fontSize: '12.5px', color: '#dc2626', margin: '0 0 18px', lineHeight: 1.5 }}>
+              Hành động này sẽ xóa vĩnh viễn hợp đồng khỏi hệ thống và không thể khôi phục.
+            </p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <button
+                type="button"
+                onClick={() => setDeleteTargetContract(null)}
+                style={{ padding: '8px 16px', background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer', color: '#334155' }}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={deleteMutation.isPending}
+                onClick={() => deleteMutation.mutate(deleteTargetContract._id)}
+                style={{ padding: '8px 18px', background: '#dc2626', color: '#ffffff', border: 'none', borderRadius: '6px', fontSize: '13px', fontWeight: 700, cursor: 'pointer' }}
+              >
+                {deleteMutation.isPending ? 'Đang xóa...' : 'Xác nhận xóa'}
               </button>
             </div>
           </div>

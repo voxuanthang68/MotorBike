@@ -14,11 +14,11 @@ exports.getDashboard = async (req, res) => {
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
     // 1. Vehicle stats & Fleet breakdown
-    const totalVehicles = await Vehicle.countDocuments({ isActive: true });
-    const availableVehicles = await Vehicle.countDocuments({ status: 'available', isActive: true });
-    const rentedVehicles = await Vehicle.countDocuments({ status: 'rented', isActive: true });
-    const maintenanceVehicles = await Vehicle.countDocuments({ status: 'maintenance', isActive: true });
-    const retiredVehicles = await Vehicle.countDocuments({ status: { $in: ['retired', 'broken'] }, isActive: true });
+    const totalVehicles = await Vehicle.countDocuments({ isActive: { $ne: false } });
+    const availableVehicles = await Vehicle.countDocuments({ status: 'available', isActive: { $ne: false } });
+    const rentedVehicles = await Vehicle.countDocuments({ status: 'rented', isActive: { $ne: false } });
+    const maintenanceVehicles = await Vehicle.countDocuments({ status: 'maintenance', isActive: { $ne: false } });
+    const retiredVehicles = await Vehicle.countDocuments({ status: { $in: ['retired', 'broken'] }, isActive: { $ne: false } });
 
     const utilizationRate = totalVehicles > 0 ? Math.round((rentedVehicles / totalVehicles) * 100) : 0;
 
@@ -41,9 +41,13 @@ exports.getDashboard = async (req, res) => {
       }
     };
 
-    // 2. Contracts & Bookings
-    const activeContracts = await Contract.countDocuments({ status: 'active' });
-    const pendingBookings = await Booking.countDocuments({ status: { $in: ['pending', 'confirmed'] } });
+    // 2. Contracts & Bookings (real counts on active fleet, never forced >= 1)
+    const [activeContractDocs, pendingBookingDocs] = await Promise.all([
+      Contract.find({ status: 'active' }).populate('vehicle', 'isActive').lean(),
+      Booking.find({ status: { $in: ['pending', 'confirmed'] } }).populate('vehicle', 'isActive').lean()
+    ]);
+    const activeContracts = activeContractDocs.filter(c => !c.vehicle || c.vehicle.isActive !== false).length;
+    const pendingBookings = pendingBookingDocs.filter(b => !b.vehicle || b.vehicle.isActive !== false).length;
     const completedContractsThisMonth = await Contract.countDocuments({
       status: 'completed',
       updatedAt: { $gte: monthStart }
@@ -99,59 +103,98 @@ exports.getDashboard = async (req, res) => {
     const totalCustomers = await User.countDocuments({ role: 'customer', isActive: true });
     const totalDrivers = await User.countDocuments({ role: { $in: ['driver', 'technician'] }, isActive: true });
 
-    // 5. Alerts / Notices
-    const overdueContracts = await Contract.find({
-      status: 'active',
-      endDate: { $lt: today }
-    }).populate('vehicle', 'name licensePlate').populate('customer', 'fullName phone');
+    // 5. Real Alerts / Notices (only emitted when real issues exist on active vehicles/contracts)
+    const [rawOverdueContracts, rawOverdueBookings, activeFleetIssues, activeMaintSchedules] = await Promise.all([
+      Contract.find({
+        status: 'active',
+        endDate: { $lt: today },
+        actualReturnDate: { $in: [null, undefined] }
+      }).populate('vehicle', 'name licensePlate isActive').populate('booking', 'status'),
+      Booking.find({
+        status: { $in: ['active', 'overdue'] },
+        endDate: { $lt: today }
+      }).populate('vehicle', 'name licensePlate isActive'),
+      Vehicle.find({
+        isActive: true,
+        $or: [
+          { status: { $in: ['maintenance', 'broken'] } },
+          { nextMaintenanceDate: { $lt: today } }
+        ]
+      }).lean(),
+      Maintenance.find({
+        status: { $in: ['scheduled', 'in_progress'] },
+        scheduledDate: { $lt: today }
+      }).populate('vehicle', 'name licensePlate isActive').lean()
+    ]);
 
-    const overdueBookings = await Booking.find({
-      status: { $in: ['active', 'overdue'] },
-      endDate: { $lt: today }
-    }).populate('vehicle', 'name licensePlate').populate('customer', 'fullName phone');
-
-    const overdueCount = Math.max(overdueContracts.length, overdueBookings.length, 1);
-
-    // Find vehicles with maintenance or inspection issues
-    const maintenanceAlertVehicles = await Vehicle.find({
-      $or: [
-        { status: 'maintenance' },
-        { nextMaintenanceDate: { $lt: today } }
-      ]
-    }).limit(2);
+    const realOverdueContracts = rawOverdueContracts.filter(c =>
+      (!c.vehicle || c.vehicle.isActive !== false) &&
+      (!c.booking || !['completed', 'cancelled'].includes(c.booking.status))
+    );
+    const linkedBookingIds = new Set(realOverdueContracts.map(c => c.booking?._id ? String(c.booking._id) : '').filter(Boolean));
+    const realOverdueBookings = rawOverdueBookings.filter(b =>
+      (!b.vehicle || b.vehicle.isActive !== false) &&
+      !linkedBookingIds.has(String(b._id))
+    );
+    const overdueCount = realOverdueContracts.length + realOverdueBookings.length;
 
     const alerts = [];
 
-    // Alert 1: Overdue contract
-    alerts.push({
-      type: 'overdue_contract',
-      label: 'Cần xử lý',
-      message: `${overdueCount} hợp đồng QUÁ HẠN chưa trả xe`,
-      actionText: 'Xem hợp đồng →',
-      actionUrl: '/dashboard/contracts'
-    });
+    if (overdueCount > 0) {
+      alerts.push({
+        type: 'overdue_contract',
+        label: 'Cần xử lý',
+        message: `${overdueCount} hợp đồng QUÁ HẠN chưa trả xe`,
+        actionText: 'Xem hợp đồng →',
+        actionUrl: '/dashboard/contracts'
+      });
+    }
 
-    // Alert 2: Document / Registration
-    const docVehicle = maintenanceAlertVehicles[0] || await Vehicle.findOne();
-    const docPlate = docVehicle?.licensePlate || '43AC-092.92';
-    alerts.push({
-      type: 'document_expiration',
-      label: 'Giấy tờ xe',
-      message: `${docPlate} — Đăng kiểm đã hết hạn 5 ngày`,
-      actionText: null,
-      actionUrl: null
-    });
+    const alertedPlates = new Set();
+    for (const v of activeFleetIssues) {
+      if (!v.licensePlate || alertedPlates.has(v.licensePlate)) continue;
+      alertedPlates.add(v.licensePlate);
+      if (v.status === 'broken') {
+        alerts.push({
+          type: 'maintenance_overdue',
+          label: 'Xe đang hư hỏng',
+          message: `${v.licensePlate} (${v.name}) đang báo hư hỏng cần xử lý kỹ thuật`,
+          actionText: 'Xem xe →',
+          actionUrl: '/dashboard/vehicles'
+        });
+      } else if (v.status === 'maintenance') {
+        alerts.push({
+          type: 'maintenance_overdue',
+          label: 'Bảo dưỡng xe',
+          message: `${v.licensePlate} (${v.name}) đang trong trạng thái bảo dưỡng`,
+          actionText: 'Xem xe →',
+          actionUrl: '/dashboard/vehicles'
+        });
+      } else if (v.nextMaintenanceDate && new Date(v.nextMaintenanceDate) < today) {
+        const overdueDays = Math.max(1, Math.floor((today.getTime() - new Date(v.nextMaintenanceDate).getTime()) / 86400000));
+        alerts.push({
+          type: 'maintenance_overdue',
+          label: 'Bảo dưỡng xe',
+          message: `${v.licensePlate} (${v.name}) — Quá hạn lịch bảo dưỡng ${overdueDays} ngày`,
+          actionText: 'Xem xe →',
+          actionUrl: '/dashboard/vehicles'
+        });
+      }
+    }
 
-    // Alert 3: Maintenance overdue
-    const maintVehicle = maintenanceAlertVehicles[1] || maintenanceAlertVehicles[0] || await Vehicle.findOne().skip(1);
-    const maintPlate = maintVehicle?.licensePlate || '59X1-234.56';
-    alerts.push({
-      type: 'maintenance_overdue',
-      label: 'Bảo dưỡng xe',
-      message: `${maintPlate} — Quá hạn bảo dưỡng 6.000 km`,
-      actionText: 'Xem xe →',
-      actionUrl: `/dashboard/vehicles`
-    });
+    for (const m of activeMaintSchedules) {
+      if (!m.vehicle || m.vehicle.isActive === false) continue;
+      if (alertedPlates.has(m.vehicle.licensePlate)) continue;
+      alertedPlates.add(m.vehicle.licensePlate);
+      const overdueDays = Math.max(1, Math.floor((today.getTime() - new Date(m.scheduledDate).getTime()) / 86400000));
+      alerts.push({
+        type: 'maintenance_overdue',
+        label: 'Lịch bảo dưỡng',
+        message: `${m.vehicle.licensePlate} (${m.vehicle.name}) — Phiếu "${m.title}" quá hạn ${overdueDays} ngày`,
+        actionText: 'Xem bảo dưỡng →',
+        actionUrl: '/dashboard/maintenance'
+      });
+    }
 
     // Legacy fields for backward compatibility
     const todayBookings = await Booking.countDocuments({
@@ -159,7 +202,8 @@ exports.getDashboard = async (req, res) => {
     });
     const activeRentals = rentedVehicles;
     const newCustomers = await User.countDocuments({ role: 'customer', createdAt: { $gte: monthStart } });
-    const pendingMaintenance = await Maintenance.countDocuments({ status: 'scheduled' });
+    const scheduledMaints = await Maintenance.find({ status: 'scheduled' }).populate('vehicle', 'isActive').lean();
+    const pendingMaintenance = scheduledMaints.filter(m => !m.vehicle || m.vehicle.isActive !== false).length;
     const recentBookings = await Booking.find()
       .populate('customer', 'fullName phone avatar')
       .populate('vehicle', 'name brand mainImage')
@@ -174,12 +218,12 @@ exports.getDashboard = async (req, res) => {
         // Permission flag
         canViewRevenue: isOwner,
 
-        // New Overview Schema (matching screenshot)
+        // Real Overview Schema
         alerts,
         rentedVehicles,
         totalVehicles,
         utilizationRate,
-        activeContracts: Math.max(activeContracts, 1),
+        activeContracts,
         pendingBookings,
         // Revenue strictly restricted to owner
         monthRevenue: isOwner ? monthRevenue : null,
@@ -191,8 +235,8 @@ exports.getDashboard = async (req, res) => {
         fleetStatus,
         operationsScope: {
           totalVehicles,
-          totalCustomers: Math.max(totalCustomers, 1),
-          totalDrivers: Math.max(totalDrivers, 1),
+          totalCustomers,
+          totalDrivers,
           completedContractsThisMonth
         },
 

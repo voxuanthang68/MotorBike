@@ -1383,6 +1383,7 @@ export default function RepairManagementWorkspace({
               <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                 <thead>
                   <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '11.5px', color: '#64748b', fontWeight: 700 }}>
+                    <th style={{ padding: '9px 8px', textAlign: 'center', width: '44px' }}>STT</th>
                     <th style={{ padding: '9px 10px' }}>Mã PT</th>
                     <th style={{ padding: '9px 10px' }}>Tên phụ tùng</th>
                     <th style={{ padding: '9px 10px' }}>Phương án xử lý</th>
@@ -1395,13 +1396,14 @@ export default function RepairManagementWorkspace({
                 <tbody>
                   {rep.parts.length === 0 ? (
                     <tr>
-                      <td colSpan={7} style={{ padding: '22px 12px', textAlign: 'center', fontSize: '12px', color: '#64748b' }}>
+                      <td colSpan={8} style={{ padding: '22px 12px', textAlign: 'center', fontSize: '12px', color: '#64748b' }}>
                         Chưa có phụ tùng thay thế nào được chọn (chỉ tính công sửa chữa / sơn dặm).
                       </td>
                     </tr>
                   ) : (
                     rep.parts.map((pt, pIdx) => (
                       <tr key={pIdx} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '12.5px' }}>
+                        <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{pIdx + 1}</td>
                         <td style={{ padding: '9px 10px', fontFamily: 'monospace', color: '#2563eb', fontWeight: 700 }}>{pt.partCode}</td>
                         <td style={{ padding: '9px 10px', fontWeight: 700, color: '#0f172a' }}>{pt.name}</td>
                         <td style={{ padding: '9px 10px', color: '#475569' }}>{pt.actionMethod || 'Thay mới chính hãng'}</td>
@@ -1805,6 +1807,7 @@ export default function RepairManagementWorkspace({
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', fontSize: '12px', fontWeight: 700, color: '#475569' }}>
+                <th style={{ padding: '12px 12px', textAlign: 'center', width: '48px' }}>STT</th>
                 <th style={{ padding: '12px 16px' }}>Mã phiếu</th>
                 <th style={{ padding: '12px 16px' }}>Xe / Biển số</th>
                 <th style={{ padding: '12px 16px' }}>Khách hàng / Đơn thuê</th>
@@ -1817,15 +1820,18 @@ export default function RepairManagementWorkspace({
             <tbody>
               {pagedRepairs.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                  <td colSpan={8} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
                     Không tìm thấy phiếu sửa chữa phù hợp.
                   </td>
                 </tr>
               ) : (
-                pagedRepairs.map(rep => {
+                pagedRepairs.map((rep, idx) => {
                   const meta = STATUS_META[rep.status] || STATUS_META.waiting_quote;
                   return (
                     <tr key={rep.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                      <td style={{ padding: '14px 12px', verticalAlign: 'top', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                        {(safePage - 1) * PER_PAGE + idx + 1}
+                      </td>
                       <td style={{ padding: '14px 16px', verticalAlign: 'top' }}>
                         <button
                           type="button"

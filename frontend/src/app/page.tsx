@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -368,11 +369,51 @@ function toCatalogBike(vehicle: any): Motorbike {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const { user, logout } = useAuthStore();
   const [mounted, setMounted] = useState(false);
 
+  const [showNotifDropdown, setShowNotifDropdown] = useState(false);
+  const [homeNotifs, setHomeNotifs] = useState<any[]>([]);
+  const [homeUnreadCount, setHomeUnreadCount] = useState(0);
+  const notifRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  const loadHomeNotifications = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+    if (!token) {
+      setHomeNotifs([]);
+      setHomeUnreadCount(0);
+      return;
+    }
+    try {
+      const res = await api.get('/notifications');
+      const list = Array.isArray(res.data?.data) ? res.data.data : [];
+      setHomeNotifs(list);
+      setHomeUnreadCount(res.data?.unreadCount ?? list.filter((n: any) => !n.isRead).length);
+    } catch {
+      // Ignore unauthenticated errors
+    }
+  };
+
+  useEffect(() => {
+    if (!mounted || !user) return;
+    loadHomeNotifications();
+    const timer = window.setInterval(loadHomeNotifications, 20000);
+    return () => window.clearInterval(timer);
+  }, [mounted, user]);
+
+  useEffect(() => {
+    const onOutside = (e: MouseEvent) => {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setShowNotifDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
   }, []);
 
   const [selectedType, setSelectedType] = useState<string>('all');
@@ -395,6 +436,7 @@ export default function HomePage() {
   const [availabilityById, setAvailabilityById] = useState<Record<string, string>>({});
   const [availabilityByName, setAvailabilityByName] = useState<Record<string, string>>({});
   const [availabilityLoaded, setAvailabilityLoaded] = useState(false);
+  const [availabilityRefreshTick, setAvailabilityRefreshTick] = useState(0);
   const [catalogBikes, setCatalogBikes] = useState<Motorbike[]>([]);
 
   // ONE LIVE THING: Route & Rate Planner
@@ -435,7 +477,7 @@ export default function HomePage() {
     refreshAvailability();
     const timer = window.setInterval(refreshAvailability, 20000);
     return () => { active = false; window.clearInterval(timer); };
-  }, []);
+  }, [availabilityRefreshTick]);
 
   const toggleFavorite = (bikeId: string) => {
     setFavoriteIds(prev => {
@@ -843,26 +885,148 @@ export default function HomePage() {
 
           {/* Action / Auth Button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              type="button"
-              onClick={() => toast.success('Bạn không có thông báo mới nào')}
-              style={{
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: '#f1f5f9',
-                border: 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'background 0.15s ease',
-              }}
-            >
-              <Bell size={18} style={{ color: '#475569' }} />
-              <span style={{ position: 'absolute', top: '9px', right: '9px', width: '7px', height: '7px', borderRadius: '50%', background: '#2563eb' }} />
-            </button>
+            <div ref={notifRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                aria-label="Mở thông báo"
+                onClick={() => {
+                  const next = !showNotifDropdown;
+                  setShowNotifDropdown(next);
+                  if (next && user) loadHomeNotifications();
+                }}
+                style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '50%',
+                  background: showNotifDropdown ? '#eff6ff' : '#f1f5f9',
+                  border: showNotifDropdown ? '1px solid #bfdbfe' : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  transition: 'background 0.15s ease',
+                }}
+              >
+                <Bell size={18} style={{ color: showNotifDropdown ? '#2563eb' : '#475569' }} />
+                {mounted && user && homeUnreadCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-3px',
+                      right: '-3px',
+                      minWidth: '17px',
+                      height: '17px',
+                      borderRadius: '999px',
+                      background: '#dc2626',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px',
+                    }}
+                  >
+                    {homeUnreadCount}
+                  </span>
+                )}
+              </button>
+
+              {showNotifDropdown && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '46px',
+                    right: 0,
+                    width: '340px',
+                    maxWidth: 'calc(100vw - 24px)',
+                    background: '#ffffff',
+                    borderRadius: '14px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 18px 45px rgba(15, 23, 42, 0.16)',
+                    zIndex: 100,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '13.5px', color: '#0f172a' }}>
+                      Thông báo {mounted && user ? `(${homeUnreadCount} mới)` : ''}
+                    </strong>
+                    {mounted && user && homeUnreadCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setHomeNotifs(prev => prev.map(x => ({ ...x, isRead: true })));
+                          setHomeUnreadCount(0);
+                          try { await api.put('/notifications/read-all'); } catch {}
+                        }}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      >
+                        Đọc tất cả
+                      </button>
+                    )}
+                  </div>
+
+                  {!mounted || !user ? (
+                    <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                      <div>Vui lòng đăng nhập để xem thông báo của bạn.</div>
+                      <Link
+                        href="/login"
+                        onClick={() => setShowNotifDropdown(false)}
+                        style={{ display: 'inline-block', marginTop: '10px', padding: '7px 14px', borderRadius: '8px', background: '#2563eb', color: '#ffffff', fontWeight: 700, fontSize: '12px', textDecoration: 'none' }}
+                      >
+                        Đăng nhập
+                      </Link>
+                    </div>
+                  ) : homeNotifs.length === 0 ? (
+                    <div style={{ padding: '22px 14px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                      Hiện tại bạn chưa có thông báo mới nào.
+                    </div>
+                  ) : (
+                    <>
+                      <div style={{ maxHeight: '300px', overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {homeNotifs.slice(0, 8).map((n: any) => (
+                          <div
+                            key={n._id}
+                            onClick={async () => {
+                              setHomeNotifs(prev => prev.map(x => (x._id === n._id ? { ...x, isRead: true } : x)));
+                              if (!n.isRead) setHomeUnreadCount(c => Math.max(0, c - 1));
+                              try { await api.put(`/notifications/${n._id}/read`); } catch {}
+                              setShowNotifDropdown(false);
+                              const fallbackDest = user.role === 'customer' ? '/portal' : user.role === 'technician' ? '/technician' : '/dashboard/notifications';
+                              router.push(n.link || fallbackDest);
+                            }}
+                            style={{
+                              padding: '10px 12px',
+                              borderRadius: '10px',
+                              background: n.isRead ? '#f8fafc' : '#eff6ff',
+                              border: n.isRead ? '1px solid #f1f5f9' : '1px solid #bfdbfe',
+                              cursor: 'pointer',
+                            }}
+                          >
+                            <div style={{ fontSize: '12.5px', fontWeight: n.isRead ? 600 : 800, color: '#0f172a' }}>{n.title}</div>
+                            {n.message && <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '2px' }}>{n.message}</div>}
+                            <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                              {n.createdAt ? new Date(n.createdAt).toLocaleString('vi-VN') : ''}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ padding: '10px 14px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', textAlign: 'center' }}>
+                        <Link
+                          href={user.role === 'customer' ? '/portal' : user.role === 'technician' ? '/technician' : '/dashboard/notifications'}
+                          onClick={() => setShowNotifDropdown(false)}
+                          style={{ color: '#2563eb', fontSize: '12px', fontWeight: 700, textDecoration: 'none' }}
+                        >
+                          Xem tất cả thông báo →
+                        </Link>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
 
             {mounted && user ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -2421,6 +2585,7 @@ export default function HomePage() {
         <RentalWizard
           bike={bookingBike}
           onClose={() => setBookingBike(null)}
+          onCompleted={() => setAvailabilityRefreshTick((t) => t + 1)}
         />
       )}
 

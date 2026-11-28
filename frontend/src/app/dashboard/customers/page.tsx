@@ -70,25 +70,6 @@ export default function CustomersManagementPage() {
   const [editRiskReason, setEditRiskReason] = useState('');
   const [editNotes, setEditNotes] = useState('');
 
-  // Fallback customer matching user's screenshot
-  const fallbackCustomers = useMemo(() => [
-    {
-      _id: 'cust-001',
-      customerCode: 'KH0001',
-      fullName: 'Nguyễn Văn An',
-      phone: '901234567',
-      cccd: '79201001234',
-      drivingLicense: '790123456789',
-      drivingLicenseClass: 'B2',
-      customerType: 'standard',
-      customerTier: 'regular',
-      address: 'Hải Châu, Đà Nẵng',
-      isBlacklisted: false,
-      debtAmount: 0,
-      totalRentals: 2,
-    }
-  ], []);
-
   // Fetch customers
   const { data: customersData, isLoading } = useQuery({
     queryKey: ['customers-list', appliedFilters],
@@ -112,11 +93,8 @@ export default function CustomersManagementPage() {
   });
 
   const customersList = useMemo(() => {
-    if (customersData && customersData.length > 0) {
-      return customersData;
-    }
-    return fallbackCustomers;
-  }, [customersData, fallbackCustomers]);
+    return Array.isArray(customersData) ? customersData : [];
+  }, [customersData]);
 
   // Apply filter action
   const handleApplyFilters = () => {
@@ -548,6 +526,7 @@ export default function CustomersManagementPage() {
           <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                <th style={{ padding: '14px 12px', textAlign: 'center', width: '52px' }}>STT</th>
                 <th style={{ padding: '14px 18px' }}>Mã KH</th>
                 <th style={{ padding: '14px 18px' }}>Họ tên</th>
                 <th style={{ padding: '14px 18px' }}>Điện thoại</th>
@@ -560,13 +539,13 @@ export default function CustomersManagementPage() {
             <tbody>
               {customersList.length === 0 ? (
                 <tr>
-                  <td colSpan={7} style={{ padding: '50px 20px', textAlign: 'center', color: '#64748b' }}>
+                  <td colSpan={8} style={{ padding: '50px 20px', textAlign: 'center', color: '#64748b' }}>
                     <User style={{ width: '36px', height: '36px', color: '#cbd5e1', margin: '0 auto 8px' }} />
                     <div>Không tìm thấy khách hàng nào phù hợp bộ lọc.</div>
                   </td>
                 </tr>
               ) : (
-                customersList.map((c: any) => {
+                customersList.map((c: any, idx: number) => {
                   const isHighRisk = c.customerType === 'high_risk' || c.isBlacklisted;
                   const isWalkIn = c.customerType === 'walk_in';
 
@@ -580,6 +559,11 @@ export default function CustomersManagementPage() {
                       onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
                       onMouseLeave={(e) => (e.currentTarget.style.background = '#ffffff')}
                     >
+                      {/* STT */}
+                      <td style={{ padding: '14px 12px', verticalAlign: 'top', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                        {idx + 1}
+                      </td>
+
                       {/* Mã KH */}
                       <td style={{ padding: '14px 18px', verticalAlign: 'top' }}>
                         <div style={{ fontWeight: 700, color: '#0f172a' }}>

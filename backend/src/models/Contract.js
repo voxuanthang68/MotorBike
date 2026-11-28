@@ -9,19 +9,28 @@ const contractSchema = new mongoose.Schema({
   // Customer info at time of contract
   customerInfo: {
     fullName: String,
+    birthYear: String,
     cccd: String,
+    cccdIssueDate: String,
+    cccdIssuePlace: String,
     drivingLicense: String,
+    drivingLicenseClass: String,
+    licenseExpiryDate: String,
     phone: String,
     address: String,
+    tempAddress: String,
     email: String
   },
   // Vehicle info at time of contract
   vehicleInfo: {
-    name: String,
-    licensePlate: String,
-    brand: String,
-    model: String,
-    color: String
+    name: { type: String },
+    licensePlate: { type: String },
+    brand: { type: String },
+    model: { type: String },
+    type: { type: String },
+    color: { type: String },
+    engineNumber: { type: String },
+    chassisNumber: { type: String }
   },
   // Terms
   startDate: Date,

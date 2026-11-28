@@ -28,7 +28,7 @@ const checkAuthOrAdmin = async (req, res, next) => {
       }
     }
     // Fallback to active admin or staff user
-    const defaultUser = await User.findOne({ role: { $in: ['admin', 'manager', 'staff'] } }) || await User.findOne();
+    const defaultUser = await User.findOne({ role: { $in: ['owner', 'admin', 'manager', 'receptionist', 'staff'] } }) || await User.findOne();
     if (defaultUser) {
       req.user = defaultUser;
     } else {
@@ -56,7 +56,7 @@ const findContract = async (id) => {
     }
   }
 
-  // 2. Normalize contract code: "seed-hd0001" -> "HD0001", "hd0001" -> "HD0001"
+  // 2. Normalize contract code: "hd0001" -> "HD0001"
   const cleanCode = strId.replace(/^seed-/i, '').trim().toUpperCase();
 
   try {
@@ -70,94 +70,6 @@ const findContract = async (id) => {
     if (contract) return contract;
   } catch (e) {
     // Continue
-  }
-
-  // 3. Auto-create HD0001 or HD0002 on demand if missing
-  if (cleanCode === 'HD0001' || strId.toLowerCase().includes('hd0001')) {
-    try {
-      const cust = await User.findOne({ role: 'customer' });
-      const veh = await Vehicle.findOne({ licensePlate: '51K-123.45' }) || await Vehicle.findOne();
-      const admin = await User.findOne({ role: { $in: ['admin', 'owner', 'staff'] } });
-
-      return await Contract.create({
-        contractCode: 'HD0001',
-        customer: cust?._id,
-        vehicle: veh?._id,
-        customerInfo: {
-          fullName: cust?.fullName || 'Nguyễn Văn An',
-          phone: cust?.phone || '0901234567',
-          cccd: cust?.cccd || '048200001234',
-          drivingLicense: cust?.drivingLicense || '790123456789',
-          address: cust?.address || '128 Bạch Đằng, P. Hải Châu 1, Đà Nẵng',
-          email: cust?.email || 'customer@gmail.com'
-        },
-        vehicleInfo: {
-          name: veh?.name || 'Toyota Vios',
-          licensePlate: veh?.licensePlate || '51K-123.45',
-          brand: veh?.brand || 'Toyota',
-          model: veh?.model || 'Vios',
-          color: veh?.color || 'Trắng'
-        },
-        startDate: new Date('2026-08-25T00:00:00'),
-        endDate: new Date('2026-08-26T10:00:00'),
-        rentalDays: 2,
-        pricePerDay: 800000,
-        totalRentalFee: 1600000,
-        depositAmount: 0,
-        totalPayable: 1600000,
-        paidAmount: 0,
-        paymentMethod: 'bank_transfer',
-        status: 'active',
-        termsAndConditions: 'Bên thuê xe cam kết chấp hành nghiêm chỉnh luật giao thông đường bộ Việt Nam.',
-        createdBy: admin?._id
-      });
-    } catch (e) {
-      return await Contract.findOne({ contractCode: 'HD0001' });
-    }
-  }
-
-  if (cleanCode === 'HD0002' || strId.toLowerCase().includes('hd0002')) {
-    try {
-      const cust = await User.findOne({ role: 'customer' });
-      const veh = await Vehicle.findOne({ licensePlate: '51K-123.45' }) || await Vehicle.findOne();
-      const admin = await User.findOne({ role: { $in: ['admin', 'owner', 'staff'] } });
-
-      return await Contract.create({
-        contractCode: 'HD0002',
-        customer: cust?._id,
-        vehicle: veh?._id,
-        customerInfo: {
-          fullName: cust?.fullName || 'Nguyễn Văn An',
-          phone: cust?.phone || '0901234567',
-          cccd: cust?.cccd || '048200001234',
-          drivingLicense: cust?.drivingLicense || '790123456789',
-          address: cust?.address || '128 Bạch Đằng, P. Hải Châu 1, Đà Nẵng',
-          email: cust?.email || 'customer@gmail.com'
-        },
-        vehicleInfo: {
-          name: veh?.name || 'Toyota Vios',
-          licensePlate: veh?.licensePlate || '51K-123.45',
-          brand: veh?.brand || 'Toyota',
-          model: veh?.model || 'Vios',
-          color: veh?.color || 'Trắng'
-        },
-        startDate: new Date('2026-08-29T18:00:00'),
-        endDate: new Date('2026-08-29T18:11:00'),
-        actualReturnDate: new Date('2026-08-29T18:11:00'),
-        rentalDays: 1,
-        pricePerDay: 140000,
-        totalRentalFee: 140000,
-        depositAmount: 0,
-        totalPayable: 140000,
-        paidAmount: 0,
-        paymentMethod: 'bank_transfer',
-        status: 'completed',
-        termsAndConditions: 'Bên thuê xe cam kết chấp hành nghiêm chỉnh luật giao thông đường bộ Việt Nam.',
-        createdBy: admin?._id
-      });
-    } catch (e) {
-      return await Contract.findOne({ contractCode: 'HD0002' });
-    }
   }
 
   return null;
@@ -210,91 +122,11 @@ router.get('/', checkAuthOrAdmin, async (req, res) => {
       if (maxAmount) query.totalPayable.$lte = Number(maxAmount);
     }
 
-    // Auto seed default contracts if empty
-    const totalCount = await Contract.countDocuments();
-    if (totalCount === 0) {
-      try {
-        const cust = await User.findOne({ role: 'customer' });
-        const veh = await Vehicle.findOne({ licensePlate: '51K-123.45' }) || await Vehicle.findOne();
-        const admin = await User.findOne({ role: { $in: ['admin', 'owner', 'staff'] } });
-
-        await Contract.create([
-          {
-            contractCode: 'HD0002',
-            customer: cust?._id,
-            vehicle: veh?._id,
-            customerInfo: {
-              fullName: cust?.fullName || 'Nguyễn Văn An',
-              phone: cust?.phone || '0901234567',
-              cccd: cust?.cccd || '048200001234',
-              drivingLicense: cust?.drivingLicense || '790123456789',
-              address: cust?.address || '128 Bạch Đằng, P. Hải Châu 1, Đà Nẵng',
-              email: cust?.email || 'customer@gmail.com'
-            },
-            vehicleInfo: {
-              name: veh?.name || 'Toyota Vios',
-              licensePlate: veh?.licensePlate || '51K-123.45',
-              brand: veh?.brand || 'Toyota',
-              model: veh?.model || 'Vios',
-              color: veh?.color || 'Trắng'
-            },
-            startDate: new Date('2026-08-29T18:00:00'),
-            endDate: new Date('2026-08-29T18:11:00'),
-            actualReturnDate: new Date('2026-08-29T18:11:00'),
-            rentalDays: 1,
-            pricePerDay: 140000,
-            totalRentalFee: 140000,
-            depositAmount: 0,
-            totalPayable: 140000,
-            paidAmount: 0,
-            paymentMethod: 'bank_transfer',
-            status: 'completed',
-            termsAndConditions: 'Bên thuê xe cam kết chấp hành nghiêm chỉnh luật giao thông đường bộ Việt Nam.',
-            createdBy: admin?._id
-          },
-          {
-            contractCode: 'HD0001',
-            customer: cust?._id,
-            vehicle: veh?._id,
-            customerInfo: {
-              fullName: cust?.fullName || 'Nguyễn Văn An',
-              phone: cust?.phone || '0901234567',
-              cccd: cust?.cccd || '048200001234',
-              drivingLicense: cust?.drivingLicense || '790123456789',
-              address: cust?.address || '128 Bạch Đằng, P. Hải Châu 1, Đà Nẵng',
-              email: cust?.email || 'customer@gmail.com'
-            },
-            vehicleInfo: {
-              name: veh?.name || 'Toyota Vios',
-              licensePlate: veh?.licensePlate || '51K-123.45',
-              brand: veh?.brand || 'Toyota',
-              model: veh?.model || 'Vios',
-              color: veh?.color || 'Trắng'
-            },
-            startDate: new Date('2026-08-25T00:00:00'),
-            endDate: new Date('2026-08-26T10:00:00'),
-            rentalDays: 2,
-            pricePerDay: 800000,
-            totalRentalFee: 1600000,
-            depositAmount: 0,
-            totalPayable: 1600000,
-            paidAmount: 0,
-            paymentMethod: 'bank_transfer',
-            status: 'active',
-            termsAndConditions: 'Bên thuê xe cam kết chấp hành nghiêm chỉnh luật giao thông đường bộ Việt Nam.',
-            createdBy: admin?._id
-          }
-        ]);
-      } catch (seedErr) {
-        console.warn('Auto-seed contracts warning:', seedErr.message);
-      }
-    }
-
     let contracts;
     try {
       contracts = await Contract.find(query)
-        .populate('customer', 'fullName email phone')
-        .populate('vehicle', 'name licensePlate brand color mainImage status')
+        .populate('customer', 'fullName email phone cccd drivingLicense drivingLicenseClass address')
+        .populate('vehicle', 'name licensePlate brand model type engineCC color mainImage status isActive')
         .populate('driver', 'fullName phone')
         .populate('signedByStaff', 'fullName')
         .populate('booking')
@@ -420,8 +252,10 @@ router.post('/', checkAuthOrAdmin, async (req, res) => {
     let finalPaid = Number(paidAmount) || 0;
 
     // 1. Resolve booking if provided
+    let linkedBooking = null;
     if (bookingId && mongoose.Types.ObjectId.isValid(bookingId)) {
       const booking = await Booking.findById(bookingId).populate('customer').populate('vehicle');
+      linkedBooking = booking;
       if (booking) {
         if (!finalCustomer && booking.customer) finalCustomer = booking.customer._id;
         if (!finalVehicle && booking.vehicle) finalVehicle = booking.vehicle._id;
@@ -431,6 +265,7 @@ router.post('/', checkAuthOrAdmin, async (req, res) => {
             phone: booking.customer.phone,
             cccd: booking.customer.cccd,
             drivingLicense: booking.customer.drivingLicense,
+            drivingLicenseClass: booking.customer.drivingLicenseClass,
             address: booking.customer.address,
             email: booking.customer.email
           };
@@ -441,7 +276,9 @@ router.post('/', checkAuthOrAdmin, async (req, res) => {
             licensePlate: booking.vehicle.licensePlate,
             brand: booking.vehicle.brand,
             model: booking.vehicle.model,
-            color: booking.vehicle.color
+            type: booking.vehicle.type,
+            color: booking.vehicle.color,
+            engineNumber: booking.vehicle.engineCC ? `${booking.vehicle.engineCC}cc` : undefined
           };
         }
         finalStart = booking.startDate || finalStart;
@@ -463,7 +300,9 @@ router.post('/', checkAuthOrAdmin, async (req, res) => {
             licensePlate: v.licensePlate,
             brand: v.brand,
             model: v.model,
-            color: v.color
+            type: v.type,
+            color: v.color,
+            engineNumber: v.engineCC ? `${v.engineCC}cc` : undefined
           };
         }
         if (!finalPrice) finalPrice = v.pricePerDay;
@@ -481,66 +320,100 @@ router.post('/', checkAuthOrAdmin, async (req, res) => {
           phone: c.phone,
           cccd: c.cccd,
           drivingLicense: c.drivingLicense,
+          drivingLicenseClass: c.drivingLicenseClass,
           address: c.address,
           email: c.email
         };
       }
     }
 
-    // Fallbacks if not found
     if (!finalVehInfo.name && !finalVehInfo.licensePlate) {
-      finalVehInfo = {
-        name: req.body.vehicleName || 'Toyota Vios',
-        licensePlate: req.body.licensePlate || '51K-123.45',
-        brand: 'Toyota',
-        model: 'Vios',
-        color: 'Trắng'
-      };
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn phương tiện hợp lệ để lập hợp đồng.' });
     }
     if (!finalCustInfo.fullName) {
-      finalCustInfo = {
-        fullName: req.body.customerName || 'Nguyễn Văn An',
-        phone: req.body.customerPhone || '0901234567'
-      };
+      return res.status(400).json({ success: false, message: 'Vui lòng chọn khách hàng hợp lệ để lập hợp đồng.' });
     }
 
-    // Ensure customer and vehicle reference exist or are generated
-    if (!finalCustomer) finalCustomer = new mongoose.Types.ObjectId();
-    if (!finalVehicle) finalVehicle = new mongoose.Types.ObjectId();
+    // Ensure customer and vehicle references are valid ObjectIds
+    if (!finalCustomer || !mongoose.Types.ObjectId.isValid(finalCustomer)) finalCustomer = new mongoose.Types.ObjectId();
+    if (!finalVehicle || !mongoose.Types.ObjectId.isValid(finalVehicle)) finalVehicle = new mongoose.Types.ObjectId();
 
-    const countContracts = await Contract.countDocuments();
-    const contractCode = `HD${String(countContracts + 1).padStart(4, '0')}`;
     const initialStatus = req.body.status || 'pending_signature';
+    const validBookingId = bookingId && mongoose.Types.ObjectId.isValid(bookingId) ? bookingId : null;
 
-    const contract = await Contract.create({
-      contractCode,
-      booking: (bookingId && mongoose.Types.ObjectId.isValid(bookingId)) ? bookingId : null,
-      customer: finalCustomer,
-      vehicle: finalVehicle,
-      driver: (driverId && mongoose.Types.ObjectId.isValid(driverId)) ? driverId : null,
-      customerInfo: finalCustInfo,
-      vehicleInfo: finalVehInfo,
-      startDate: finalStart,
-      endDate: finalEnd,
-      rentalDays: finalDays,
-      pricePerDay: finalPrice,
-      totalRentalFee: finalTotal,
-      depositAmount: finalDeposit,
-      totalPayable: finalTotal,
-      paidAmount: finalPaid,
-      paymentMethod: paymentMethod || 'cash',
-      termsAndConditions,
-      notes,
-      status: initialStatus,
-      customerSignature: req.body.customerSignature || null,
-      customerSignedAt: req.body.customerSignature ? new Date() : null,
-      staffSignature: req.body.staffSignature || null,
-      staffSignedAt: req.body.staffSignature ? new Date() : null,
-      createdBy: req.user?._id || new mongoose.Types.ObjectId()
-    });
+    let contract = null;
+    if (validBookingId && typeof Contract.findOne === 'function') {
+      const bookingMatch = [String(validBookingId), new mongoose.Types.ObjectId(validBookingId)];
+      contract = await Contract.findOne({ booking: { $in: bookingMatch }, status: { $ne: 'cancelled' } });
+    }
 
-    // Update vehicle status to reserved (NOT rented until handover)
-    if (mongoose.Types.ObjectId.isValid(finalVehicle)) {
+    if (contract) {
+      contract.customerInfo = { ...(contract.customerInfo || {}), ...finalCustInfo };
+      contract.vehicleInfo = { ...(contract.vehicleInfo || {}), ...finalVehInfo };
+      if (termsAndConditions) contract.termsAndConditions = termsAndConditions;
+      if (notes !== undefined) contract.notes = notes;
+      if (paymentMethod) contract.paymentMethod = paymentMethod;
+      if (req.body.customerSignature) {
+        contract.customerSignature = req.body.customerSignature;
+        contract.customerSignedAt = contract.customerSignedAt || new Date();
+      }
+      if (req.body.staffSignature) {
+        contract.staffSignature = req.body.staffSignature;
+        contract.staffSignedAt = new Date();
+        if (req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) {
+          contract.signedByStaff = req.user._id;
+        }
+      }
+      if (initialStatus && contract.status !== 'active' && contract.status !== 'completed') {
+        contract.status = initialStatus;
+      }
+      await contract.save();
+    } else {
+      const existingCodes = await Contract.find({}, 'contractCode').lean();
+      let maxNum = 0;
+      for (const c of existingCodes) {
+        const m = /^HD(\d+)$/i.exec(c.contractCode || '');
+        if (m) maxNum = Math.max(maxNum, Number(m[1]));
+      }
+      const contractCode = `HD${String(maxNum + 1).padStart(4, '0')}`;
+
+      contract = await Contract.create({
+        contractCode,
+        booking: validBookingId,
+        customer: finalCustomer,
+        vehicle: finalVehicle,
+        driver: (driverId && mongoose.Types.ObjectId.isValid(driverId)) ? driverId : null,
+        customerInfo: finalCustInfo,
+        vehicleInfo: finalVehInfo,
+        startDate: finalStart,
+        endDate: finalEnd,
+        rentalDays: finalDays,
+        pricePerDay: finalPrice,
+        totalRentalFee: finalTotal,
+        depositAmount: finalDeposit,
+        totalPayable: finalTotal,
+        paidAmount: finalPaid,
+        paymentMethod: paymentMethod || 'cash',
+        termsAndConditions,
+        notes,
+        status: initialStatus,
+        customerSignature: req.body.customerSignature || null,
+        customerSignedAt: req.body.customerSignature ? new Date() : null,
+        staffSignature: req.body.staffSignature || null,
+        staffSignedAt: req.body.staffSignature ? new Date() : null,
+        signedByStaff: (req.body.staffSignature && req.user?._id && mongoose.Types.ObjectId.isValid(req.user._id)) ? req.user._id : undefined,
+        createdBy: req.user?._id || new mongoose.Types.ObjectId()
+      });
+    }
+
+    // Update vehicle status to reserved only when booking is already paid or staff-created (not unpaid online draft)
+    const isUnpaidOnlineBooking = Boolean(
+      linkedBooking &&
+      linkedBooking.bookingSource === 'online' &&
+      linkedBooking.paymentStatus === 'unpaid' &&
+      initialStatus === 'pending_signature'
+    );
+    if (mongoose.Types.ObjectId.isValid(finalVehicle) && !isUnpaidOnlineBooking && initialStatus !== 'active') {
       await Vehicle.findByIdAndUpdate(finalVehicle, { status: 'reserved' });
     }
 
@@ -771,20 +644,45 @@ router.put('/:id', checkAuthOrAdmin, async (req, res) => {
   }
 });
 
-// @DELETE /api/contracts/:id - Cancel contract
+// @DELETE /api/contracts/:id - Cancel or permanently delete contract (?permanent=true)
 router.delete('/:id', checkAuthOrAdmin, async (req, res) => {
   try {
+    if (req.user?.role === 'customer') {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền xóa hợp đồng.' });
+    }
+
     const contract = await findContract(req.params.id);
     if (!contract) return res.status(404).json({ success: false, message: 'Không tìm thấy hợp đồng.' });
 
-    contract.status = 'cancelled';
-    await contract.save();
+    const isPermanent = String(req.query.permanent) === 'true';
 
-    // Set vehicle back to available
+    // Release vehicle back to available if contract was holding it and no other active booking/contract exists
     if (contract.vehicle && mongoose.Types.ObjectId.isValid(contract.vehicle)) {
-      await Vehicle.findByIdAndUpdate(contract.vehicle, { status: 'available' });
+      const wasHoldingVehicle = ['active', 'confirmed'].includes(contract.status);
+      if (wasHoldingVehicle || !isPermanent) {
+        const otherActive = await Contract.findOne({
+          _id: { $ne: contract._id },
+          vehicle: contract.vehicle,
+          status: 'active'
+        });
+        const otherActiveBooking = await Booking.findOne({
+          ...(contract.booking && mongoose.Types.ObjectId.isValid(contract.booking) ? { _id: { $ne: contract.booking } } : {}),
+          vehicle: contract.vehicle,
+          status: 'active'
+        });
+        if (!otherActive && !otherActiveBooking) {
+          await Vehicle.findByIdAndUpdate(contract.vehicle, { status: 'available' });
+        }
+      }
     }
 
+    if (isPermanent) {
+      await Contract.findByIdAndDelete(contract._id);
+      return res.json({ success: true, message: 'Xóa hợp đồng thành công.' });
+    }
+
+    contract.status = 'cancelled';
+    await contract.save();
     res.json({ success: true, message: 'Hủy hợp đồng thành công.' });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

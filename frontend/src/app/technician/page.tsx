@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
@@ -137,6 +137,18 @@ export default function TechnicianPortalPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
+  const [showHeaderNotifs, setShowHeaderNotifs] = useState(false);
+  const headerNotifRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleOutside = (e: MouseEvent) => {
+      if (headerNotifRef.current && !headerNotifRef.current.contains(e.target as Node)) {
+        setShowHeaderNotifs(false);
+      }
+    };
+    document.addEventListener('mousedown', handleOutside);
+    return () => document.removeEventListener('mousedown', handleOutside);
+  }, []);
 
   // Core Real States (loaded 100% from MongoDB Backend)
   const [vehicles, setVehicles] = useState<VehicleItem[]>([]);
@@ -1199,46 +1211,125 @@ export default function TechnicianPortalPage() {
               <RefreshCw size={15} color="#475569" className={loading ? 'animate-spin' : ''} />
             </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('notifications')}
-              style={{
-                position: 'relative',
-                background: '#f8fafc',
-                border: '1px solid #e2e8f0',
-                width: '36px',
-                height: '36px',
-                borderRadius: '10px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer'
-              }}
-            >
-              <Bell size={16} color="#475569" />
-              {unreadNotifsCount > 0 && (
-                <span
+            <div ref={headerNotifRef} style={{ position: 'relative' }}>
+              <button
+                type="button"
+                onClick={() => setShowHeaderNotifs(prev => !prev)}
+                aria-label="Mở danh sách thông báo"
+                style={{
+                  position: 'relative',
+                  background: showHeaderNotifs ? '#eff6ff' : '#f8fafc',
+                  border: showHeaderNotifs ? '1px solid #bfdbfe' : '1px solid #e2e8f0',
+                  width: '36px',
+                  height: '36px',
+                  borderRadius: '10px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer'
+                }}
+              >
+                <Bell size={16} color={showHeaderNotifs ? '#2563eb' : '#475569'} />
+                {unreadNotifsCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-5px',
+                      right: '-5px',
+                      minWidth: '18px',
+                      height: '18px',
+                      borderRadius: '999px',
+                      background: '#dc2626',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 800,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      padding: '0 4px'
+                    }}
+                  >
+                    {unreadNotifsCount}
+                  </span>
+                )}
+              </button>
+
+              {showHeaderNotifs && (
+                <div
                   style={{
                     position: 'absolute',
-                    top: '-5px',
-                    right: '-5px',
-                    minWidth: '18px',
-                    height: '18px',
-                    borderRadius: '999px',
-                    background: '#dc2626',
-                    color: '#ffffff',
-                    fontSize: '10px',
-                    fontWeight: 800,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    padding: '0 4px'
+                    top: '44px',
+                    right: 0,
+                    width: '360px',
+                    maxWidth: 'calc(100vw - 32px)',
+                    background: '#ffffff',
+                    borderRadius: '14px',
+                    border: '1px solid #e2e8f0',
+                    boxShadow: '0 18px 40px rgba(15, 23, 42, 0.16)',
+                    zIndex: 90,
+                    overflow: 'hidden'
                   }}
                 >
-                  {unreadNotifsCount}
-                </span>
+                  <div style={{ padding: '12px 14px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#0f172a' }}>
+                      Thông báo kỹ thuật ({unreadNotifsCount} mới)
+                    </div>
+                    {unreadNotifsCount > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleMarkAllNotificationsRead}
+                        style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '11.5px', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      >
+                        Đọc tất cả
+                      </button>
+                    )}
+                  </div>
+
+                  <div style={{ maxHeight: '320px', overflowY: 'auto', padding: '8px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: '24px 12px', textAlign: 'center', fontSize: '12.5px', color: '#64748b' }}>
+                        Hiện chưa có thông báo nào.
+                      </div>
+                    ) : notifications.slice(0, 8).map(n => (
+                      <div
+                        key={n.id}
+                        onClick={() => {
+                          setShowHeaderNotifs(false);
+                          handleMarkNotificationRead(n);
+                        }}
+                        style={{
+                          padding: '10px 12px',
+                          borderRadius: '10px',
+                          background: n.unread ? '#eff6ff' : '#f8fafc',
+                          border: n.unread ? '1px solid #bfdbfe' : '1px solid #f1f5f9',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', gap: '8px', alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: '12.5px', fontWeight: n.unread ? 800 : 600, color: '#0f172a' }}>{n.title}</span>
+                          {n.unread && <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#2563eb', marginTop: '5px', flexShrink: 0 }} />}
+                        </div>
+                        {n.description && <div style={{ fontSize: '11.5px', color: '#475569', marginTop: '2px' }}>{n.description}</div>}
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>{n.time}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ padding: '10px 14px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', textAlign: 'center' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowHeaderNotifs(false);
+                        setActiveTab('notifications');
+                      }}
+                      style={{ background: 'none', border: 'none', color: '#2563eb', fontSize: '12px', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Xem tất cả trong mục Thông báo ({notifications.length}) →
+                    </button>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
 
             <div
               onClick={() => setActiveTab('profile')}
@@ -1435,10 +1526,11 @@ export default function TechnicianPortalPage() {
                       <div style={{ fontSize: '12.5px', color: '#64748b', padding: '14px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px' }}>
                         Chưa có lịch bảo dưỡng nào trong hệ thống.
                       </div>
-                    ) : maintenances.slice(0, 4).map(m => (
+                    ) : maintenances.slice(0, 4).map((m, idx) => (
                       <div key={m._id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', borderRadius: '10px', background: '#f8fafc', border: '1px solid #f1f5f9', gap: '10px' }}>
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: 700, color: '#0f172a' }}>
+                            <span style={{ color: '#64748b', marginRight: '6px' }}>#{idx + 1}</span>
                             {m.vehicle?.name || 'Xe máy'} • <span style={{ color: '#2563eb' }}>{m.vehicle?.licensePlate || '43-ĐN'}</span>
                           </div>
                           <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>{m.title}</div>
@@ -1467,7 +1559,7 @@ export default function TechnicianPortalPage() {
                       <div style={{ fontSize: '12.5px', color: '#64748b', padding: '14px', textAlign: 'center', background: '#f8fafc', borderRadius: '10px' }}>
                         Chưa có thông báo mới.
                       </div>
-                    ) : notifications.slice(0, 4).map(n => (
+                    ) : notifications.slice(0, 4).map((n, idx) => (
                       <div
                         key={n.id}
                         onClick={() => handleMarkNotificationRead(n)}
@@ -1480,7 +1572,10 @@ export default function TechnicianPortalPage() {
                         }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>{n.title}</span>
+                          <span style={{ fontSize: '12.5px', fontWeight: 700, color: '#0f172a' }}>
+                            <span style={{ color: '#64748b', marginRight: '6px' }}>#{idx + 1}</span>
+                            {n.title}
+                          </span>
                           <span style={{ fontSize: '11px', color: '#64748b', whiteSpace: 'nowrap' }}>{n.time}</span>
                         </div>
                         {n.description && <div style={{ fontSize: '11.5px', color: '#64748b', marginTop: '2px' }}>{n.description}</div>}
@@ -1503,11 +1598,11 @@ export default function TechnicianPortalPage() {
 
                 {returnedBookings.length > 0 && (
                   <div style={{ marginBottom: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {returnedBookings.map((bk: any) => (
+                    {returnedBookings.map((bk: any, idx: number) => (
                       <div key={bk._id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 14px', background: '#fff7ed', borderRadius: '11px', border: '1px solid #fed7aa', flexWrap: 'wrap', gap: '10px' }}>
                         <div>
                           <div style={{ fontSize: '13.5px', fontWeight: 800, color: '#9a3412' }}>
-                            CHỜ TIẾP NHẬN • {bk.vehicle?.name} (<span style={{ fontFamily: 'monospace' }}>{bk.vehicle?.licensePlate}</span>)
+                            #{idx + 1} • CHỜ TIẾP NHẬN • {bk.vehicle?.name} (<span style={{ fontFamily: 'monospace' }}>{bk.vehicle?.licensePlate}</span>)
                           </div>
                           <div style={{ fontSize: '12px', color: '#7c2d12' }}>
                             Đơn <strong>{bk.bookingCode}</strong> • KH: {bk.customer?.fullName} • Trả lúc: {bk.customerReturnedAt ? new Date(bk.customerReturnedAt).toLocaleString('vi-VN') : 'Đã trả xe'}
@@ -1532,9 +1627,10 @@ export default function TechnicianPortalPage() {
                         ? 'Chọn nút "+ Tiếp nhận xe trả" phía trên để mở phiếu kiểm tra 8 hạng mục.'
                         : 'Chưa có phiếu kiểm tra xe khi trả nào (Chỉ tiếp nhận được xe sau khi khách hàng thực hiện trả xe).'}
                     </div>
-                  ) : returnInspections.map(ins => (
+                  ) : returnInspections.map((ins, idx) => (
                     <div key={ins.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px', background: '#f8fafc', borderRadius: '11px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '10px' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', minWidth: '24px' }}>#{idx + 1}</span>
                         <img
                           src={ins.vehicleImage || SAMPLE_PHOTOS.cleanFront}
                           alt={ins.vehicleName}
@@ -1716,6 +1812,7 @@ export default function TechnicianPortalPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '12px', fontWeight: 700 }}>
+                          <th style={{ padding: '12px 12px', textAlign: 'center', width: '48px' }}>STT</th>
                           <th style={{ padding: '12px 16px' }}>Hình ảnh xe</th>
                           <th style={{ padding: '12px 14px' }}>Mã xe</th>
                           <th style={{ padding: '12px 14px' }}>Tên xe</th>
@@ -1730,7 +1827,7 @@ export default function TechnicianPortalPage() {
                       <tbody>
                         {pagedVehicles.length === 0 ? (
                           <tr>
-                            <td colSpan={9} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                            <td colSpan={10} style={{ padding: '32px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
                               Không tìm thấy phương tiện phù hợp.
                             </td>
                           </tr>
@@ -1740,6 +1837,9 @@ export default function TechnicianPortalPage() {
                             const badge = getVehBadge(veh.status);
                             return (
                               <tr key={veh._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                                <td style={{ padding: '12px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>
+                                  {(safeVehPage - 1) * PER_PAGE + idx + 1}
+                                </td>
                                 <td style={{ padding: '12px 16px' }}>
                                   <img
                                     src={veh.image || SAMPLE_PHOTOS.cleanFront}
@@ -2006,11 +2106,12 @@ export default function TechnicianPortalPage() {
                 ) : null}
                 {damageReports
                   .filter(d => dmgFilter === 'all' || d.status === dmgFilter)
-                  .map(dmg => (
+                  .map((dmg, idx) => (
                     <div key={dmg.id} style={{ border: '1px solid #e2e8f0', borderRadius: '14px', padding: '20px', background: '#ffffff' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
                         <div>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11.5px', fontWeight: 800, background: '#f1f5f9', color: '#475569', padding: '2px 7px', borderRadius: '6px' }}>STT #{idx + 1}</span>
                             <span style={{ fontSize: '14.5px', fontWeight: 900, color: '#dc2626', fontFamily: 'monospace' }}>{dmg.code}</span>
                             <span style={{ fontSize: '11.5px', background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', padding: '2px 8px', borderRadius: '999px', fontWeight: 700 }}>
                               Mức độ: {dmg.overallSeverity === 'high' ? 'Nặng' : dmg.overallSeverity === 'low' ? 'Nhẹ' : 'Trung bình'}
@@ -2182,6 +2283,7 @@ export default function TechnicianPortalPage() {
                     <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                       <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                          <th style={{ padding: '12px 12px', textAlign: 'center', width: '48px' }}>STT</th>
                           <th style={{ padding: '12px 16px' }}>Mã PT</th>
                           <th style={{ padding: '12px 16px' }}>Tên linh kiện</th>
                           <th style={{ padding: '12px 16px' }}>Nhóm</th>
@@ -2200,8 +2302,9 @@ export default function TechnicianPortalPage() {
                             const matchC = partCatFilter === 'all' || p.category === partCatFilter;
                             return matchQ && matchC;
                           })
-                          .map(pt => (
+                          .map((pt, idx) => (
                             <tr key={pt.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                              <td style={{ padding: '12px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                               <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{pt.code}</td>
                               <td style={{ padding: '12px 16px', fontWeight: 700, color: '#0f172a' }}>{pt.name}</td>
                               <td style={{ padding: '12px 16px', color: '#475569', fontSize: '12px' }}>{pt.category}</td>
@@ -2222,9 +2325,9 @@ export default function TechnicianPortalPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
                   {partsCatalog
                     .filter(p => partCatFilter === 'all' || p.category === partCatFilter)
-                    .map(pt => (
+                    .map((pt, idx) => (
                       <div key={pt.id} style={{ background: '#ffffff', borderRadius: '14px', border: '1px solid #e2e8f0', padding: '16px' }}>
-                        <div style={{ fontSize: '11.5px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{pt.code} • {pt.category}</div>
+                        <div style={{ fontSize: '11.5px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>#{idx + 1} • {pt.code} • {pt.category}</div>
                         <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: '4px 0 8px' }}>{pt.name}</div>
                         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', marginBottom: '6px' }}>
                           <strong style={{ color: '#2563eb' }}>{pt.unitPrice.toLocaleString('vi-VN')} đ</strong>
@@ -2293,6 +2396,7 @@ export default function TechnicianPortalPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                        <th style={{ padding: '12px 12px', textAlign: 'center', width: '48px' }}>STT</th>
                         <th style={{ padding: '12px 16px' }}>Mã phiếu</th>
                         <th style={{ padding: '12px 16px' }}>Xe bảo dưỡng</th>
                         <th style={{ padding: '12px 16px' }}>Hạng mục</th>
@@ -2306,14 +2410,15 @@ export default function TechnicianPortalPage() {
                     <tbody>
                       {maintenances.filter(m => maintStatusFilter === 'all' || m.status === maintStatusFilter).length === 0 ? (
                         <tr>
-                          <td colSpan={8} style={{ padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                          <td colSpan={9} style={{ padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
                             Chưa có lịch bảo dưỡng nào phù hợp.
                           </td>
                         </tr>
                       ) : maintenances
                         .filter(m => maintStatusFilter === 'all' || m.status === maintStatusFilter)
-                        .map(m => (
+                        .map((m, idx) => (
                           <tr key={m._id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                            <td style={{ padding: '12px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                             <td style={{ padding: '12px 16px', fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>BD#{m._id.slice(-4).toUpperCase()}</td>
                             <td style={{ padding: '12px 16px' }}>
                               <div style={{ fontWeight: 800, color: '#0f172a' }}>{m.vehicle?.name || 'Xe máy'}</div>
@@ -2434,6 +2539,7 @@ export default function TechnicianPortalPage() {
                   <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
                     <thead>
                       <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#475569', fontSize: '12px', fontWeight: 700 }}>
+                        <th style={{ padding: '12px 12px', textAlign: 'center', width: '48px' }}>STT</th>
                         <th style={{ padding: '12px 16px' }}>Mã / Thời gian</th>
                         <th style={{ padding: '12px 16px' }}>Phương tiện</th>
                         <th style={{ padding: '12px 16px' }}>Nội dung công việc</th>
@@ -2446,12 +2552,13 @@ export default function TechnicianPortalPage() {
                     <tbody>
                       {unifiedHistory.length === 0 ? (
                         <tr>
-                          <td colSpan={7} style={{ padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
+                          <td colSpan={8} style={{ padding: '28px', textAlign: 'center', fontSize: '13px', color: '#64748b' }}>
                             Chưa có hồ sơ lịch sử kỹ thuật nào.
                           </td>
                         </tr>
-                      ) : unifiedHistory.map(h => (
+                      ) : unifiedHistory.map((h, idx) => (
                         <tr key={h.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: '13px' }}>
+                          <td style={{ padding: '12px 12px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>{idx + 1}</td>
                           <td style={{ padding: '12px 16px' }}>
                             <div style={{ fontFamily: 'monospace', fontWeight: 800, color: '#2563eb' }}>{h.code}</div>
                             <div style={{ fontSize: '11.5px', color: '#64748b', fontFamily: 'monospace' }}>{h.date}</div>
@@ -2631,7 +2738,7 @@ export default function TechnicianPortalPage() {
                   </div>
                 ) : notifications
                   .filter(n => notifFilter === 'all' || n.unread)
-                  .map(n => (
+                  .map((n, idx) => (
                     <div
                       key={n.id}
                       onClick={() => handleMarkNotificationRead(n)}
@@ -2647,6 +2754,7 @@ export default function TechnicianPortalPage() {
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', minWidth: '24px' }}>#{idx + 1}</span>
                         <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: n.unread ? '#2563eb' : '#f1f5f9', color: n.unread ? '#ffffff' : '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <Bell size={17} />
                         </div>
@@ -2794,6 +2902,24 @@ export default function TechnicianPortalPage() {
           ======================================================== */}
       {showNewInspectionModal && (() => {
         const selectedBk = returnedBookings.find(b => b._id === selectedReturnedBookingId) || returnedBookings[0] || null;
+        const retVehIds = new Set(returnedBookings.map(b => String(b.vehicle?._id)));
+        const otherVehicles = vehicles.filter(v => !retVehIds.has(String(v._id)));
+        const stLabel = (st: string) =>
+          st === 'rented' ? 'Đang thuê (chưa trả)' : st === 'maintenance' ? 'Đang bảo dưỡng' : st === 'broken' ? 'Hư hỏng' : st === 'reserved' ? 'Đã đặt' : 'Sẵn sàng';
+        const otherVehiclesBox = otherVehicles.length > 0 ? (
+          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', fontSize: '11.5px', color: '#475569', marginTop: '10px' }}>
+            <div style={{ fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+              Các xe hiện có còn lại trong đội xe ({otherVehicles.length} xe không chờ kiểm tra trả):
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+              {otherVehicles.map(v => (
+                <span key={v._id} style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 7px' }}>
+                  <strong>{v.licensePlate}</strong> ({v.name}) — {stLabel(v.status)}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null;
         return (
           <div onClick={() => setShowNewInspectionModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(3px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 120, padding: '16px' }}>
             <form onSubmit={handleSaveInspection} onClick={e => e.stopPropagation()} style={{ background: '#ffffff', borderRadius: '18px', padding: '24px', maxWidth: '620px', width: '100%', maxHeight: '90vh', overflowY: 'auto' }}>
@@ -2801,7 +2927,7 @@ export default function TechnicianPortalPage() {
                 <div>
                   <h3 style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', margin: 0 }}>Tiếp nhận xe khách đã trả</h3>
                   <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
-                    Chỉ hiển thị xe thuộc đơn thuê đã được khách hàng thực hiện trả xe
+                    Chỉ hiển thị xe thuộc đội xe đang hoạt động đã được khách hàng thực hiện trả xe
                   </div>
                 </div>
                 <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ background: '#f8fafc', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer' }}><X size={16} /></button>
@@ -2813,6 +2939,7 @@ export default function TechnicianPortalPage() {
                   <div style={{ marginTop: '6px' }}>
                     Theo quy trình hệ thống, nhân viên kỹ thuật chỉ được tiếp nhận khi khách hàng đã bấm <strong>Trả xe</strong> trên Cổng khách hàng hoặc lễ tân đã xác nhận nhận trả xe tại quầy.
                   </div>
+                  {otherVehiclesBox}
                   <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '14px' }}>
                     <button type="button" onClick={() => setShowNewInspectionModal(false)} style={{ padding: '8px 16px', borderRadius: '8px', border: 'none', background: '#2563eb', color: '#ffffff', fontSize: '12.5px', fontWeight: 700, cursor: 'pointer' }}>
                       Đóng
@@ -2872,6 +2999,8 @@ export default function TechnicianPortalPage() {
                       <label style={{ fontSize: '12px', fontWeight: 700, color: '#334155', display: 'block', marginBottom: '4px' }}>Ghi chú nhận xe</label>
                       <textarea rows={2} value={newInsNotes} onChange={e => setNewInsNotes(e.target.value)} placeholder="Tình trạng ban đầu khi nhận xe từ khách..." style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '13px' }} />
                     </div>
+
+                    {otherVehiclesBox}
                   </div>
 
                   <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '16px' }}>
