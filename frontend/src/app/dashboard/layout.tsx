@@ -21,10 +21,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     if (user?.role === 'customer') {
       router.push('/portal');
+    } else if (user?.role === 'support') {
+      router.push('/support');
     }
   }, [authReady, isAuthenticated, isLoading, user, router]);
 
-  if (!authReady || isLoading || !isAuthenticated || !user || user.role === 'customer') {
+  if (!authReady || isLoading || !isAuthenticated || !user || user.role === 'customer' || user.role === 'support') {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-primary)' }}>
         <div style={{ textAlign: 'center' }}>

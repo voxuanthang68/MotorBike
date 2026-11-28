@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import StandardRentalContractDocument, { mapContractToStandardData } from '@/components/contract/StandardRentalContractDocument';
+import HandoverProtocolModal from '@/components/booking/HandoverProtocolModal';
+import { handleImageError, PHOTO_IMAGE_FALLBACK, resolveMediaUrl, resolveVehicleImage } from '@/lib/media';
 import {
   Phone,
   Camera,
@@ -38,10 +40,6 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
   const [returnOdometer, setReturnOdometer] = useState<number | string>('');
   const [returnExtraFee, setReturnExtraFee] = useState<number>(0);
   const [returnNote, setReturnNote] = useState('');
-
-  // Handover form state
-  const [handoverOdometer, setHandoverOdometer] = useState<number | string>('15000');
-  const [handoverNote, setHandoverNote] = useState('Xe nguyên vẹn, đầy đủ phụ kiện và 2 mũ bảo hiểm');
 
   // Fetch real Contracts from DB
   const {
@@ -205,6 +203,11 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
         endDate: b.endDate,
         totalPayable: finalPrice,
         remainingDebt: debt,
+        checkInOdometer: b.checkInOdometer,
+        checkInNote: b.checkInNote,
+        checkInImages: b.checkInImages,
+        checkInCustomerSignature: b.checkInCustomerSignature,
+        checkInStaffSignature: b.checkInSignature,
         status: b.status,
       };
 
@@ -262,20 +265,21 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
   const handoverMutation = useMutation({
     mutationFn: async ({ id, isBookingOnly, data }: { id: string; isBookingOnly?: boolean; data: any }) => {
       if (isBookingOnly) {
-        const res = await api.put(`/bookings/${id}/status`, { status: 'active' });
+        const res = await api.put(`/bookings/${id}/status`, { status: 'active', ...data });
         return res.data;
       }
       const res = await api.put(`/contracts/${id}/handover`, data);
       return res.data;
     },
     onSuccess: () => {
-      toast.success('Bàn giao xe thành công! Xe đã được giao cho khách.');
+      toast.success('Bàn giao xe thành công! Ảnh xe và chữ ký xác nhận của 2 bên đã được lưu.');
       queryClient.invalidateQueries({ queryKey: ['contracts-today'] });
       queryClient.invalidateQueries({ queryKey: ['bookings-today'] });
       queryClient.invalidateQueries({ queryKey: ['contracts'] });
       queryClient.invalidateQueries({ queryKey: ['bookings-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['contracts-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles-schedule'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       setHandoverModalContract(null);
     },
@@ -792,7 +796,6 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                   {isPickup ? (
                     <button
                       onClick={() => {
-                        setHandoverOdometer(item.vehicle?.odometer || item.checkInOdometer || 15000);
                         setHandoverModalContract(item);
                       }}
                       style={{
@@ -1089,155 +1092,31 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
       )}
 
       {/* ========================================================
-          MODAL 2: GIAO XE (BÀN GIAO CHO KHÁCH)
+          MODAL 2: BIÊN BẢN BÀN GIAO XE (GIAO XE CHO KHÁCH)
           ======================================================== */}
-      {handoverModalContract && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            background: 'rgba(15, 23, 42, 0.6)',
-            zIndex: 9999,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '20px',
-          }}
-          onClick={() => setHandoverModalContract(null)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              background: '#ffffff',
-              borderRadius: '8px',
-              maxWidth: '520px',
-              width: '100%',
-              padding: '24px',
-              boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '16px',
-              }}
-            >
-              <h3 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#0f172a' }}>
-                Bàn giao xe: {handoverModalContract.vehicleInfo?.licensePlate || 'Xe bàn giao'}
-              </h3>
-              <button
-                onClick={() => setHandoverModalContract(null)}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
-              >
-                <X style={{ width: '20px', height: '20px', color: '#64748b' }} />
-              </button>
-            </div>
-
-            <div
-              style={{
-                background: '#eff6ff',
-                padding: '12px 16px',
-                borderRadius: '6px',
-                border: '1px solid #bfdbfe',
-                marginBottom: '16px',
-                fontSize: '13px',
-              }}
-            >
-              <div>Khách nhận: <strong>{handoverModalContract.customerInfo?.fullName}</strong></div>
-              <div>Số điện thoại: <strong>{handoverModalContract.customerInfo?.phone}</strong></div>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                handoverMutation.mutate({
-                  id: handoverModalContract._id,
-                  isBookingOnly: Boolean(handoverModalContract.isBookingOnly),
-                  data: {
-                    checkInOdometer: Number(handoverOdometer),
-                    checkInNote: handoverNote,
-                  },
-                });
-              }}
-            >
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
-                  Số km lúc bàn giao xe (km) *
-                </label>
-                <input
-                  type="number"
-                  value={handoverOdometer}
-                  onChange={(e) => setHandoverOdometer(e.target.value)}
-                  required
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ marginBottom: '18px' }}>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, marginBottom: '6px' }}>
-                  Ghi chú bàn giao & phụ kiện đi kèm
-                </label>
-                <textarea
-                  rows={2}
-                  value={handoverNote}
-                  onChange={(e) => setHandoverNote(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    fontSize: '13px',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                  type="button"
-                  onClick={() => setHandoverModalContract(null)}
-                  style={{
-                    padding: '9px 16px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={handoverMutation.isPending}
-                  style={{
-                    padding: '9px 20px',
-                    background: '#2563eb',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {handoverMutation.isPending ? 'Đang lưu...' : 'Xác nhận giao xe'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <HandoverProtocolModal
+        isOpen={Boolean(handoverModalContract)}
+        vehiclePlate={handoverModalContract?.vehicleInfo?.licensePlate || handoverModalContract?.vehicle?.licensePlate || 'Xe bàn giao'}
+        vehicleName={handoverModalContract?.vehicleInfo?.name || handoverModalContract?.vehicle?.name || ''}
+        customerName={handoverModalContract?.customerInfo?.fullName || 'Khách hàng'}
+        customerPhone={handoverModalContract?.customerInfo?.phone || ''}
+        initialOdometer={Number(handoverModalContract?.vehicle?.odometer || handoverModalContract?.checkInOdometer || 0)}
+        initialImages={
+          handoverModalContract?.vehicle?.mainImage || handoverModalContract?.vehicle?.images?.[0]
+            ? [resolveVehicleImage(handoverModalContract.vehicle)]
+            : []
+        }
+        isSubmitting={handoverMutation.isPending}
+        onClose={() => setHandoverModalContract(null)}
+        onConfirm={(data) => {
+          if (!handoverModalContract) return;
+          handoverMutation.mutate({
+            id: handoverModalContract._id,
+            isBookingOnly: Boolean(handoverModalContract.isBookingOnly),
+            data,
+          });
+        }}
+      />
 
       {/* ========================================================
           MODAL 3: XEM CHI TIẾT
@@ -1391,13 +1270,14 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                         }}
                       >
                         <img
-                          src={img.url || img}
+                          src={resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK)}
                           alt={`Ảnh bàn giao ${i + 1}`}
+                          onError={handleImageError(PHOTO_IMAGE_FALLBACK)}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       </div>
                     ))
-                  ) : imagesModalContract.vehicle?.mainImage ? (
+                  ) : imagesModalContract.vehicle?.mainImage || imagesModalContract.vehicle?.images?.[0] ? (
                     <div
                       style={{
                         height: '110px',
@@ -1408,8 +1288,9 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                       }}
                     >
                       <img
-                        src={imagesModalContract.vehicle.mainImage}
+                        src={resolveVehicleImage(imagesModalContract.vehicle)}
                         alt="Xe thực tế"
+                        onError={handleImageError()}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     </div>
@@ -1451,8 +1332,9 @@ export default function TodayTasks({ standalone = false }: TodayTasksProps) {
                         }}
                       >
                         <img
-                          src={img.url || img}
+                          src={resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK)}
                           alt={`Ảnh nhận lại ${i + 1}`}
+                          onError={handleImageError(PHOTO_IMAGE_FALLBACK)}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       </div>

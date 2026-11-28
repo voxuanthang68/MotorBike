@@ -17,6 +17,7 @@ const users = [
   { fullName: 'Nguyễn Văn Chủ', email: 'owner@motobike.vn', phone: '0901234567', password: 'Owner@123', role: 'owner', isEmailVerified: true, isActive: true },
   { fullName: 'Trần Thị Admin', email: 'admin@motobike.vn', phone: '0901234568', password: 'Admin@123', role: 'admin', isEmailVerified: true, isActive: true, employeeId: 'NV001' },
   { fullName: 'Lê Văn Tài Xế', email: 'driver@motobike.vn', phone: '0907654321', password: 'Driver@123', role: 'driver', isEmailVerified: true, isActive: true, employeeId: 'TX001' },
+  { fullName: 'Phạm Minh Hỗ Trợ', email: 'support@motobike.vn', phone: '0905888111', password: 'Support@123', role: 'support', isEmailVerified: true, isActive: true, employeeId: 'CSKH01' },
   {
     fullName: 'Nguyễn Văn An',
     customerCode: 'KH0001',

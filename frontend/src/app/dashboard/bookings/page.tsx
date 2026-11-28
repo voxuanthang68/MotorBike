@@ -5,6 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import VietQrPaymentBox, { QrSessionData } from '@/components/payment/VietQrPaymentBox';
+import HandoverProtocolModal from '@/components/booking/HandoverProtocolModal';
+import { handleImageError, PHOTO_IMAGE_FALLBACK, resolveMediaUrl } from '@/lib/media';
 import StandardRentalContractDocument, {
   buildStandardContractTerms,
   mapContractToStandardData,
@@ -121,19 +123,6 @@ export default function VehicleBookingSchedulePage() {
 
   // 4. HANDOVER MODAL (GIAO XE: ẢNH XE & CHỮ KÝ 2 BÊN)
   const [handoverModal, setHandoverModal] = useState<any | null>(null);
-  const [handoverOdo, setHandoverOdo] = useState<number>(15200);
-  const [handoverFuel, setHandoverFuel] = useState<string>('full');
-  const [handoverNote, setHandoverNote] = useState<string>('Xe sạch sẽ, phanh tốt, xăng đầy vạch, kèm 2 mũ bảo hiểm');
-  const [handoverImages, setHandoverImages] = useState<string[]>([
-    'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1568772585407-9361f9bf3a87?w=600&auto=format&fit=crop&q=80'
-  ]);
-  const handoverCustCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const handoverStaffCanvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [hasDrawnHandoverCust, setHasDrawnHandoverCust] = useState(false);
-  const [hasDrawnHandoverStaff, setHasDrawnHandoverStaff] = useState(false);
-  const [isDrawingHandoverCust, setIsDrawingHandoverCust] = useState(false);
-  const [isDrawingHandoverStaff, setIsDrawingHandoverStaff] = useState(false);
 
   // 5. RETURN MODAL (TRẢ XE: ẢNH XE & CHỮ KÝ 2 BÊN)
   const [returnModal, setReturnModal] = useState<any | null>(null);
@@ -623,7 +612,14 @@ export default function VehicleBookingSchedulePage() {
         const res = await api.put(`/contracts/${payload.contractId}/handover`, payload);
         resData = res.data;
       } else if (payload.bookingId) {
-        const res = await api.put(`/bookings/${payload.bookingId}/status`, { status: 'active' });
+        const res = await api.put(`/bookings/${payload.bookingId}/status`, {
+          status: 'active',
+          checkInOdometer: payload.checkInOdometer,
+          checkInNote: payload.checkInNote,
+          checkInImages: payload.checkInImages,
+          checkInStaffSignature: payload.checkInStaffSignature,
+          checkInCustomerSignature: payload.checkInCustomerSignature,
+        });
         resData = res.data;
       }
       return { success: true, data: resData, contractId: payload.contractId, bookingId: payload.bookingId, payload };
@@ -734,8 +730,6 @@ export default function VehicleBookingSchedulePage() {
   });
 
   const staffApproveDraw = createDrawingHandlers(staffApproveCanvasRef, isDrawingStaffApprove, setIsDrawingStaffApprove, setHasDrawnStaffApprove);
-  const handoverCustDraw = createDrawingHandlers(handoverCustCanvasRef, isDrawingHandoverCust, setIsDrawingHandoverCust, setHasDrawnHandoverCust);
-  const handoverStaffDraw = createDrawingHandlers(handoverStaffCanvasRef, isDrawingHandoverStaff, setIsDrawingHandoverStaff, setHasDrawnHandoverStaff);
   const returnCustDraw = createDrawingHandlers(returnCustCanvasRef, isDrawingReturnCust, setIsDrawingReturnCust, setHasDrawnReturnCust);
   const returnStaffDraw = createDrawingHandlers(returnStaffCanvasRef, isDrawingReturnStaff, setIsDrawingReturnStaff, setHasDrawnReturnStaff);
   const contractStaffDraw = createDrawingHandlers(contractStaffCanvasRef, isDrawingContractStaff, setIsDrawingContractStaff, setHasDrawnContractStaff);
@@ -1396,12 +1390,6 @@ export default function VehicleBookingSchedulePage() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setHandoverImages(booking.vehicle?.mainImage ? [booking.vehicle.mainImage] : []);
-                                    setHasDrawnHandoverCust(false);
-                                    setHasDrawnHandoverStaff(false);
-                                    setHandoverOdo(Number(booking.vehicle?.odometer || 0));
-                                    setHandoverFuel('full');
-                                    setHandoverNote('Xe sạch sẽ, phanh tốt, xăng đầy vạch, kèm 2 mũ bảo hiểm');
                                     setHandoverModal({
                                       contractId: booking.contractId || booking._id,
                                       bookingId: booking._id,
@@ -1409,6 +1397,8 @@ export default function VehicleBookingSchedulePage() {
                                       vehicleName: booking.vehicle?.name || '',
                                       customerName: booking.customer?.fullName || 'Khách hàng',
                                       customerPhone: booking.customer?.phone || '',
+                                      odometer: Number(booking.vehicle?.odometer || 0),
+                                      initialImages: (booking.vehicle?.mainImage || booking.vehicle?.images?.[0]) ? [resolveMediaUrl(booking.vehicle.mainImage || booking.vehicle.images?.[0])] : [],
                                       pricePerDay: booking.pricePerDay || 0,
                                       deposit: booking.deposit || 0,
                                     });
@@ -2085,220 +2075,25 @@ export default function VehicleBookingSchedulePage() {
       {/* ========================================================
           MODAL 1: BÀN GIAO XE (GIAO XE: ẢNH XE + 2 BÊN KÝ XÁC NHẬN)
           ======================================================== */}
-      {handoverModal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.6)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-          <div style={{ background: '#ffffff', borderRadius: '8px', width: '100%', maxWidth: '640px', maxHeight: '92vh', overflowY: 'auto', padding: '24px', border: '1px solid #e2e8f0' }}>
-            
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <div>
-                <div style={{ fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Biên bản bàn giao xe (Giao xe)</div>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>Yêu cầu: Chụp/tải ảnh xe lúc giao và cả 2 bên ký xác nhận</div>
-              </div>
-              <button type="button" onClick={() => setHandoverModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                <X style={{ width: '20px', height: '20px', color: '#64748b' }} />
-              </button>
-            </div>
-
-            {/* Vehicle & Customer Info */}
-            <div style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '16px', fontSize: '13px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div>Xe bàn giao: <strong>{handoverModal.vehiclePlate} ({handoverModal.vehicleName})</strong></div>
-                <div>Khách nhận xe: <strong>{handoverModal.customerName} ({handoverModal.customerPhone})</strong></div>
-              </div>
-            </div>
-
-            {/* Step A: Odometer & Fuel */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                  Số km hiện tại (Odometer) *
-                </label>
-                <input
-                  type="number"
-                  value={handoverOdo}
-                  onChange={(e) => setHandoverOdo(Number(e.target.value))}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                  Mức nhiên liệu / Pin lúc giao *
-                </label>
-                <select
-                  value={handoverFuel}
-                  onChange={(e) => setHandoverFuel(e.target.value)}
-                  style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
-                >
-                  <option value="full">Đầy bình / 100%</option>
-                  <option value="half">Nửa bình / 50%</option>
-                  <option value="low">Gần hết / Dưới 25%</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Step B: Vehicle Inspection Images */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                Hình ảnh xe trước khi giao (Tối thiểu 1 ảnh) *
-              </label>
-              
-              {/* Image Previews */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '8px', marginBottom: '8px' }}>
-                {handoverImages.map((img, idx) => (
-                  <div key={idx} style={{ height: '80px', borderRadius: '6px', overflow: 'hidden', position: 'relative', border: '1px solid #cbd5e1' }}>
-                    <img src={img} alt={`Ảnh xe ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  </div>
-                ))}
-
-                <label
-                  style={{
-                    height: '80px',
-                    borderRadius: '6px',
-                    border: '2px dashed #94a3b8',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                    background: '#f8fafc',
-                    color: '#64748b',
-                    fontSize: '11px',
-                    fontWeight: 600,
-                  }}
-                >
-                  <Camera style={{ width: '20px', height: '20px', marginBottom: '4px' }} />
-                  <span>Chụp / Thêm ảnh</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    style={{ display: 'none' }}
-                    onChange={(e) => {
-                      if (e.target.files) {
-                        const files = Array.from(e.target.files);
-                        files.forEach((file) => {
-                          const reader = new FileReader();
-                          reader.onload = (ev) => {
-                            if (ev.target?.result) {
-                              setHandoverImages((prev) => [...prev, String(ev.target?.result)]);
-                            }
-                          };
-                          reader.readAsDataURL(file);
-                        });
-                      }
-                    }}
-                  />
-                </label>
-              </div>
-            </div>
-
-            {/* Step C: Handover Note */}
-            <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '12.5px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                Tình trạng vỏ xe & phụ kiện bàn giao
-              </label>
-              <textarea
-                rows={2}
-                value={handoverNote}
-                onChange={(e) => setHandoverNote(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', fontSize: '13px', border: '1px solid #cbd5e1', borderRadius: '6px', boxSizing: 'border-box' }}
-              />
-            </div>
-
-            {/* Step D: DUAL SIGNATURE (KHÁCH KÝ + NHÂN VIÊN KÝ BÀN GIAO) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
-              
-              {/* Bên A: Nhân viên giao xe ký */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>1. Nhân viên giao xe ký *</label>
-                  <button type="button" onClick={handoverStaffDraw.clear} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '11px', cursor: 'pointer' }}>Xóa ký lại</button>
-                </div>
-                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '6px', background: '#fafafa', overflow: 'hidden' }}>
-                  <canvas
-                    ref={handoverStaffCanvasRef}
-                    width={260}
-                    height={100}
-                    style={{ width: '100%', height: '100px', cursor: 'crosshair', display: 'block' }}
-                    onMouseDown={handoverStaffDraw.start}
-                    onMouseMove={handoverStaffDraw.draw}
-                    onMouseUp={handoverStaffDraw.stop}
-                    onMouseLeave={handoverStaffDraw.stop}
-                    onTouchStart={handoverStaffDraw.start}
-                    onTouchMove={handoverStaffDraw.draw}
-                    onTouchEnd={handoverStaffDraw.stop}
-                  />
-                </div>
-              </div>
-
-              {/* Bên B: Khách nhận xe ký */}
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <label style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a' }}>2. Khách nhận xe ký *</label>
-                  <button type="button" onClick={handoverCustDraw.clear} style={{ background: 'none', border: 'none', color: '#dc2626', fontSize: '11px', cursor: 'pointer' }}>Xóa ký lại</button>
-                </div>
-                <div style={{ border: '2px dashed #cbd5e1', borderRadius: '6px', background: '#fafafa', overflow: 'hidden' }}>
-                  <canvas
-                    ref={handoverCustCanvasRef}
-                    width={260}
-                    height={100}
-                    style={{ width: '100%', height: '100px', cursor: 'crosshair', display: 'block' }}
-                    onMouseDown={handoverCustDraw.start}
-                    onMouseMove={handoverCustDraw.draw}
-                    onMouseUp={handoverCustDraw.stop}
-                    onMouseLeave={handoverCustDraw.stop}
-                    onTouchStart={handoverCustDraw.start}
-                    onTouchMove={handoverCustDraw.draw}
-                    onTouchEnd={handoverCustDraw.stop}
-                  />
-                </div>
-              </div>
-
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-              <button
-                type="button"
-                onClick={() => setHandoverModal(null)}
-                style={{ padding: '9px 16px', fontSize: '13px', fontWeight: 600, background: '#f1f5f9', border: 'none', borderRadius: '6px', color: '#475569', cursor: 'pointer' }}
-              >
-                Hủy
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (handoverImages.length === 0) {
-                    toast.error('Vui lòng chụp hoặc tải ít nhất 1 ảnh xe trước khi giao!');
-                    return;
-                  }
-                  if (!hasDrawnHandoverCust || !hasDrawnHandoverStaff) {
-                    toast.error('Yêu cầu cả 2 bên (Nhân viên & Khách hàng) ký xác nhận bàn giao xe!');
-                    return;
-                  }
-                  const staffSig = handoverStaffCanvasRef.current?.toDataURL('image/png') || '';
-                  const custSig = handoverCustCanvasRef.current?.toDataURL('image/png') || '';
-
-                  handoverMutation.mutate({
-                    contractId: handoverModal.contractId,
-                    bookingId: handoverModal.bookingId,
-                    checkInOdometer: handoverOdo,
-                    checkInNote: `${handoverNote} [Nhiên liệu: ${handoverFuel}]`,
-                    checkInImages: handoverImages.map((u) => ({ url: u, caption: 'Bàn giao xe' })),
-                    checkInStaffSignature: staffSig,
-                    checkInCustomerSignature: custSig,
-                  });
-                }}
-                disabled={handoverMutation.isPending}
-                style={{ padding: '9px 22px', fontSize: '13px', fontWeight: 700, background: '#059669', border: 'none', borderRadius: '6px', color: '#ffffff', cursor: 'pointer' }}
-              >
-                {handoverMutation.isPending ? 'Đang lưu...' : 'Hoàn tất bàn giao xe'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <HandoverProtocolModal
+        isOpen={Boolean(handoverModal)}
+        vehiclePlate={handoverModal?.vehiclePlate || ''}
+        vehicleName={handoverModal?.vehicleName || ''}
+        customerName={handoverModal?.customerName || 'Khách hàng'}
+        customerPhone={handoverModal?.customerPhone || ''}
+        initialOdometer={Number(handoverModal?.odometer || 0)}
+        initialImages={handoverModal?.initialImages || []}
+        isSubmitting={handoverMutation.isPending}
+        onClose={() => setHandoverModal(null)}
+        onConfirm={(data) => {
+          if (!handoverModal) return;
+          handoverMutation.mutate({
+            contractId: handoverModal.contractId,
+            bookingId: handoverModal.bookingId,
+            ...data,
+          });
+        }}
+      />
 
       {/* ========================================================
           MODAL 2: NHẬN TRẢ XE (TRẢ XE: ẢNH XE + 2 BÊN KÝ XÁC NHẬN)
@@ -2417,10 +2212,10 @@ export default function VehicleBookingSchedulePage() {
                   {(returnModal.checkInImages || []).length > 0 ? (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: '6px' }}>
                       {(returnModal.checkInImages || []).map((img: any, i: number) => {
-                        const url = typeof img === 'string' ? img : img.url;
+                        const url = resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK);
                         return (
                           <div key={i} style={{ height: '75px', borderRadius: '6px', overflow: 'hidden', border: '2px solid #93c5fd', position: 'relative' }}>
-                            <img src={url} alt={`Ảnh giao xe ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <img src={url} alt={`Ảnh giao xe ${i + 1}`} onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'rgba(29,78,216,0.7)', color: '#fff', fontSize: '9px', textAlign: 'center', padding: '2px' }}>
                               Ảnh {i + 1}
                             </div>
@@ -2452,7 +2247,7 @@ export default function VehicleBookingSchedulePage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(70px, 1fr))', gap: '6px', marginBottom: '8px' }}>
                     {returnImages.map((img, idx) => (
                       <div key={idx} style={{ height: '75px', borderRadius: '6px', overflow: 'hidden', border: '2px solid #86efac', position: 'relative' }}>
-                        <img src={img} alt={`Ảnh trả xe ${idx + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK)} alt={`Ảnh trả xe ${idx + 1}`} onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         <button
                           type="button"
                           onClick={() => setReturnImages(prev => prev.filter((_, i) => i !== idx))}
@@ -2815,7 +2610,7 @@ export default function VehicleBookingSchedulePage() {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '10px' }}>
                 {(viewHandoverImagesModal.checkInImages || []).map((img: any, i: number) => (
                   <div key={i} style={{ height: '110px', borderRadius: '6px', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                    <img src={img.url || img} alt="Ảnh xe" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <img src={resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK)} alt="Ảnh xe" onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                   </div>
                 ))}
               </div>

@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import Link from 'next/link';
+import { handleImageError, resolveVehicleImage } from '@/lib/media';
 
 const STATUS_LABELS: Record<string, { label: string; color: string; bg: string }> = {
   available: { label: 'Hoạt Động', color: '#059669', bg: '#ecfdf5' },
@@ -427,10 +428,7 @@ export default function VehiclesPage() {
               {/* Left — photo + name + badge */}
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
                 <div style={{ width: '160px', height: '130px', borderRadius: '14px', overflow: 'hidden', background: '#f1f5f9', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {detailVehicle.mainImage
-                    ? <img src={`http://localhost:5000${detailVehicle.mainImage}`} alt={detailVehicle.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    : <span style={{ fontSize: '52px' }}>🏍️</span>
-                  }
+                  <img src={resolveVehicleImage(detailVehicle)} alt={detailVehicle.name} onError={handleImageError()} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>{detailVehicle.name}</div>

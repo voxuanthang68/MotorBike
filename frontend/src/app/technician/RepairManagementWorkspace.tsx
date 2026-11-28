@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { handleImageError, PHOTO_IMAGE_FALLBACK, resolveMediaUrl, VEHICLE_IMAGE_FALLBACK } from '@/lib/media';
 import {
   Plus,
   Search,
@@ -1029,8 +1030,9 @@ export default function RepairManagementWorkspace({
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
               <img
-                src={rep.vehicleImage || SAMPLE_PHOTOS.cleanFront}
+                src={resolveMediaUrl(rep.vehicleImage) || VEHICLE_IMAGE_FALLBACK}
                 alt={rep.vehicleName}
+                onError={handleImageError()}
                 style={{ width: '82px', height: '58px', borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
               />
               <div style={{ flex: 1 }}>
@@ -1315,8 +1317,9 @@ export default function RepairManagementWorkspace({
                                 }}
                               >
                                 <img
-                                  src={src}
+                                  src={resolveMediaUrl(src, PHOTO_IMAGE_FALLBACK)}
                                   alt="Minh chứng"
+                                  onError={handleImageError(PHOTO_IMAGE_FALLBACK)}
                                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                 />
                                 <button

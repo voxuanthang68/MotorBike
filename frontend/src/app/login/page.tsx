@@ -27,11 +27,13 @@ export default function LoginPage() {
         router.push('/portal');
       } else if (updatedUser?.role === 'technician') {
         router.push('/technician');
+      } else if (updatedUser?.role === 'support') {
+        router.push('/support');
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
-      toast.error(error.message || 'Đăng nhập không thành công');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Đăng nhập không thành công');
     }
   };
 
@@ -46,11 +48,13 @@ export default function LoginPage() {
         router.push('/portal');
       } else if (updatedUser?.role === 'technician') {
         router.push('/technician');
+      } else if (updatedUser?.role === 'support') {
+        router.push('/support');
       } else {
         router.push('/dashboard');
       }
-    } catch (error: any) {
-      toast.error(error.message);
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Đăng nhập thất bại');
     }
   };
 
@@ -315,9 +319,16 @@ export default function LoginPage() {
               <button
                 type="button"
                 onClick={() => handleQuickDemoLogin({ email: 'technician@motobike.vn', pass: 'Tech@123', role: 'Kỹ thuật viên' })}
-                style={{ padding: '6px 8px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontWeight: 800, gridColumn: 'span 2' }}
+                style={{ padding: '6px 8px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #bfdbfe', background: '#eff6ff', color: '#1d4ed8', cursor: 'pointer', fontWeight: 800 }}
               >
-                🔧 Kỹ thuật viên (Technician Demo)
+                🔧 Kỹ thuật viên
+              </button>
+              <button
+                type="button"
+                onClick={() => handleQuickDemoLogin({ email: 'support@motobike.vn', pass: 'Support@123', role: 'Nhân viên hỗ trợ' })}
+                style={{ padding: '6px 8px', fontSize: '11.5px', borderRadius: '6px', border: '1px solid #a5f3fc', background: '#ecfeff', color: '#0e7490', cursor: 'pointer', fontWeight: 800 }}
+              >
+                🎧 Nhân viên hỗ trợ
               </button>
               <button
                 type="button"

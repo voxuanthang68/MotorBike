@@ -652,7 +652,25 @@ exports.updateStatus = async (req, res) => {
     if (status === 'confirmed') {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { status: 'reserved' });
     } else if (status === 'active') {
-      await Vehicle.findByIdAndUpdate(booking.vehicle, { status: 'rented' });
+      const {
+        checkInOdometer,
+        checkInNote,
+        checkInImages,
+        checkInStaffSignature,
+        checkInCustomerSignature,
+      } = req.body;
+      booking.checkInTime = booking.checkInTime || new Date();
+      if (checkInOdometer !== undefined) booking.checkInOdometer = Number(checkInOdometer);
+      if (checkInNote) booking.checkInNote = checkInNote;
+      if (Array.isArray(checkInImages) && checkInImages.length > 0) booking.checkInImages = checkInImages;
+      if (checkInStaffSignature) booking.checkInSignature = checkInStaffSignature;
+      if (checkInCustomerSignature) booking.checkInCustomerSignature = checkInCustomerSignature;
+      if (req.user?._id) booking.checkInStaff = req.user._id;
+      if (checkInOdometer !== undefined && booking.vehicle) {
+        await Vehicle.findByIdAndUpdate(booking.vehicle, { status: 'rented', odometer: Number(checkInOdometer) });
+      } else {
+        await Vehicle.findByIdAndUpdate(booking.vehicle, { status: 'rented' });
+      }
     } else if (status === 'completed' || status === 'cancelled') {
       await Vehicle.findByIdAndUpdate(booking.vehicle, { status: 'available' });
       const now = new Date();

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
+import { handleImageError, resolveMediaUrl, resolveVehicleImage } from '@/lib/media';
 import RentalWizard from '@/components/booking/RentalWizard';
 import ContractPreviewModal from '@/components/ContractPreviewModal';
 import {
@@ -336,17 +337,15 @@ const MOTORBIKES: Motorbike[] = [
   }
 ];
 
-const VEHICLE_FILE_BASE_URL = 'http://localhost:5000';
-
 function toCatalogBike(vehicle: any): Motorbike {
   const fallback = MOTORBIKES.find(bike => bike.type === vehicle.type) || MOTORBIKES[0];
-  const imagePath = vehicle.mainImage || vehicle.images?.[0]?.url;
-  const image = imagePath
-    ? (String(imagePath).startsWith('http') ? imagePath : `${VEHICLE_FILE_BASE_URL}${imagePath}`)
-    : fallback.image;
+  const image = resolveVehicleImage(vehicle, fallback.image);
   const pricePerDay = Number(vehicle.pricePerDay || 0);
   const type = vehicle.type === 'semi-automatic' ? 'manual' : vehicle.type === 'sport' ? 'clutch' : vehicle.type;
   const typeName = type === 'scooter' ? 'Xe tay ga' : type === 'manual' ? 'Xe số' : type === 'electric' ? 'Xe điện' : 'Xe côn tay';
+  const rawGallery = Array.isArray(vehicle.images) && vehicle.images.length > 0
+    ? vehicle.images.map((item: any) => resolveMediaUrl(item)).filter(Boolean)
+    : [];
   return {
     ...fallback,
     id: String(vehicle._id),
@@ -359,7 +358,7 @@ function toCatalogBike(vehicle: any): Motorbike {
     priceFormatted: `${Math.round(pricePerDay / 1000)}K`,
     priceMonthFormatted: pricePerDay ? `${Math.round(pricePerDay * 20 / 1000)}K` : undefined,
     image,
-    gallery: (vehicle.images || []).map((item: any) => String(item.url).startsWith('http') ? item.url : `${VEHICLE_FILE_BASE_URL}${item.url}`),
+    gallery: rawGallery.length > 0 ? rawGallery : [image],
     engine: vehicle.engineCC ? `${vehicle.engineCC}cc` : 'Động cơ xe máy',
     conditionTag: vehicle.condition === 'excellent' ? 'Xe mới' : 'Xe bảo dưỡng định kỳ',
     description: vehicle.description || fallback.description,
@@ -1230,6 +1229,7 @@ export default function HomePage() {
               <img
                 src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=1000&auto=format&fit=crop&q=80"
                 alt="Khám phá Đà Nẵng cùng XTMotoBike"
+                onError={handleImageError()}
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <div
@@ -1550,9 +1550,10 @@ export default function HomePage() {
                     }}
                   >
                     <img
-                      src={bike.image}
+                      src={resolveMediaUrl(bike.image)}
                       alt={bike.name}
                       loading="lazy"
+                      onError={handleImageError()}
                       style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain' }}
                     />
 
@@ -2149,8 +2150,9 @@ export default function HomePage() {
                   }}
                 >
                   <img
-                    src={selectedBikeDetail.gallery[activeImageIndex] || selectedBikeDetail.image}
+                    src={resolveMediaUrl(selectedBikeDetail.gallery[activeImageIndex] || selectedBikeDetail.image)}
                     alt={selectedBikeDetail.name}
+                    onError={handleImageError()}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                   />
                   {/* Badge Còn xe */}
@@ -2247,7 +2249,7 @@ export default function HomePage() {
                         transition: 'all 0.15s ease'
                       }}
                     >
-                      <img src={img} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      <img src={resolveMediaUrl(img)} alt="" onError={handleImageError()} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </div>
                   ))}
                 </div>

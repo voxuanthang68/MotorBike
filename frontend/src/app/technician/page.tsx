@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/authStore';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
+import { handleImageError, resolveMediaUrl, VEHICLE_IMAGE_FALLBACK } from '@/lib/media';
 import {
   LayoutGrid,
   Bike,
@@ -246,12 +247,7 @@ export default function TechnicianPortalPage() {
     return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
   }, [displayTechName]);
 
-  const backendImgBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api').replace('/api', '');
-  const resolveUrl = (u?: string) => {
-    if (!u) return '';
-    if (u.startsWith('http') || u.startsWith('data:') || u.startsWith('blob:')) return u;
-    return `${backendImgBase}${u.startsWith('/') ? '' : '/'}${u}`;
-  };
+  const resolveUrl = (u?: string) => resolveMediaUrl(u);
 
   useEffect(() => {
     if (user) {
@@ -1632,8 +1628,9 @@ export default function TechnicianPortalPage() {
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span style={{ fontSize: '12px', fontWeight: 800, color: '#64748b', minWidth: '24px' }}>#{idx + 1}</span>
                         <img
-                          src={ins.vehicleImage || SAMPLE_PHOTOS.cleanFront}
+                          src={resolveMediaUrl(ins.vehicleImage) || VEHICLE_IMAGE_FALLBACK}
                           alt={ins.vehicleName}
+                          onError={handleImageError()}
                           style={{ width: '48px', height: '38px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #cbd5e1' }}
                         />
                         <div>
@@ -1842,8 +1839,9 @@ export default function TechnicianPortalPage() {
                                 </td>
                                 <td style={{ padding: '12px 16px' }}>
                                   <img
-                                    src={veh.image || SAMPLE_PHOTOS.cleanFront}
+                                    src={resolveMediaUrl(veh.image) || VEHICLE_IMAGE_FALLBACK}
                                     alt={veh.name}
+                                    onError={handleImageError()}
                                     style={{ width: '56px', height: '38px', borderRadius: '8px', objectFit: 'cover', border: '1px solid #e2e8f0', display: 'block' }}
                                   />
                                 </td>
@@ -2176,7 +2174,7 @@ export default function TechnicianPortalPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                         {dmg.positions.map((pos, idx) => (
                           <div key={pos.id || idx} style={{ background: '#f8fafc', borderRadius: '10px', padding: '12px', border: '1px solid #e2e8f0', display: 'flex', gap: '12px' }}>
-                            {pos.photo && <img src={pos.photo} alt={pos.position} style={{ width: '76px', height: '76px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
+                            {pos.photo && <img src={resolveUrl(pos.photo)} alt={pos.position} onError={handleImageError()} style={{ width: '76px', height: '76px', borderRadius: '8px', objectFit: 'cover', flexShrink: 0 }} />}
                             <div>
                               <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>{pos.position}</div>
                               <div style={{ fontSize: '11.5px', color: '#dc2626', fontWeight: 700, margin: '2px 0' }}>
@@ -3147,8 +3145,8 @@ export default function TechnicianPortalPage() {
                   ẢNH TRƯỚC ({showPhotoCompareModal.beforeImgs.length || 1} ảnh)
                 </div>
                 <div style={{ padding: '10px', display: 'grid', gridTemplateColumns: showPhotoCompareModal.beforeImgs.length > 1 ? '1fr 1fr' : '1fr', gap: '8px' }}>
-                  {(showPhotoCompareModal.beforeImgs.length > 0 ? showPhotoCompareModal.beforeImgs : [SAMPLE_PHOTOS.cleanFront]).map((src, i) => (
-                    <img key={i} src={src} alt="Before" style={{ width: '100%', height: showPhotoCompareModal.beforeImgs.length > 1 ? '145px' : '250px', objectFit: 'cover', borderRadius: '8px' }} />
+                  {(showPhotoCompareModal.beforeImgs.length > 0 ? showPhotoCompareModal.beforeImgs : [VEHICLE_IMAGE_FALLBACK]).map((src, i) => (
+                    <img key={i} src={resolveUrl(src) || VEHICLE_IMAGE_FALLBACK} alt="Before" onError={handleImageError()} style={{ width: '100%', height: showPhotoCompareModal.beforeImgs.length > 1 ? '145px' : '250px', objectFit: 'cover', borderRadius: '8px' }} />
                   ))}
                 </div>
               </div>
@@ -3158,8 +3156,8 @@ export default function TechnicianPortalPage() {
                   ẢNH SAU ({showPhotoCompareModal.afterImgs.length || 1} ảnh)
                 </div>
                 <div style={{ padding: '10px', display: 'grid', gridTemplateColumns: showPhotoCompareModal.afterImgs.length > 1 ? '1fr 1fr' : '1fr', gap: '8px' }}>
-                  {(showPhotoCompareModal.afterImgs.length > 0 ? showPhotoCompareModal.afterImgs : [SAMPLE_PHOTOS.repairedPerfect]).map((src, i) => (
-                    <img key={i} src={src} alt="After" style={{ width: '100%', height: showPhotoCompareModal.afterImgs.length > 1 ? '145px' : '250px', objectFit: 'cover', borderRadius: '8px' }} />
+                  {(showPhotoCompareModal.afterImgs.length > 0 ? showPhotoCompareModal.afterImgs : [VEHICLE_IMAGE_FALLBACK]).map((src, i) => (
+                    <img key={i} src={resolveUrl(src) || VEHICLE_IMAGE_FALLBACK} alt="After" onError={handleImageError()} style={{ width: '100%', height: showPhotoCompareModal.afterImgs.length > 1 ? '145px' : '250px', objectFit: 'cover', borderRadius: '8px' }} />
                   ))}
                 </div>
               </div>
@@ -3198,8 +3196,8 @@ export default function TechnicianPortalPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '14px' }}>
-              <img src={selectedInspectionForDetail.deliveryImages[0] || SAMPLE_PHOTOS.cleanFront} alt="Before" style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} />
-              <img src={selectedInspectionForDetail.returnImages[0] || SAMPLE_PHOTOS.cleanRear} alt="After" style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} />
+              <img src={resolveUrl(selectedInspectionForDetail.deliveryImages[0]) || VEHICLE_IMAGE_FALLBACK} alt="Before" onError={handleImageError()} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} />
+              <img src={resolveUrl(selectedInspectionForDetail.returnImages[0]) || VEHICLE_IMAGE_FALLBACK} alt="After" onError={handleImageError()} style={{ width: '100%', height: '140px', objectFit: 'cover', borderRadius: '8px' }} />
             </div>
 
             <div style={{ fontSize: '12.5px', color: '#475569', marginBottom: '14px' }}>
@@ -3295,8 +3293,9 @@ export default function TechnicianPortalPage() {
               >
                 <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', height: '180px' }}>
                   <img
-                    src={veh.image || SAMPLE_PHOTOS.cleanFront}
+                    src={resolveMediaUrl(veh.image) || VEHICLE_IMAGE_FALLBACK}
                     alt={veh.name}
+                    onError={handleImageError()}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                   />
                 </div>
@@ -3412,8 +3411,9 @@ export default function TechnicianPortalPage() {
                   {galleryImgs.map((src, i) => (
                     <img
                       key={i}
-                      src={src}
+                      src={resolveUrl(src) || VEHICLE_IMAGE_FALLBACK}
                       alt={`${veh.name} #${i + 1}`}
+                      onError={handleImageError()}
                       onClick={() =>
                         setShowPhotoCompareModal({
                           title: `Thư viện ảnh xe ${veh.name} (${veh.licensePlate})`,

@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import { useAuthStore } from '@/store/authStore';
 import VietQrPaymentBox, { QrSessionData } from '@/components/payment/VietQrPaymentBox';
 import StandardRentalContractDocument, { mapContractToStandardData } from '@/components/contract/StandardRentalContractDocument';
+import { handleImageError, PHOTO_IMAGE_FALLBACK, resolveMediaUrl, resolveVehicleImage } from '@/lib/media';
 
 function playNotificationSound() {
   try {
@@ -509,11 +510,14 @@ export default function CustomerPortalPage() {
 
   const handleRescueSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const currentBooking = activeBookings[0];
     rescueMutation.mutate({
       subject: rescueSubject || 'Cần cứu hộ xe gấp trên đường',
       description: rescueDescription,
       priority: 'urgent',
-      category: 'vehicle_issue'
+      category: 'vehicle_issue',
+      bookingId: currentBooking?._id,
+      vehicleId: currentBooking?.vehicle?._id || currentBooking?.vehicle,
     });
   };
 
@@ -1342,7 +1346,7 @@ export default function CustomerPortalPage() {
                 {bookings.map((b: any, idx: number) => {
                   const relatedContract = contracts.find((c: any) => c.booking === b._id || c.booking?._id === b._id);
                   const sta = getBookingDisplay(b, relatedContract);
-                  const image = b.vehicle?.mainImage || b.vehicle?.images?.[0]?.url || '/placeholder-bike.jpg';
+                  const image = resolveVehicleImage(b.vehicle);
                   return <div key={b._id} style={{ border: '1px solid #e2e8f0', borderRadius: 16, overflow: 'hidden', background: '#fff' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 22px', background: '#f8fafc', borderBottom: '1px solid #eef2f7', fontSize: 13 }}>
                       <strong style={{ fontFamily: 'monospace', color: '#172033' }}>STT #{idx + 1} • {b.bookingCode}</strong>
@@ -1354,7 +1358,7 @@ export default function CustomerPortalPage() {
                       </span>
                     </div>
                     <div style={{ display: 'grid', gridTemplateColumns: '170px 1.2fr 1fr 1fr auto', gap: 20, alignItems: 'center', padding: 22 }}>
-                      <img src={image.startsWith('http') ? image : `http://localhost:5000${image}`} alt={b.vehicle?.name || 'Xe thuê'} style={{ width: 160, height: 105, objectFit: 'cover', borderRadius: 12, background: '#e2e8f0' }} />
+                      <img src={image} alt={b.vehicle?.name || 'Xe thuê'} onError={handleImageError()} style={{ width: 160, height: 105, objectFit: 'cover', borderRadius: 12, background: '#e2e8f0' }} />
                       <div><div style={{ fontSize: 17, fontWeight: 800, color: '#172033' }}>{b.vehicle?.name}</div><span style={{ display: 'inline-block', marginTop: 7, padding: '4px 10px', borderRadius: 6, color: '#1463ff', background: '#eff6ff', fontSize: 12, fontWeight: 700 }}>{b.vehicle?.licensePlate}</span><div style={{ marginTop: 8, color: '#64748b', fontSize: 13 }}>Thời gian: {new Date(b.startDate).toLocaleDateString('vi-VN')} → {new Date(b.endDate).toLocaleDateString('vi-VN')} ({b.totalDays} ngày)</div></div>
                       <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 20, fontSize: 13 }}><div style={{ color: '#64748b' }}>Tổng tiền thuê:</div><strong>{(b.finalPrice || b.totalPrice || 0).toLocaleString('vi-VN')} đ</strong><div style={{ color: '#64748b', marginTop: 8 }}>Tiền cọc quy định:</div><strong>{(b.deposit || 0).toLocaleString('vi-VN')} đ</strong></div>
                       <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 20, fontSize: 13 }}><div style={{ color: '#64748b' }}>Tình trạng cọc:</div><strong style={{ color: b.paymentStatus === 'deposit_paid' || b.paymentStatus === 'fully_paid' ? '#059669' : '#d97706' }}>{b.paymentStatus === 'deposit_paid' || b.paymentStatus === 'fully_paid' ? '✓ Đã cọc' : 'Chưa thanh toán'}</strong><div style={{ color: '#64748b', marginTop: 8 }}>Điểm nhận:</div><span>{b.pickupLocation || 'Tại cửa hàng'}</span></div>
@@ -1682,7 +1686,7 @@ export default function CustomerPortalPage() {
                         <label key={field} style={{ border: '1px dashed #cbd5e1', borderRadius: '12px', padding: '10px', background: '#fff', cursor: 'pointer' }}>
                           <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginBottom: '8px' }}>{label}</div>
                           <input type="file" accept="image/*" onChange={e => handleDocumentFile(field, e.target.files?.[0])} style={{ width: '100%', fontSize: '11px' }} />
-                          {documentImages[field] && <img src={documentImages[field]} alt={label} style={{ display: 'block', width: '100%', height: '110px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />}
+                          {documentImages[field] && <img src={resolveMediaUrl(documentImages[field], PHOTO_IMAGE_FALLBACK)} alt={label} onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ display: 'block', width: '100%', height: '110px', objectFit: 'cover', borderRadius: '8px', marginTop: '8px' }} />}
                         </label>
                       ))}
                     </div>
@@ -2316,22 +2320,26 @@ export default function CustomerPortalPage() {
                       {/* Attachments (Ảnh xe, sự cố) */}
                       {msg.attachments && msg.attachments.length > 0 && (
                         <div style={{ marginTop: '8px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                          {msg.attachments.map((imgUrl: string, aIdx: number) => (
-                            <img
-                              key={aIdx}
-                              src={imgUrl}
-                              alt="Ảnh sự cố"
-                              onClick={() => setChatLightboxImage(imgUrl)}
-                              style={{
-                                width: '180px',
-                                height: '130px',
-                                borderRadius: '8px',
-                                objectFit: 'cover',
-                                cursor: 'zoom-in',
-                                border: isMe ? '2px solid rgba(255,255,255,0.3)' : '1px solid #cbd5e1',
-                              }}
-                            />
-                          ))}
+                          {msg.attachments.map((imgUrl: string, aIdx: number) => {
+                            const resolvedAtt = resolveMediaUrl(imgUrl, PHOTO_IMAGE_FALLBACK);
+                            return (
+                              <img
+                                key={aIdx}
+                                src={resolvedAtt}
+                                alt="Ảnh sự cố"
+                                onError={handleImageError(PHOTO_IMAGE_FALLBACK)}
+                                onClick={() => setChatLightboxImage(resolvedAtt)}
+                                style={{
+                                  width: '180px',
+                                  height: '130px',
+                                  borderRadius: '8px',
+                                  objectFit: 'cover',
+                                  cursor: 'zoom-in',
+                                  border: isMe ? '2px solid rgba(255,255,255,0.3)' : '1px solid #cbd5e1',
+                                }}
+                              />
+                            );
+                          })}
                         </div>
                       )}
 
@@ -2697,7 +2705,7 @@ export default function CustomerPortalPage() {
           onClick={() => setChatLightboxImage(null)}
         >
           <div style={{ position: 'relative', maxWidth: '90vw', maxHeight: '90vh' }}>
-            <img src={chatLightboxImage} alt="Ảnh phóng to" style={{ width: '100%', maxHeight: '85vh', objectFit: 'contain', borderRadius: '12px' }} />
+            <img src={resolveMediaUrl(chatLightboxImage, PHOTO_IMAGE_FALLBACK)} alt="Ảnh phóng to" onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ width: '100%', maxHeight: '85vh', objectFit: 'contain', borderRadius: '12px' }} />
             <button
               onClick={() => setChatLightboxImage(null)}
               style={{

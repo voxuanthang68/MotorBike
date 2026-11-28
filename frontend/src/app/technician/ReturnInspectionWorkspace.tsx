@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import toast from 'react-hot-toast';
+import { handleImageError, PHOTO_IMAGE_FALLBACK, resolveMediaUrl, VEHICLE_IMAGE_FALLBACK } from '@/lib/media';
 import {
   ClipboardCheck,
   Plus,
@@ -454,8 +455,9 @@ export default function ReturnInspectionWorkspace({
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <img
-              src={activeIns.vehicleImage || activeIns.deliveryImages?.[0] || SAMPLE_PHOTOS.adventureSide}
+              src={resolveMediaUrl(activeIns.vehicleImage || activeIns.deliveryImages?.[0]) || VEHICLE_IMAGE_FALLBACK}
               alt={activeIns.vehicleName}
+              onError={handleImageError()}
               style={{
                 width: '56px',
                 height: '44px',
@@ -748,8 +750,9 @@ export default function ReturnInspectionWorkspace({
             }}
           >
             <img
-              src={diagramSrc}
+              src={resolveMediaUrl(diagramSrc) || VEHICLE_IMAGE_FALLBACK}
               alt={activeIns.vehicleName}
+              onError={handleImageError()}
               draggable={false}
               style={{
                 width: '100%',
@@ -1314,8 +1317,9 @@ export default function ReturnInspectionWorkspace({
                           onClick={() => setZoomPhoto(src)}
                         >
                           <img
-                            src={src}
+                            src={resolveMediaUrl(src, PHOTO_IMAGE_FALLBACK)}
                             alt={`${item.title} #${idx + 1}`}
+                            onError={handleImageError(PHOTO_IMAGE_FALLBACK)}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           />
                           <button
@@ -1505,8 +1509,9 @@ export default function ReturnInspectionWorkspace({
               <X size={16} />
             </button>
             <img
-              src={zoomPhoto}
+              src={resolveMediaUrl(zoomPhoto, PHOTO_IMAGE_FALLBACK)}
               alt="Ảnh minh chứng"
+              onError={handleImageError(PHOTO_IMAGE_FALLBACK)}
               style={{
                 width: '100%',
                 maxHeight: '78vh',

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
+import { handleImageError, PHOTO_IMAGE_FALLBACK, resolveMediaUrl, resolveVehicleImage } from '@/lib/media';
 import StandardRentalContractDocument, {
   buildStandardContractTerms,
   mapContractToStandardData,
@@ -1659,14 +1660,15 @@ export default function ContractsDashboardPage() {
                   {showImagesModal.checkInImages?.length > 0 ? (
                     showImagesModal.checkInImages.map((img: any, i: number) => (
                       <div key={i} style={{ height: '110px', borderRadius: '6px', background: '#f1f5f9', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                        <img src={img.url || img} alt={`Ảnh bàn giao ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK)} alt={`Ảnh bàn giao ${i + 1}`} onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                     ))
                   ) : (
                     <div style={{ height: '110px', borderRadius: '6px', background: '#f1f5f9', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
                       <img
-                        src={showImagesModal.vehicle?.mainImage || 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?w=600&auto=format&fit=crop&q=80'}
+                        src={resolveVehicleImage(showImagesModal.vehicle)}
                         alt="Xe bàn giao"
+                        onError={handleImageError()}
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                       />
                     </div>
@@ -1682,7 +1684,7 @@ export default function ContractsDashboardPage() {
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px' }}>
                     {showImagesModal.checkOutImages.map((img: any, i: number) => (
                       <div key={i} style={{ height: '110px', borderRadius: '6px', background: '#f1f5f9', overflow: 'hidden', border: '1px solid #cbd5e1' }}>
-                        <img src={img.url || img} alt={`Ảnh trả xe ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={resolveMediaUrl(img, PHOTO_IMAGE_FALLBACK)} alt={`Ảnh trả xe ${i + 1}`} onError={handleImageError(PHOTO_IMAGE_FALLBACK)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                       </div>
                     ))}
                   </div>
